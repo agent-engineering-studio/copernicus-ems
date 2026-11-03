@@ -17,11 +17,16 @@ from copernicus_ems.catalogue import (
     select_activations,
 )
 from copernicus_ems.client import (
+    ENV_DATA_DIR,
     ProductEvents,
+    RapidMapping,
+    RetryTransport,
+    default_directory,
     fetch_activations,
     fetch_layer,
     fetch_observed_events,
     fetch_products,
+    layer_path,
 )
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import (
@@ -37,6 +42,7 @@ __version__ = version("copernicus-ems")
 __all__ = [
     "ACTIVATIONS_URL",
     "DETAIL_URL",
+    "ENV_DATA_DIR",
     "FLOOD_EVENT_TYPE",
     "FLOOD_NOTATIONS",
     "OBSERVED_EVENT",
@@ -46,13 +52,17 @@ __all__ = [
     "Layer",
     "Product",
     "ProductEvents",
+    "RapidMapping",
+    "RetryTransport",
     "__version__",
     "activations_url",
+    "default_directory",
     "detail_url",
     "fetch_activations",
     "fetch_layer",
     "fetch_observed_events",
     "fetch_products",
+    "layer_path",
     "parse_activations",
     "parse_detail",
     "parse_layer",

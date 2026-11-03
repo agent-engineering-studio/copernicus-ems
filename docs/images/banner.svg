@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 230" role="img" aria-label="copernicus-ems: where the water actually was, from Copernicus EMS Rapid Mapping, in Python">
+<style>
+  .bg{fill:#fcfcfb} .t1{fill:#0b0b0b} .t2{fill:#52514e} .chip{fill:#f0efec} .aoi{fill:none;stroke:#52514e}
+  @media (prefers-color-scheme: dark){ .bg{fill:#1a1a19} .t1{fill:#f0efec} .t2{fill:#c3c2b7} .chip{fill:#2a2a28} .aoi{stroke:#c3c2b7} }
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+</style>
+<rect class="bg" width="1000" height="230" rx="14"/>
+<text class="t1" x="40" y="88" font-size="44" font-weight="700">copernicus-ems</text>
+<text class="t2" x="40" y="124" font-size="18">Where the water actually was, after a flood,</text>
+<text class="t2" x="40" y="148" font-size="18">as GeoJSON, in a few lines of Python.</text>
+<g font-size="13">
+  <rect class="chip" x="40" y="172" width="128" height="28" rx="14"/><text class="t2" x="104" y="191" text-anchor="middle">Rapid Mapping</text>
+  <rect class="chip" x="176" y="172" width="82" height="28" rx="14"/><text class="t2" x="217" y="191" text-anchor="middle">GeoJSON</text>
+  <rect class="chip" x="266" y="172" width="66" height="28" rx="14"/><text class="t2" x="299" y="191" text-anchor="middle">async</text>
+  <rect class="chip" x="340" y="172" width="104" height="28" rx="14"/><text class="t2" x="392" y="191" text-anchor="middle">no API key</text>
+</g>
+<!-- an area of interest (dashed) and the flooded polygons inside it, along a river -->
+<path class="aoi" d="M560 40 L930 28 L962 150 L880 206 L600 200 L540 120 Z" stroke-width="1.5" stroke-dasharray="7 5"/>
+<path d="M548 168 C610 150 640 96 700 104 S790 150 840 112 S920 70 970 82" fill="none" stroke="#8db8ec" stroke-width="3" stroke-linecap="round"/>
+<g fill="#2a78d6">
+  <path d="M640 120 l18 -10 l14 6 l-6 14 l-20 4 Z"/>
+  <path d="M690 96 l24 -4 l10 12 l-14 10 l-18 -6 Z"/>
+  <path d="M742 124 l16 -2 l8 14 l-12 8 l-14 -6 Z"/>
+  <path d="M786 132 l26 -6 l12 10 l-10 12 l-24 -2 Z"/>
+  <path d="M846 100 l14 -8 l14 4 l-4 12 l-18 2 Z"/>
+  <path d="M896 78 l20 -4 l6 10 l-12 8 l-14 -4 Z"/>
+  <path d="M604 146 l10 -4 l6 8 l-8 6 Z"/>
+</g>
+<text class="t2" x="946" y="196" font-size="12" text-anchor="end">observation mask · observed flood</text>
+</svg>

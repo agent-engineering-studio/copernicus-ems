@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 250" role="img" aria-label="Per activation: the product package is about 100 MB of zips of zips; the GeoJSON flood layer of EMSR762 AOI01, the same polygons, is 62 KB">
+<style>
+  .bg{fill:#fcfcfb} .t1{fill:#0b0b0b} .t2{fill:#52514e} .track{fill:#f0efec}
+  @media (prefers-color-scheme: dark){ .bg{fill:#1a1a19} .t1{fill:#f0efec} .t2{fill:#c3c2b7} .track{fill:#2a2a28} }
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+</style>
+<rect class="bg" width="1000" height="250" rx="14"/>
+<text class="t1" x="40" y="48" font-size="20" font-weight="700">What you download to get the flooded area</text>
+<text class="t1" x="40" y="96" font-size="15" font-weight="600">Product package (.zip)</text>
+<text class="t2" x="40" y="116" font-size="13">per activation: zips of zips, imagery, shapefiles</text>
+<rect class="track" x="330" y="82" width="560" height="30" rx="6"/>
+<rect x="330" y="82" width="560" height="30" rx="6" fill="#e34948"/>
+<text class="t1" x="904" y="103" font-size="15" font-weight="600">~100 MB</text>
+<text class="t1" x="40" y="168" font-size="15" font-weight="600">observedEventA (.geojson)</text>
+<text class="t2" x="40" y="188" font-size="13">EMSR762 AOI01: 43 polygons, same attributes</text>
+<rect class="track" x="330" y="154" width="560" height="30" rx="6"/>
+<rect x="330" y="154" width="4" height="30" rx="2" fill="#2a78d6"/>
+<text class="t1" x="346" y="175" font-size="15" font-weight="600">62 KB</text>
+<text class="t2" x="40" y="226" font-size="12">Layers grow with the event: the largest of EMSR664 (6,334 polygons) is 17 MB. Still one file per product, never imagery.</text>
+</svg>

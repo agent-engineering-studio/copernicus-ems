@@ -6,6 +6,27 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-03
+
+### Added
+
+- Layers are saved as `.geojson` and read back from disk on the next call
+  (`fetch_layer`, `fetch_observed_events`: `directory=`). Files are written
+  to `.part` and renamed, so a file in the cache is whole.
+- `default_directory()`: `COPERNICUS_EMS_DATA_DIR` (`ENV_DATA_DIR`) if set,
+  else `$XDG_CACHE_HOME/copernicus-ems` or `~/.cache/copernicus-ems`. Point
+  it at a volume in Docker.
+- `RapidMapping`: the same calls with a client of its own (or yours) and a
+  directory; its own client retries network errors and 429/502/503/504
+  (`RetryTransport`).
+- `layer_path`, and `examples/italy_floods.py`.
+
+### Changed
+
+- `fetch_layer` and `fetch_observed_events` now write to the default
+  directory when none is given.
+- README rewritten, with diagrams, images and a Docker section.
+
 ## [0.1.0] - 2026-11-03
 
 ### Added
