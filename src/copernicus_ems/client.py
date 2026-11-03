@@ -1,22 +1,39 @@
 """Async functions over :mod:`copernicus_ems.catalogue` and :mod:`copernicus_ems.events`.
 
 They take your ``httpx.AsyncClient``: timeouts, retries and pooling stay
-yours, and HTTP errors propagate.
+yours, and HTTP errors propagate. :class:`RapidMapping` wraps them for
+callers who would rather not bring one: it opens (and closes) its own,
+which retries network errors and 429/502/503/504 (the dashboard API
+answers 502 now and then).
+
+Layers are saved as ``.geojson`` in a directory, which is also the cache:
+a layer's URL carries its version (``_v1``), so a file already there is the
+same layer and is read from disk, not downloaded again. The activation list
+and details are always asked: new monitoring products appear in them. Files
+are written to ``.part`` and renamed, so a file that exists is whole.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import asyncio
+import os
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from types import TracebackType
+from typing import Any
+
+import httpx
 
 from copernicus_ems.catalogue import (
     Activation,
+    Layer,
     Product,
     activations_url,
     detail_url,
     parse_activations,
     parse_detail,
+    select_activations,
 )
 from copernicus_ems.events import (
     FLOOD_EVENT_TYPE,
@@ -26,8 +43,28 @@ from copernicus_ems.events import (
     select_features,
 )
 
-if TYPE_CHECKING:
-    import httpx
+_RETRY_STATUS = frozenset({429, 502, 503, 504})
+
+#: The environment variable :func:`default_directory` reads.
+ENV_DATA_DIR = "COPERNICUS_EMS_DATA_DIR"
+
+
+def default_directory() -> Path:
+    """Where layers are saved when no directory is given.
+
+    ``COPERNICUS_EMS_DATA_DIR`` if set, else ``copernicus-ems`` in the user
+    cache (``$XDG_CACHE_HOME``, or ``~/.cache``).
+    """
+    if configured := os.environ.get(ENV_DATA_DIR, "").strip():
+        return Path(configured).expanduser()
+    cache = os.environ.get("XDG_CACHE_HOME", "").strip() or "~/.cache"
+    return Path(cache).expanduser() / "copernicus-ems"
+
+
+def layer_path(product: Product, layer: Layer, directory: Path) -> Path:
+    """``directory/EMSR762/EMSR762_AOI01_DEL_PRODUCT_observedEventA_v1.geojson``."""
+    name = layer.url.rsplit("/", 1)[-1].split("?", 1)[0].removesuffix(".json")
+    return directory / product.activation_code / f"{name}.geojson"
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,15 +96,31 @@ async def fetch_products(client: httpx.AsyncClient, code: str) -> list[Product]:
 
 
 async def fetch_layer(
-    client: httpx.AsyncClient, product: Product, kind: str
+    client: httpx.AsyncClient,
+    product: Product,
+    kind: str,
+    *,
+    directory: Path | None = None,
 ) -> dict[str, Any] | None:
-    """One vector layer of a product as GeoJSON; ``None`` if the product has none of that kind."""
+    """One vector layer of a product as GeoJSON; ``None`` if the product has none of that kind.
+
+    The layer is saved under ``directory`` (default :func:`default_directory`)
+    and read from there on the next call.
+    """
     layer = product.layers.get(kind)
     if layer is None:
         return None
+    path = layer_path(product, layer, directory or default_directory())
+    if path.is_file():
+        return parse_layer(path.read_bytes())
     response = await client.get(layer.url, follow_redirects=True)
     response.raise_for_status()
-    return parse_layer(response.content)
+    collection = parse_layer(response.content)  # nothing invalid reaches the cache
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_suffix(".part")
+    partial.write_bytes(response.content)
+    partial.replace(path)
+    return collection
 
 
 async def fetch_observed_events(
@@ -76,20 +129,131 @@ async def fetch_observed_events(
     *,
     event_types: Iterable[str] | None = (FLOOD_EVENT_TYPE,),
     notations: Iterable[str] | None = FLOOD_NOTATIONS,
+    directory: Path | None = None,
 ) -> list[ProductEvents]:
     """The observed events of every product of an activation (floods by default).
 
     Products without an ``observedEventA`` layer, and products where no
-    feature passes the filter, are left out.
+    feature passes the filter, are left out. Layers are cached as in
+    :func:`fetch_layer`.
     """
     types = tuple(event_types) if event_types is not None else None
     marks = tuple(notations) if notations is not None else None
     out: list[ProductEvents] = []
     for product in await fetch_products(client, code):
-        collection = await fetch_layer(client, product, OBSERVED_EVENT)
+        collection = await fetch_layer(client, product, OBSERVED_EVENT, directory=directory)
         if collection is None:
             continue
         features = select_features(collection, event_types=types, notations=marks)
         if features:
             out.append(ProductEvents(product=product, features=features))
     return out
+
+
+class RetryTransport(httpx.AsyncBaseTransport):
+    """Retry network errors and 429/502/503/504, waiting ``backoff_s``, doubled each time."""
+
+    def __init__(
+        self,
+        transport: httpx.AsyncBaseTransport | None = None,
+        *,
+        retries: int = 3,
+        backoff_s: float = 2.0,
+        sleep: Callable[[float], Awaitable[Any]] = asyncio.sleep,
+    ) -> None:
+        self._transport = transport or httpx.AsyncHTTPTransport()
+        self._retries = retries
+        self._backoff_s = backoff_s
+        self._sleep = sleep
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        for attempt in range(self._retries + 1):
+            last = attempt == self._retries
+            try:
+                response = await self._transport.handle_async_request(request)
+            except httpx.TransportError:
+                if last:
+                    raise
+            else:
+                if response.status_code not in _RETRY_STATUS or last:
+                    return response
+                await response.aclose()
+            await self._sleep(self._backoff_s * 2**attempt)
+        raise AssertionError("unreachable")  # pragma: no cover
+
+    async def aclose(self) -> None:
+        await self._transport.aclose()
+
+
+class RapidMapping:
+    """The functions above, with a client and a directory of their own.
+
+    Give it no ``client`` and it opens one that retries (see
+    :class:`RetryTransport`); use it as an async context manager, or call
+    :meth:`aclose`, to close it. ``directory`` defaults to
+    :func:`default_directory`, read when a layer is fetched.
+    """
+
+    def __init__(
+        self,
+        client: httpx.AsyncClient | None = None,
+        *,
+        directory: Path | None = None,
+        retries: int = 3,
+    ) -> None:
+        self._own = client is None
+        self._client = client or httpx.AsyncClient(
+            timeout=60, follow_redirects=True, transport=RetryTransport(retries=retries)
+        )
+        self._directory = directory
+
+    @property
+    def directory(self) -> Path:
+        return self._directory or default_directory()
+
+    async def __aenter__(self) -> RapidMapping:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        """Close the HTTP client if this instance opened it."""
+        if self._own:
+            await self._client.aclose()
+
+    async def activations(
+        self, *, country: str | None = None, categories: Iterable[str] | None = None
+    ) -> list[Activation]:
+        """Public activations, oldest first, filtered as :func:`select_activations` does."""
+        found = await fetch_activations(self._client)
+        return select_activations(found, country=country, categories=categories)
+
+    async def products(self, code: str) -> list[Product]:
+        """The products of one activation (``EMSR762``)."""
+        return await fetch_products(self._client, code)
+
+    async def layer(self, product: Product, kind: str) -> dict[str, Any] | None:
+        """One vector layer as GeoJSON, cached; ``None`` if the product has none of that kind."""
+        return await fetch_layer(self._client, product, kind, directory=self.directory)
+
+    async def observed_events(
+        self,
+        code: str,
+        *,
+        event_types: Iterable[str] | None = (FLOOD_EVENT_TYPE,),
+        notations: Iterable[str] | None = FLOOD_NOTATIONS,
+    ) -> list[ProductEvents]:
+        """The observed events of every product of an activation (floods by default)."""
+        return await fetch_observed_events(
+            self._client,
+            code,
+            event_types=event_types,
+            notations=notations,
+            directory=self.directory,
+        )
