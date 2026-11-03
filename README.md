@@ -205,7 +205,7 @@ $COPERNICUS_EMS_DATA_DIR/
     └── EMSR762_AOI01_DEL_PRODUCT_observedEventA_v1.geojson
 ```
 
-Every flood mapped in Italy since 2023 takes about **210 MB** (14
+Every flood mapped in Italy since 2023 takes about **200 MB** (14
 activations, November 2026). Each file is a plain GeoJSON
 FeatureCollection, exactly as Rapid Mapping publishes it: you can open the
 folder in QGIS directly.

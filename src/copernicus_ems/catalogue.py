@@ -11,7 +11,7 @@ The public dashboard API needs no credentials:
   each product was made from, and its **layers**.
 
 Every vector layer of a product is published on its own as GeoJSON (the
-``json`` URL of a ``vt`` layer), from tens of kilobytes to a few megabytes. There is no need for
+``json`` URL of a ``vt`` layer), from tens of kilobytes to tens of megabytes. There is no need for
 the product package, which is a ~100 MB zip of zips holding the ortho
 imagery, and which for some activations answers 403 (EMSR664) while its
 GeoJSON layers are open.
