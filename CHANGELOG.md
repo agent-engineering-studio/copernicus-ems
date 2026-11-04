@@ -6,6 +6,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Pre-event reference images for change detection: `plan_reference` picks
+  the latest Sentinel-1 pass of the event pass's relative orbit before the
+  flood began, `make_pair(..., reference=)` fetches it on the same grid and
+  records it in the `_pair.json` (`"reference"`, plus `relative_orbit`).
+  CLI: `pairs --reference [--reference-days N]`, priced and cached like
+  the event image. `RapidMapping.search_scenes` for any time range.
+- `build_dataset(..., reference=True)` / `dataset --reference`: chips with
+  `VV, VH, VV_pre, VH_pre, dataMask` bands (mask = both passes have data),
+  `reference_time` in `index.csv`. `Pair.reference`.
+- `notebooks/02_change_detection_s1.ipynb`: the floods of notebook 01 with a
+  pre-event reference each; VV threshold, change threshold and two
+  classifiers compared on the same chips, independent labels apart. The
+  `notebook` workflow takes the notebook to run as an input.
+
 ## [0.5.2] - 2026-11-04
 
 ### Added

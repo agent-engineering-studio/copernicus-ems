@@ -1,7 +1,7 @@
-# Runs notebooks/01_flood_segmentation_s1.ipynb on real data, on demand.
+# Runs a notebook of notebooks/ on real data, on demand.
 # It spends Copernicus Data Space processing units (the CDSE_CLIENT_ID /
 # CDSE_CLIENT_SECRET secrets) only for images not in the cached data
-# directory: the first run about 94 PU, the next ones none. The executed
+# directory: about 94 PU the first time for each notebook, then none. The executed
 # notebook and its figure are uploaded as an artifact, and so is the data
 # directory (`ems-data`: Sentinel-1 images, labels, pair manifests, EMS
 # layers), so other projects can reuse the images without spending PU:
@@ -13,6 +13,13 @@ name: notebook
 on:
   workflow_dispatch:
     inputs:
+      notebook:
+        description: "Which notebook"
+        type: choice
+        default: 01_flood_segmentation_s1
+        options:
+          - 01_flood_segmentation_s1
+          - 02_change_detection_s1
       budget_pu:
         description: "Processing units the run may spend at most"
         default: "100"
@@ -44,16 +51,17 @@ jobs:
           CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
           CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
           NOTEBOOK_BUDGET_PU: ${{ inputs.budget_pu }}
-          NOTEBOOK_FIGURE: ${{ github.workspace }}/out/notebook-flood-s1.png
+          NOTEBOOK: ${{ inputs.notebook }}
+          NOTEBOOK_FIGURE: ${{ github.workspace }}/out/figure.png
         run: |
           mkdir -p out
-          cp notebooks/01_flood_segmentation_s1.ipynb out/
+          cp "notebooks/$NOTEBOOK.ipynb" out/
           uv run --no-sync jupyter nbconvert --to notebook --execute --inplace \
-            --ExecutePreprocessor.timeout=3600 out/01_flood_segmentation_s1.ipynb
+            --ExecutePreprocessor.timeout=3600 "out/$NOTEBOOK.ipynb"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: notebook-flood-s1
+          name: notebook-${{ inputs.notebook }}
           path: out/
       - name: Data directory as an artifact (reuse it elsewhere at 0 PU)
         uses: actions/upload-artifact@v7

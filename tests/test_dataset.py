@@ -223,3 +223,57 @@ def test_pair_properties(tmp_path: Path) -> None:
         {"activation": "EMSR9", "product": "AOI03_GRA_PRODUCT"},
     )
     assert (pair.aoi, pair.group) == ("AOI03", "EMSR9/AOI03")
+
+
+def add_reference(manifest: Path, value: float, *, blind_cols: int = 0) -> Path:
+    """Write a pre-event image next to a pair and name it in the manifest."""
+    meta = json.loads(manifest.read_text())
+    with rasterio.open(manifest.parent / meta["image"]) as src:
+        profile, image = src.profile, src.read()
+    image[:2] = value
+    image[2] = 1
+    image[:, :, :blind_cols] = 0
+    name = manifest.name.replace("_pair.json", "_pre.tif")
+    with rasterio.open(manifest.parent / name, "w", **profile) as dst:
+        dst.write(image)
+    meta["reference"] = {"image": name, "pass_time": "2024-09-09T16:58:40+00:00", "lead_days": 12}
+    manifest.write_text(json.dumps(meta))
+    return manifest.parent / name
+
+
+def test_a_dataset_with_reference_bands(tmp_path: Path, labels: LabelRaster) -> None:
+    data = tmp_path / "data"
+    with_ref = write_pair(data, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    add_reference(with_ref, 0.2, blind_cols=30)
+    write_pair(data, "EMSR2", "AOI01_DEL_PRODUCT", labels)  # no reference: left out
+    pairs = find_pairs(data)
+    assert [p.reference is not None for p in pairs] == [True, False]
+
+    out = tmp_path / "ds"
+    summary = build_dataset(pairs, out, size=64, min_observed=0.3, min_valid=0.0, reference=True)
+    assert summary.pairs == 1 and summary.chips > 0
+    meta = json.loads((out / "dataset.json").read_text())
+    assert meta["image_bands"] == ["VV", "VH", "VV_pre", "VH_pre", "dataMask"]
+    assert meta["reference"] is True and meta["pairs"][0]["reference_lead_days"] == 12
+    rows = list(csv.DictReader((out / "index.csv").open()))
+    assert {r["reference_time"] for r in rows} == {"2024-09-09T16:58:40+00:00"}
+    first = next(r for r in rows if r["id"].endswith("_c0"))
+    with rasterio.open(out / first["image"]) as src:
+        assert src.count == 5 and src.descriptions[2] == "VV_pre"
+        bands = src.read()
+    assert np.allclose(bands[0][bands[4] == 1], 0.05) and np.allclose(bands[2][bands[4] == 1], 0.2)
+    # no data in the reference -> no data in the chip -> ignored label
+    assert (bands[4][:, :30] == 0).all()
+    with rasterio.open(out / first["label"]) as src:
+        assert (src.read(1)[:, :30] == IGNORE).all()
+
+    # without reference=True the same pairs give the three-band layout
+    plain = build_dataset(pairs, tmp_path / "plain", size=64, min_observed=0.3)
+    assert plain.pairs == 2
+    assert json.loads((tmp_path / "plain" / "dataset.json").read_text())["image_bands"] == [
+        "VV",
+        "VH",
+        "dataMask",
+    ]
+    with pytest.raises(EmsError, match="--reference"):
+        build_dataset(pairs[1:], tmp_path / "none", reference=True)

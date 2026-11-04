@@ -43,7 +43,7 @@ from copernicus_ems.events import (
     parse_layer,
     select_features,
 )
-from copernicus_ems.scenes import SceneMatch, find_scenes
+from copernicus_ems.scenes import Scene, SceneMatch, fetch_scenes, find_scenes
 
 _RETRY_STATUS = frozenset({429, 502, 503, 504})
 
@@ -271,6 +271,17 @@ class RapidMapping:
             within=within,
             max_cloud_cover=max_cloud_cover,
         )
+
+    async def search_scenes(
+        self,
+        geometry: dict[str, Any],
+        start: datetime,
+        end: datetime,
+        *,
+        collections: Iterable[str] = ("sentinel-1-grd",),
+    ) -> list[Scene]:
+        """Open scenes over ``geometry`` from ``start`` to ``end``: see :func:`fetch_scenes`."""
+        return await fetch_scenes(self._client, geometry, start, end, collections=collections)
 
     async def layer(self, product: Product, kind: str) -> dict[str, Any] | None:
         """One vector layer as GeoJSON, cached; ``None`` if the product has none of that kind."""

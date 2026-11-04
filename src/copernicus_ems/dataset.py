@@ -5,7 +5,8 @@ data directory (``<data dir>/<code>/sentinel-1/*_pair.json``), so it spends
 no processing units and works offline, and writes::
 
     dataset/
-    ├── images/<id>.tif     Sentinel-1 VV, VH, dataMask (float32, linear power)
+    ├── images/<id>.tif     Sentinel-1 VV, VH, dataMask (float32, linear power);
+    │                       VV, VH, VV_pre, VH_pre, dataMask with ``reference=True``
     ├── labels/<id>.tif     1 flooded, 0 dry, 255 ignore (uint8)
     ├── index.csv           one row per chip: split, provenance, shares, bounds
     └── dataset.json        bands, label values, splits, statistics, credits
@@ -25,6 +26,7 @@ import csv
 import hashlib
 import json
 from collections.abc import Iterable, Sequence
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -57,6 +59,7 @@ _INDEX_FIELDS = (
     "observed_time",
     "pass_time",
     "gap_hours",
+    "reference_time",
     "observed_share",
     "flooded_share",
     "image",
@@ -90,6 +93,15 @@ class Pair:
     def aoi(self) -> str:
         """``AOI01`` from ``AOI01_DEL_MONIT02``."""
         return self.product.split("_", 1)[0]
+
+    @property
+    def reference(self) -> Path | None:
+        """The pre-event image (``pairs --reference``), if it was fetched."""
+        ref = self.meta.get("reference")
+        if not isinstance(ref, dict) or "image" not in ref:
+            return None
+        path = self.manifest.parent / str(ref["image"])
+        return path if path.is_file() else None
 
     @property
     def group(self) -> str:
@@ -170,13 +182,24 @@ def build_dataset(
     min_valid: float = 0.9,
     ratios: Sequence[float] = (0.7, 0.15, 0.15),
     seed: int = 0,
+    reference: bool = False,
 ) -> DatasetSummary:
     """Cut every pair into aligned chips, assign splits by area, write the dataset.
 
     A chip is kept when ``min_observed`` of its pixels are observed (label
     0 or 1), ``min_flooded`` of those are flooded, and the image has data on
     ``min_valid`` of the observed ones.
+
+    With ``reference=True`` only pairs with a pre-event image are used, and
+    each image chip has five bands: ``VV, VH, VV_pre, VH_pre, dataMask``,
+    where ``dataMask`` is 1 only where both acquisitions have data.
     """
+    if reference:
+        pairs = [p for p in pairs if p.reference is not None]
+        if not pairs:
+            raise EmsError(
+                "no pair has a reference image: run `copernicus-ems pairs CODE --reference`"
+            )
     if not pairs:
         raise EmsError("no pairs: run `copernicus-ems pairs CODE` first")
     images_dir, labels_dir = directory / "images", directory / "labels"
@@ -191,7 +214,15 @@ def build_dataset(
             (
                 pair,
                 _cut(
-                    pair, images_dir, labels_dir, size, stride, min_observed, min_flooded, min_valid
+                    pair,
+                    images_dir,
+                    labels_dir,
+                    size,
+                    stride,
+                    min_observed,
+                    min_flooded,
+                    min_valid,
+                    reference,
                 ),
             )
         )
@@ -224,7 +255,8 @@ def build_dataset(
             "min_flooded": min_flooded,
             "min_valid": min_valid,
         },
-        "image_bands": ["VV", "VH", "dataMask"],
+        "image_bands": list(_bands(reference)),
+        "reference": reference,
         "image_units": "linear power (10 * log10 for dB)",
         "label_values": {"flooded": FLOODED, "dry": DRY, "ignore": IGNORE},
         "split_by": "activation + AOI (no area in two splits)",
@@ -246,6 +278,9 @@ def build_dataset(
                 "product": p.product,
                 "group": p.group,
                 "gap_hours": p.meta.get("gap_hours"),
+                "reference_lead_days": (p.meta.get("reference") or {}).get("lead_days")
+                if reference
+                else None,
                 "chips": len(r),
                 "manifest": str(p.manifest),
             }
@@ -272,29 +307,40 @@ def _cut(
     min_observed: float,
     min_flooded: float,
     min_valid: float,
+    reference: bool = False,
 ) -> list[dict[str, Any]]:
     labels = LabelRaster.from_geotiff(pair.labels)
     rows: list[dict[str, Any]] = []
-    with rasterio.open(pair.image) as src:
+    with ExitStack() as stack:
+        src = stack.enter_context(rasterio.open(pair.image))
         grid = Grid.from_transform(src.crs, src.transform, src.width, src.height)
         if grid != labels.grid:
             raise EmsError(f"{pair.image.name} is not on the grid of {pair.labels.name}")
+        pre = None
+        if reference:
+            assert pair.reference is not None
+            pre = stack.enter_context(rasterio.open(pair.reference))
+            if Grid.from_transform(pre.crs, pre.transform, pre.width, pre.height) != grid:
+                raise EmsError(f"{pair.reference.name} is not on the grid of {pair.image.name}")
+        descriptions = _bands(reference)
         profile = {
             "driver": "GTiff",
             "width": size,
             "height": size,
-            "count": src.count,
+            "count": len(descriptions),
             "dtype": "float32",
             "crs": src.crs,
             "compress": "deflate",
             "predictor": 3,
         }
-        descriptions = src.descriptions
         for chip in chips(
             labels, size, stride=stride, min_observed=min_observed, min_flooded=min_flooded
         ):
             window = Window(chip.col, chip.row, size, size)
             image = src.read(window=window, boundless=True, fill_value=0).astype(np.float32)
+            if pre is not None:
+                before = pre.read(window=window, boundless=True, fill_value=0).astype(np.float32)
+                image = np.concatenate([image[:-1], before[:-1], image[-1:] * before[-1:]])
             label = chip.labels.copy()
             no_data = image[-1] == 0
             observed = label != IGNORE
@@ -312,8 +358,7 @@ def _cut(
             ) as dst:
                 dst.write(image)
                 for index, name in enumerate(descriptions, start=1):
-                    if name:
-                        dst.set_band_description(index, name)
+                    dst.set_band_description(index, name)
             LabelRaster(
                 label, chip.grid, {"activation": pair.activation, "product": pair.product}
             ).to_geotiff(labels_dir / f"{chip_id}.tif")
@@ -329,6 +374,9 @@ def _cut(
                     "observed_time": pair.meta.get("observed_time"),
                     "pass_time": pair.meta.get("pass_time"),
                     "gap_hours": pair.meta.get("gap_hours"),
+                    "reference_time": (pair.meta.get("reference") or {}).get("pass_time")
+                    if pre is not None
+                    else None,
                     "observed_share": round((wet + dry) / label.size, 4),
                     "flooded_share": round(wet / (wet + dry), 4) if wet + dry else 0.0,
                     "image": f"images/{chip_id}.tif",
@@ -343,3 +391,7 @@ def _cut(
                 }
             )
     return rows
+
+
+def _bands(reference: bool) -> tuple[str, ...]:
+    return ("VV", "VH", "VV_pre", "VH_pre", "dataMask") if reference else ("VV", "VH", "dataMask")

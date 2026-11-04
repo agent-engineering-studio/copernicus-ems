@@ -13,7 +13,7 @@ import pytest
 import rasterio
 from rasterio.io import MemoryFile
 from rasterio.transform import from_bounds
-from test_scenes import stac_handler
+from test_scenes import STAC, stac_handler
 
 from copernicus_ems import (
     EmsError,
@@ -39,6 +39,7 @@ from copernicus_ems.sentinelhub import (
     parse_token,
     pass_window,
     plan_pair,
+    plan_reference,
     tiles,
 )
 
@@ -502,3 +503,118 @@ def test_pairs_labels_floods_only(
     assert main(argv) == 0
     assert np.count_nonzero(LabelRaster.from_geotiff(labels).labels == FLOODED) == flooded
     assert len(fake.requests) == sent  # the image came from the cache
+
+
+def with_references(request: httpx.Request) -> httpx.Response:
+    """STAC that also knows the passes before the flood: orbit 44 twelve and
+    twenty-four days earlier, and an orbit 168 pass in between (wrong geometry)."""
+    from copernicus_ems.scenes import STAC_SEARCH_URL
+
+    if str(request.url) != STAC_SEARCH_URL:
+        return stac_handler(request)
+    body = json.loads(request.content)
+    start, end = (
+        datetime.fromisoformat(t.replace("Z", "+00:00")) for t in body["datetime"].split("/")
+    )
+    page = json.loads(STAC.read_text())
+    s1 = [f for f in page["features"] if f["collection"] == "sentinel-1-grd"]
+    asc = next(f for f in s1 if f["properties"]["sat:relative_orbit"] == 44)
+    desc = next(f for f in s1 if f["properties"]["sat:relative_orbit"] == 168)
+    extra = []
+    for base, days, take in ((asc, 12, "1"), (asc, 24, "2"), (desc, 9, "3")):
+        f = json.loads(json.dumps(base))
+        when = datetime.fromisoformat(f["properties"]["datetime"].replace("Z", "+00:00"))
+        when -= timedelta(days=days)
+        f["id"] = f"{f['id']}_minus{days}"
+        f["properties"]["datetime"] = when.isoformat().replace("+00:00", "Z")
+        f["properties"]["start_datetime"] = f["properties"]["datetime"]
+        f["properties"]["eopf:datatake_id"] = f"ref{take}"
+        extra.append(f)
+    feats = [
+        f
+        for f in s1 + extra
+        if start
+        <= datetime.fromisoformat(f["properties"]["datetime"].replace("Z", "+00:00"))
+        <= end
+    ]
+    page["features"] = feats
+    page["links"] = []
+    return httpx.Response(200, json=page)
+
+
+def test_a_reference_pass_of_the_same_orbit(tmp_path: Path) -> None:
+    fake = FakeCdse()
+
+    def transport(request: httpx.Request) -> httpx.Response:
+        return with_references(request) if "stac" in str(request.url) else fake(request)
+
+    async def go(**kwargs: Any) -> Any:
+        http = httpx.AsyncClient(transport=httpx.MockTransport(transport))
+        ems = RapidMapping(http, directory=tmp_path)
+        plan = await plan_pair(
+            ems, event(), resolution_m=100, max_gap=timedelta(hours=48), min_coverage=0.1
+        )
+        ref = await plan_reference(ems, plan, min_coverage=0.1, **kwargs)
+        return ems, http, plan, ref
+
+    _ems, http, plan, ref = asyncio.run(go())
+    assert plan.scene_pass is not None
+    assert (
+        ref.scene_pass is not None
+        and ref.relative_orbit == plan.scene_pass.scenes[0].relative_orbit
+    )
+    lead = plan.scene_pass.time - ref.scene_pass.time
+    assert lead == timedelta(days=12) and ref.pu == plan.pu
+    assert ref.backscatter_path != plan.backscatter_path
+
+    # the flood began 13 days before the pass: the 12-day pass is already wet
+    early = plan.scene_pass.time - timedelta(days=13)
+    *_, older = asyncio.run(go(before=early))
+    assert older.scene_pass is not None
+    assert plan.scene_pass.time - older.scene_pass.time == timedelta(days=24)
+    *_, none = asyncio.run(go(before=early, lookback=timedelta(days=5)))
+    assert none.scene_pass is None and "relative orbit 44" in (none.reason or "")
+
+    async def make() -> Any:
+        async with SentinelHub(CREDS, http) as h:
+            return await make_pair(h, plan, reference=ref)
+
+    _image, labels = asyncio.run(make())
+    assert ref.backscatter_path is not None and ref.backscatter_path.is_file()
+    with rasterio.open(ref.backscatter_path) as src:
+        assert Grid.from_transform(src.crs, src.transform, src.width, src.height) == plan.grid
+    manifest = json.loads(
+        labels.with_name(labels.name.replace("_labels.tif", "_pair.json")).read_text()
+    )
+    assert manifest["reference"]["image"] == ref.backscatter_path.name
+    assert manifest["reference"]["lead_days"] == 12 and manifest["relative_orbit"] == 44
+    assert len(fake.requests) == 2
+
+
+def test_the_pairs_command_with_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    fake = FakeCdse()
+    monkeypatch.setenv("CDSE_CLIENT_ID", "my-client")
+    monkeypatch.setenv("CDSE_CLIENT_SECRET", "s3cret")
+    real = httpx.AsyncClient
+
+    def transport(request: httpx.Request) -> httpx.Response:
+        return with_references(request) if "stac" in str(request.url) else fake(request)
+
+    def patched(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        kwargs["transport"] = httpx.MockTransport(transport)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", patched)
+    argv = [
+        "--dir", str(tmp_path), "pairs", "EMSR762", "--aoi", "1", "--resolution", "100",
+        "--max-gap-hours", "48", "--min-coverage", "0.1", "--reference",
+    ]  # fmt: skip
+    assert main([*argv, "--dry-run"]) == 0
+    out = capsys.readouterr()
+    assert "reference" in out.out and "2 images to fetch" in out.err and fake.requests == []
+    assert main(argv) == 0
+    assert len(fake.requests) == 2
+    assert main(argv) == 0  # all cached
+    assert len(fake.requests) == 2 and "0 images to fetch" in capsys.readouterr().err

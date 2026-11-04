@@ -86,6 +86,31 @@ EMSR664/sentinel-1/
 - Each answer is checked to be on the asked grid; a shifted tile is
   refused, not written.
 
+## A pre-event reference, for change detection
+
+One radar image shows dark, smooth surfaces: open water, but also tarmac,
+dry bare soil, radar shadow. The usual way past that is to compare the
+flood pass with a pass **before** the flood, from the **same relative
+orbit** (same viewing geometry), and look at what became darker:
+
+```bash
+copernicus-ems pairs EMSR664 --reference --dry-run   # both images, and their PU
+copernicus-ems pairs EMSR664 --reference             # about twice the PU of pairs alone
+```
+
+- The reference is the latest pass of the event pass's relative orbit
+  acquired before the flood began: the activation's `event_time` minus a
+  day, looked for `--reference-days` back (default 36, three repeat cycles).
+- It is cut to the same grid, written next to the event image, and named in
+  the `_pair.json` under `"reference"` (image, pass time, `lead_days`,
+  orbit, coverage). Products of one AOI share it, and so do runs: a cached
+  reference costs nothing.
+- Products with no such pass say why (`no reference: …`) and keep their
+  event image.
+
+From Python: `plan_reference(ems, plan, before=…)` after `plan_pair`, then
+`make_pair(hub, plan, reference=ref)`.
+
 ## From pairs to a training dataset
 
 `dataset` reads the pairs already in the data directory, so it is free
@@ -115,8 +140,11 @@ floods-s1/
 - `--min-observed` (default 0.5) and `--min-flooded` (default 0) filter the
   chips, `--stride` makes them overlap, positional codes restrict to some
   activations.
+- `--reference` keeps only the pairs with a pre-event image and writes
+  five bands per chip: `VV, VH, VV_pre, VH_pre, dataMask`, the mask being
+  1 only where both passes have data.
 - `index.csv` keeps for each chip its activation, product, observation and
-  pass times, `gap_hours`, observed and flooded shares, CRS and origin;
+  pass times (`reference_time` too), `gap_hours`, observed and flooded shares, CRS and origin;
   `dataset.json` the flooded share per split, to check the balance.
 
 ## In Docker
