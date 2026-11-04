@@ -273,7 +273,9 @@ async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
         return 2
     events = [
         e
-        for e in await ems.observed_events(args.code, event_types=None, notations=None)
+        # the features become the "flooded" label: floods only, never the
+        # landslides or other events the same activation maps
+        for e in await ems.observed_events(args.code)
         if (args.aoi is None or e.product.aoi_number == args.aoi)
         and (args.product is None or e.product.label == args.product)
         and e.product.observed_time is not None
@@ -312,7 +314,7 @@ async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
             f"{plan.scene_pass.gap_hours:+.1f} h\tAOI {plan.coverage:.0%}\t{state}"
         )
     print(f"{len(to_fetch)} images to fetch, {total:.1f} PU estimated", file=sys.stderr)
-    if args.dry_run or not to_fetch:
+    if args.dry_run or not any(p.scene_pass for p in plans):
         return 0
     if total > args.budget_pu:
         print(

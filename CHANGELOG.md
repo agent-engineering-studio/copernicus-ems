@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-04
+
+### Fixed
+
+- `copernicus-ems pairs` labelled every feature of a product as flooded,
+  landslides and other events included (it asked `observed_events` with
+  `event_types=None`): the labels now hold floods only, as documented. A
+  product with no flood feature is no longer paired. The labels and the
+  `_pair.json` are now always rewritten (they are local and free), so
+  running `pairs` again over 0.5.0 pairs corrects them, and costs no PU:
+  the Sentinel-1 images are read from the cache.
+
 ### Added
 
 - `copernicus_ems.dataset` and `copernicus-ems dataset -o DIR`: the pairs

@@ -442,3 +442,63 @@ def test_the_pairs_command(
     assert main(argv) == 0  # all cached now
     assert len(fake.requests) == sent
     assert "cached" in capsys.readouterr().out
+
+
+def test_pairs_labels_floods_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A landslide over the whole AOI must not become water in the labels."""
+    from test_client import LAYER
+
+    fake = FakeCdse()
+    layer = json.loads((FIXTURES / LAYER).read_text())
+    aoi = event().product.aoi_extent
+    layer["features"].append(
+        {
+            "type": "Feature",
+            "geometry": aoi,
+            "properties": {"event_type": "6-Mass Movement", "notation": "Landslide"},
+        }
+    )
+
+    def with_landslide(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == "https://s3.example/layer.json":
+            return httpx.Response(200, json=layer)
+        return fake(request)
+
+    monkeypatch.setenv("CDSE_CLIENT_ID", "my-client")
+    monkeypatch.setenv("CDSE_CLIENT_SECRET", "s3cret")
+    real = httpx.AsyncClient
+
+    def patched(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        kwargs["transport"] = httpx.MockTransport(with_landslide)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", patched)
+    argv = [
+        "--dir",
+        str(tmp_path),
+        "pairs",
+        "EMSR762",
+        "--aoi",
+        "1",
+        "--resolution",
+        "100",
+        "--max-gap-hours",
+        "48",
+        "--min-coverage",
+        "0.1",
+    ]
+    assert main(argv) == 0
+    (labels,) = (tmp_path / "EMSR762" / "sentinel-1").glob("AOI01_DEL_PRODUCT_*_labels.tif")
+    flooded = np.count_nonzero(LabelRaster.from_geotiff(labels).labels == FLOODED)
+    observed = np.count_nonzero(LabelRaster.from_geotiff(labels).labels != IGNORE)
+    assert 0 < flooded < 0.01 * observed  # the 1.19 km² of flood, not the whole AOI
+
+    # labels written wrong (e.g. by 0.5.0) are corrected by running again, for free
+    stale = LabelRaster.from_geotiff(labels)
+    LabelRaster(np.full_like(stale.labels, FLOODED), stale.grid, stale.meta).to_geotiff(labels)
+    sent = len(fake.requests)
+    assert main(argv) == 0
+    assert np.count_nonzero(LabelRaster.from_geotiff(labels).labels == FLOODED) == flooded
+    assert len(fake.requests) == sent  # the image came from the cache
