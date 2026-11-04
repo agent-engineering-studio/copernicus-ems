@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `notebooks/01_flood_segmentation_s1.ipynb`: Italian EMS floods as labels,
+  Sentinel-1 from the Data Space as images, a VV threshold and a per-pixel
+  classifier trained on some areas and scored on others with `evaluate`;
+  ~94 PU once. The `notebook` workflow runs it on GitHub with the CDSE
+  secrets and a cached data directory. Dependency group `notebooks`.
+
 ## [0.5.1] - 2026-11-04
 
 ### Fixed

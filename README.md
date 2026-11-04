@@ -468,6 +468,14 @@ copernicus-ems dataset -o ./floods-s1 --size 256   # chips, index.csv, train/val
 Details:
 [Sentinel-1 backscatter](https://agentengineering.it/copernicus-ems/backscatter/).
 
+### A flood detector, trained and scored on EMS
+
+[`notebooks/01_flood_segmentation_s1.ipynb`](notebooks/01_flood_segmentation_s1.ipynb)
+goes from the Italian floods mapped since 2023 to two Sentinel-1 flood
+detectors (a VV threshold and a per-pixel classifier), split by area and
+scored only where EMS observed. About 94 PU the first time, nothing after.
+See [Notebooks](https://agentengineering.it/copernicus-ems/notebooks/).
+
 ### Ask an agent (MCP server, `[mcp]` extra)
 
 ```bash

@@ -68,6 +68,12 @@ docs = [
     "mkdocstrings[python]>=1.0.8",
     "zensical>=0.0.74",
 ]
+notebooks = [
+    "ipykernel>=7.4.0",
+    "matplotlib>=3.11.2",
+    "nbconvert>=7.17.2",
+    "scikit-learn>=1.9.1",
+]
 
 [tool.ruff]
 line-length = 100
@@ -78,6 +84,7 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "ARG", "PTH", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ARG", "B018"]
+"notebooks/**" = ["E501"]
 
 [tool.mypy]
 strict = true

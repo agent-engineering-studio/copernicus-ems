@@ -1,0 +1,52 @@
+# Runs notebooks/01_flood_segmentation_s1.ipynb on real data, on demand.
+# It spends Copernicus Data Space processing units (the CDSE_CLIENT_ID /
+# CDSE_CLIENT_SECRET secrets) only for images not in the cached data
+# directory: the first run about 94 PU, the next ones none. The executed
+# notebook and its figure are uploaded as an artifact.
+name: notebook
+
+on:
+  workflow_dispatch:
+    inputs:
+      budget_pu:
+        description: "Processing units the run may spend at most"
+        default: "100"
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      COPERNICUS_EMS_DATA_DIR: ${{ github.workspace }}/.ems-data
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Data directory (Sentinel-1 images already paid for)
+        uses: actions/cache@v4
+        with:
+          path: .ems-data
+          key: ems-data-${{ github.run_id }}
+          restore-keys: ems-data-
+      - run: uv sync --locked --extra cdse --group notebooks
+      - name: Execute the notebook
+        env:
+          CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
+          CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
+          NOTEBOOK_BUDGET_PU: ${{ inputs.budget_pu }}
+          NOTEBOOK_FIGURE: ${{ github.workspace }}/out/notebook-flood-s1.png
+        run: |
+          mkdir -p out
+          cp notebooks/01_flood_segmentation_s1.ipynb out/
+          uv run --no-sync jupyter nbconvert --to notebook --execute --inplace \
+            --ExecutePreprocessor.timeout=3600 out/01_flood_segmentation_s1.ipynb
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: notebook-flood-s1
+          path: out/
