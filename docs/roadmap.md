@@ -37,7 +37,7 @@ flowchart LR
 | 3 | `[geo]` extra: area stats :white_check_mark:, GeoParquet / GeoPackage export | geo | high | M | 0.3 |
 | 4 | **Mask-aware evaluation metrics** for flood models | AI | very high | M | 0.4 :white_check_mark: |
 | 5 | **Tri-state label rasters** and ML chips | AI | very high | M | 0.4 :white_check_mark: |
-| 6 | **MCP server**: Rapid Mapping as tools for LLM agents | AI | high | S–M | 0.5 |
+| 6 | **MCP server**: Rapid Mapping as tools for LLM agents | AI | high | S–M | 0.5 :white_check_mark: |
 | 7 | **Sentinel-1/2 pairing** via Copernicus Data Space STAC | AI | very high | L | 0.6 |
 | 8 | Fine-tuning notebooks on EO foundation models | AI | medium | M | 0.6 |
 | 9 | LLM situation reports from computed facts | AI | medium | M | later |
@@ -141,6 +141,10 @@ This is what makes Rapid Mapping a better label source than an AOI-only
 dataset.
 
 ### 3. MCP server: Rapid Mapping for LLM agents (0.5)
+
+!!! success "Done"
+    `copernicus-ems mcp`, with the four tools below and a
+    `situation_report` prompt. See [MCP server](mcp.md).
 
 Expose the library as a [Model Context Protocol](https://modelcontextprotocol.io/)
 server, so an agent (Claude, or any MCP client) can answer questions such

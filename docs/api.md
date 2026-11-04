@@ -43,6 +43,19 @@ Generated from the docstrings of the package.
     options:
       show_root_heading: false
 
+## MCP server (`[mcp]` extra)
+
+::: copernicus_ems.mcp_server
+    options:
+      show_root_heading: false
+      members:
+        - build_server
+        - list_activations
+        - activation_summary
+        - compare_products
+        - export_observed_events
+        - ATTRIBUTION
+
 ## Errors
 
 ::: copernicus_ems.errors.EmsError
