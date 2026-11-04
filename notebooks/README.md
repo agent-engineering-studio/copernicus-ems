@@ -73,6 +73,44 @@ flooded), over-predicts about twice the area: class weighting, a
 pre-event reference scene and the DEM are the next steps, and the
 same split is what a foundation model has to beat.
 
+## Results of notebook 02
+
+From [workflow run 41853533004](https://github.com/agent-engineering-studio/copernicus-ems/actions/runs/41853533004)
+(4 November 2026): all 24 pairs found a reference of the same relative
+orbit, 12 days before for 19 of them and 6 days before for 5, for 93.7 PU.
+The chips and the test areas are the same as in notebook 01.
+
+| Detector | Labels | CSI | POD | FAR | F1 | bias |
+|---|---|---:|---:|---:|---:|---:|
+| VV threshold | same image | 0.394 | 0.548 | 0.417 | 0.565 | 0.94 |
+| change threshold (VV < −14 dB, ΔVV < −4 dB) | same image | **0.417** | 0.552 | 0.369 | 0.589 | 0.87 |
+| classifier, one image | same image | 0.299 | 0.692 | 0.655 | 0.461 | 2.00 |
+| classifier, change | same image | 0.361 | 0.763 | 0.593 | 0.531 | 1.88 |
+| VV threshold | independent | 0.037 | 0.058 | 0.906 | 0.072 | 0.62 |
+| change threshold | independent | 0.040 | 0.040 | 0.108 | 0.077 | 0.05 |
+| classifier, one image | independent | 0.071 | 0.219 | 0.904 | 0.133 | 2.29 |
+| classifier, change | independent | 0.032 | 0.196 | 0.963 | 0.062 | 5.31 |
+
+![Independent test chips: VV before and during, ΔVV, EMS label, change predictions](https://raw.githubusercontent.com/agent-engineering-studio/copernicus-ems/main/docs/images/notebook-change-s1.png)
+
+**How to read them.**
+
+- **Where the label shares the image, change helps.** The change
+  threshold raises CSI from 0.39 to 0.42 and cuts false alarms (FAR 0.42 to
+  0.37). The change classifier gains 0.06 CSI over the one-image classifier.
+- **On independent labels it does not help, and the figure shows why.**
+  Those test maps were drawn on Pléiades and SPOT, very-high-resolution
+  optical images, as many small scattered polygons. At 40 m most of them are
+  a pixel or two, and ΔVV shows hardly any change there: the water was
+  shallow, short-lived or under cover, or it had receded in the 5–17 h
+  between the two acquisitions. The change threshold becomes very cautious
+  (bias 0.05, FAR 0.11): what it marks is mostly right, but it finds almost
+  nothing.
+- **What would move the independent score:** a finer grid (20 m or 10 m,
+  4–16 × the PU), keeping only pairs with a small `gap_hours`, and more
+  activations with independent maps of large floods. 28 test chips from two
+  areas are too few to separate the models from the label type.
+
 The notebooks are stored without outputs. Each one saves its figure in
 `docs/images/`.
 
