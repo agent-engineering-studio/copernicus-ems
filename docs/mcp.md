@@ -33,11 +33,6 @@ copernicus-ems mcp            # stdio; --dir to choose the data directory
     }
     ```
 
-!!! note
-    The `mcp` extra ships with the next release on PyPI (0.3.0); until
-    then, install from the repository:
-    `pip install 'copernicus-ems[mcp] @ git+https://github.com/agent-engineering-studio/copernicus-ems'`.
-
 ## Tools
 
 | Tool | Returns |
