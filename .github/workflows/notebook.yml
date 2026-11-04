@@ -2,7 +2,12 @@
 # It spends Copernicus Data Space processing units (the CDSE_CLIENT_ID /
 # CDSE_CLIENT_SECRET secrets) only for images not in the cached data
 # directory: the first run about 94 PU, the next ones none. The executed
-# notebook and its figure are uploaded as an artifact.
+# notebook and its figure are uploaded as an artifact, and so is the data
+# directory (`ems-data`: Sentinel-1 images, labels, pair manifests, EMS
+# layers), so other projects can reuse the images without spending PU:
+#
+#   gh run download <run id> -R agent-engineering-studio/copernicus-ems \
+#     -n ems-data -D "$COPERNICUS_EMS_DATA_DIR"
 name: notebook
 
 on:
@@ -50,3 +55,12 @@ jobs:
         with:
           name: notebook-flood-s1
           path: out/
+      - name: Data directory as an artifact (reuse it elsewhere at 0 PU)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ems-data
+          include-hidden-files: true
+          retention-days: 90
+          path: |
+            .ems-data/*/sentinel-1/
+            .ems-data/*/*.geojson

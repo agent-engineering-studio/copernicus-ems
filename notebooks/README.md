@@ -20,6 +20,23 @@ On GitHub, the **notebook** workflow (Actions → notebook → *Run workflow*)
 runs it with the repository's CDSE secrets, keeps the data directory in
 the Actions cache, and uploads the executed notebook and its figure.
 
+### Reuse the images elsewhere, at 0 PU
+
+Each run of the workflow also uploads the data directory as the
+`ems-data` artifact (kept 90 days): Sentinel-1 images, labels, pair
+manifests and EMS layers, in the layout copernicus-ems expects. Download
+it into another project's data directory (a Docker volume, for example)
+and `pairs` / `make_pair` find the images there and send nothing:
+
+```bash
+gh run download <run id> -R agent-engineering-studio/copernicus-ems \
+  -n ems-data -D "$COPERNICUS_EMS_DATA_DIR"
+```
+
+An image is reused only for the same request: same grid (AOI and
+resolution, 40 m here) and same pass choice (`min_coverage`, `max_gap`,
+`within` at their defaults). Labels are always rewritten locally, for free.
+
 The notebooks are stored without outputs. Each one saves its figure in
 `docs/images/`.
 
