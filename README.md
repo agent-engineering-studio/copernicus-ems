@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/agent-engineering-studio/copernicus-ems/actions/workflows/ci.yml"><img src="https://github.com/agent-engineering-studio/copernicus-ems/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
+  <a href="https://agent-engineering-studio.github.io/copernicus-ems/"><img src="https://img.shields.io/badge/docs-github%20pages-blue" alt="docs"></a>
   <a href="https://pypi.org/project/copernicus-ems/"><img src="https://img.shields.io/pypi/v/copernicus-ems" alt="PyPI"></a>
   <img src="https://img.shields.io/badge/python-3.12%20%7C%203.13-blue" alt="Python 3.12 | 3.13">
   <img src="https://img.shields.io/badge/typing-mypy%20strict-informational" alt="mypy strict">
@@ -25,6 +26,9 @@ async with RapidMapping() as ems:
 ```
 
 No account, no API key: the dashboard API is public. One dependency: `httpx`.
+
+📖 **Documentation, API reference and roadmap (AI included):**
+<https://agent-engineering-studio.github.io/copernicus-ems/>
 
 ---
 
