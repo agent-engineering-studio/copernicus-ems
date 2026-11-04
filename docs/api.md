@@ -49,6 +49,12 @@ Generated from the docstrings of the package.
     options:
       show_root_heading: false
 
+## Training dataset (`[ml]` extra)
+
+::: copernicus_ems.dataset
+    options:
+      show_root_heading: false
+
 ## Geometry (`[geo]` extra)
 
 ::: copernicus_ems.geo

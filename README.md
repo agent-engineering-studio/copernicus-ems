@@ -459,7 +459,13 @@ For each product it picks the nearest Sentinel-1 pass covering the AOI,
 asks the Sentinel Hub Process API for calibrated, orthorectified
 backscatter cut to the labels' grid, and writes image, labels and a
 `_pair.json` (time gap, coverage, credits) into the data directory, the
-same Docker volume as the layers. Details:
+same Docker volume as the layers. Then, offline and free:
+
+```bash
+copernicus-ems dataset -o ./floods-s1 --size 256   # chips, index.csv, train/val/test by area
+```
+
+Details:
 [Sentinel-1 backscatter](https://agentengineering.it/copernicus-ems/backscatter/).
 
 ### Ask an agent (MCP server, `[mcp]` extra)

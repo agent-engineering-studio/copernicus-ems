@@ -135,6 +135,27 @@ def _parser() -> argparse.ArgumentParser:
         "--dry-run", action="store_true", help="show the plan and its PU, send nothing"
     )
 
+    dataset = commands.add_parser(
+        "dataset",
+        help="chips + index + train/val/test from the pairs already fetched (ml extra)",
+    )
+    dataset.add_argument("codes", nargs="*", metavar="CODE", help="only these activations")
+    dataset.add_argument("-o", "--output", type=Path, required=True, help="dataset directory")
+    dataset.add_argument("--size", type=int, default=256, help="chip side, pixels (default 256)")
+    dataset.add_argument("--stride", type=int, help="pixels between chips (default: --size)")
+    dataset.add_argument(
+        "--min-observed", type=float, default=0.5, help="observed share of a chip (default 0.5)"
+    )
+    dataset.add_argument(
+        "--min-flooded", type=float, default=0.0, help="flooded share of observed (default 0)"
+    )
+    dataset.add_argument(
+        "--split",
+        default="0.7,0.15,0.15",
+        help="train,val,test ratios by area (default 0.7,0.15,0.15)",
+    )
+    dataset.add_argument("--seed", type=int, default=0, help="split seed (default 0)")
+
     commands.add_parser(
         "mcp", help="serve the MCP tools on stdio, for LLM agents (needs the mcp extra)"
     )
@@ -157,6 +178,8 @@ async def _run(args: argparse.Namespace, client: httpx.AsyncClient | None) -> in
             return await _scenes(ems, args)
         if args.command == "pairs":
             return await _pairs(ems, args)
+        if args.command == "dataset":
+            return _dataset(ems, args)
         return await _export(ems, args)
 
 
@@ -304,6 +327,36 @@ async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
             image, labels = await make_pair(hub, plan)
             print(f"{plan.product}\t{image.path}\t{labels}")
     print(f"{hub.pu_estimated:.1f} PU spent (estimated)", file=sys.stderr)
+    return 0
+
+
+def _dataset(ems: RapidMapping, args: argparse.Namespace) -> int:
+    try:
+        from copernicus_ems.dataset import build_dataset, find_pairs
+    except ImportError:  # pragma: no cover - without the ml extra
+        print("copernicus-ems: dataset needs: pip install 'copernicus-ems[ml]'", file=sys.stderr)
+        return 2
+    try:
+        ratios = [float(v) for v in args.split.split(",")]
+    except ValueError:
+        print(f"copernicus-ems: --split must be three numbers, got {args.split!r}", file=sys.stderr)
+        return 2
+    pairs = find_pairs(ems.directory, args.codes or None)
+    print(f"{len(pairs)} pairs in {ems.directory}", file=sys.stderr)
+    summary = build_dataset(
+        pairs,
+        args.output,
+        size=args.size,
+        stride=args.stride,
+        min_observed=args.min_observed,
+        min_flooded=args.min_flooded,
+        ratios=ratios,
+        seed=args.seed,
+    )
+    for split, count in summary.per_split.items():
+        areas = sorted(g for g, s in summary.groups.items() if s == split)
+        print(f"{split}\t{count} chips\t{', '.join(areas) or '-'}")
+    print(f"{summary.chips} chips -> {summary.directory}", file=sys.stderr)
     return 0
 
 
