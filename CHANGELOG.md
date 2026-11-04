@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- Documentation site on GitHub Pages (MkDocs Material, API reference from
+- Documentation site on GitHub Pages (Zensical, API reference from
   the docstrings) with a roadmap page: improvements and AI features.
 
 ## [0.2.0] - 2026-11-03

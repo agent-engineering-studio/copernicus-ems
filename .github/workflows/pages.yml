@@ -1,4 +1,4 @@
-# Builds the documentation site (mkdocs.yml, docs/, the docstrings) and
+# Builds the documentation site (zensical.toml, docs/, the docstrings) with Zensical and
 # deploys it to GitHub Pages. Needs, once: Settings → Pages → Source:
 # "GitHub Actions".
 name: pages
@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    paths: ["docs/**", "mkdocs.yml", "src/**", "CHANGELOG.md", ".github/workflows/pages.yml"]
+    paths: ["docs/**", "zensical.toml", "src/**", "CHANGELOG.md", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked --only-group docs
-      - run: uv run --no-sync mkdocs build --strict
+      - run: uv run --no-sync zensical build --strict --clean
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site/
