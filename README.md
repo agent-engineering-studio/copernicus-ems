@@ -478,6 +478,10 @@ scored only where EMS observed. About 94 PU the first time, nothing after.
 On labels drawn on the same Sentinel-1 image the threshold reaches CSI 0.39;
 on labels from other sensors both detectors stay under CSI 0.1 — the honest
 baseline for the next models.
+[`notebooks/02_change_detection_s1.ipynb`](notebooks/02_change_detection_s1.ipynb)
+adds a pre-event pass of the same orbit (`pairs --reference`): change
+detection lifts the same-image CSI to 0.42, but labels from very-high-resolution
+optical maps stay out of reach at 40 m.
 See [Notebooks](https://agentengineering.it/copernicus-ems/notebooks/).
 
 ### Ask an agent (MCP server, `[mcp]` extra)
