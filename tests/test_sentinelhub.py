@@ -618,3 +618,61 @@ def test_the_pairs_command_with_reference(
     assert len(fake.requests) == 2
     assert main(argv) == 0  # all cached
     assert len(fake.requests) == 2 and "0 images to fetch" in capsys.readouterr().err
+
+
+def test_send_routes_every_request_through_the_caller(tmp_path: Path) -> None:
+    """Like an application's fetch_with_retry: one shared client, its own policy."""
+    from copernicus_ems.sentinelhub import pu_to_spend
+
+    fake = FakeCdse()
+    seen: list[str] = []
+
+    def transport(request: httpx.Request) -> httpx.Response:
+        return with_references(request) if "stac" in str(request.url) else fake(request)
+
+    async def go() -> Any:
+        shared = httpx.AsyncClient(transport=httpx.MockTransport(transport))
+
+        async def send(request: httpx.Request) -> httpx.Response:
+            seen.append(f"{request.method} {request.url.host}")
+            return await shared.send(request)
+
+        async with RapidMapping(directory=tmp_path, send=send) as ems:
+            plan = await plan_pair(
+                ems, event(), resolution_m=100, max_gap=timedelta(hours=48), min_coverage=0.1
+            )
+            ref = await plan_reference(ems, plan, min_coverage=0.1)
+        before = pu_to_spend([plan, plan], [ref])
+        assert before == plan.pu + ref.pu  # a plan listed twice is one image
+        async with SentinelHub(CREDS, send=send) as hub:
+            await make_pair(hub, plan, reference=ref)
+        assert pu_to_spend([plan], [ref]) == 0  # both cached now
+        await shared.aclose()
+        return plan
+
+    asyncio.run(go())
+    hosts = {s.split(" ", 1)[1] for s in seen}
+    assert "stac.dataspace.copernicus.eu" in hosts and "sh.dataspace.copernicus.eu" in hosts
+    assert "POST identity.dataspace.copernicus.eu" in seen
+    assert len(fake.requests) == 2 and sum(s.startswith("POST sh.") for s in seen) == 2
+
+
+def test_send_means_no_retry_here_and_not_with_a_client() -> None:
+    calls = 0
+
+    async def send(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(503, json={"error": "busy"}, request=request)
+
+    async def go() -> None:
+        async with SentinelHub(CREDS, send=send) as hub:
+            with pytest.raises(EmsError, match="HTTP 503"):
+                await hub.token()
+
+    asyncio.run(go())
+    assert calls == 1  # the caller's policy decides; no RetryTransport underneath
+    with pytest.raises(ValueError, match="not both"):
+        SentinelHub(CREDS, httpx.AsyncClient(), send=send)
+    with pytest.raises(ValueError, match="not both"):
+        RapidMapping(httpx.AsyncClient(), send=send)

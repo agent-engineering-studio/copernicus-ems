@@ -195,6 +195,43 @@ class RetryTransport(httpx.AsyncBaseTransport):
         await self._transport.aclose()
 
 
+#: ``async (request) -> response``: sends one request in the caller's own way.
+Send = Callable[[httpx.Request], Awaitable[httpx.Response]]
+
+
+class SendTransport(httpx.AsyncBaseTransport):
+    """Hands every request to ``send`` (the caller's retry, rate limit, shared client).
+
+    No retry of its own: with ``send``, retrying is the caller's job.
+    """
+
+    def __init__(self, send: Send) -> None:
+        self._send = send
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        response = await self._send(request)
+        await response.aread()  # the bytes, whatever stream the caller's client used
+        return httpx.Response(
+            response.status_code,
+            headers=response.headers,
+            content=response.content,
+            request=request,
+            extensions={k: v for k, v in response.extensions.items() if k != "network_stream"},
+        )
+
+
+def open_client(
+    *, timeout: float, retries: int = 3, send: Send | None = None, follow_redirects: bool = True
+) -> httpx.AsyncClient:
+    """An HTTP client that retries (:class:`RetryTransport`), or sends through ``send``."""
+    transport: httpx.AsyncBaseTransport = (
+        SendTransport(send) if send is not None else RetryTransport(retries=retries)
+    )
+    return httpx.AsyncClient(
+        timeout=timeout, follow_redirects=follow_redirects, transport=transport
+    )
+
+
 class RapidMapping:
     """The functions above, with a client and a directory of their own.
 
@@ -202,6 +239,11 @@ class RapidMapping:
     :class:`RetryTransport`); use it as an async context manager, or call
     :meth:`aclose`, to close it. ``directory`` defaults to
     :func:`default_directory`, read when a layer is fetched.
+
+    ``send``, an ``async (httpx.Request) -> httpx.Response`` callable, routes
+    every request (Rapid Mapping, layers, STAC search) through the caller
+    instead, e.g. an application's shared client with its own retry policy;
+    no :class:`RetryTransport` is installed then.
     """
 
     def __init__(
@@ -210,11 +252,12 @@ class RapidMapping:
         *,
         directory: Path | None = None,
         retries: int = 3,
+        send: Send | None = None,
     ) -> None:
+        if client is not None and send is not None:
+            raise ValueError("give client or send, not both")
         self._own = client is None
-        self._client = client or httpx.AsyncClient(
-            timeout=60, follow_redirects=True, transport=RetryTransport(retries=retries)
-        )
+        self._client = client or open_client(timeout=60, retries=retries, send=send)
         self._directory = directory
 
     @property
