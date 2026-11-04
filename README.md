@@ -558,7 +558,14 @@ make check       # ruff + mypy --strict + pytest, the same gate as CI
 
 The tests **do not need the network**: they run against recorded answers
 of the real API in [`tests/fixtures/`](tests/fixtures/), and write only to
-a temporary folder.
+a temporary folder. Because the API is undocumented, a separate set of
+**contract tests** asks the live services the same questions every Monday
+([`live.yml`](.github/workflows/live.yml)) and opens an issue if their
+answers change shape:
+
+```bash
+COPERNICUS_EMS_LIVE=1 uv run pytest -m live --no-cov
+```
 
 ```text
 copernicus-ems/

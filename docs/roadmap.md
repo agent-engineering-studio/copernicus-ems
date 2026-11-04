@@ -236,9 +236,11 @@ a lower bound; outside the AOI is unknown, not dry).
 
 ## Operations and quality
 
-- **Contract tests against the live API**, weekly in CI (not on every
-  push): the API is undocumented and can change quietly; recorded
-  fixtures would not notice.
+- :white_check_mark: **Contract tests against the live API**, weekly in CI
+  (`.github/workflows/live.yml`, `tests/test_live.py`): the fields the
+  parser reads, the activation list, the EMSR762 layer against its
+  fixture, the Sentinel catalogue. A failure opens an issue labelled
+  `live-api`.
 - **Watch mode**: poll active activations, emit an event (webhook, file,
   MCP notification) when a new monitoring product appears.
 - **Property-based tests** (Hypothesis) for the parsers.

@@ -1,0 +1,55 @@
+# Contract tests against the live services: the Rapid Mapping dashboard API
+# is undocumented, and the recorded fixtures of the other tests cannot
+# notice when it changes. Weekly, and on demand; a failure opens (or
+# comments on) an issue labelled `live-api`.
+name: live
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"  # Mondays, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Live contract tests
+        env:
+          COPERNICUS_EMS_LIVE: "1"
+        run: uv run pytest -m live --no-cov -v -p no:cacheprovider
+
+  report:
+    needs: contract
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create live-api --repo "$GITHUB_REPOSITORY" --color B60205 \
+            --description "Live contract tests failed" 2>/dev/null || true
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label live-api --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$GITHUB_REPOSITORY" --body "Failed again: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --label live-api \
+              --title "Live contract tests failed" \
+              --body "The weekly check against Rapid Mapping / Copernicus Data Space failed: $RUN_URL
+
+          A service may have changed the shape of its answers. Compare with \`tests/fixtures/\`."
+          fi
