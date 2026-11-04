@@ -1,6 +1,6 @@
 [project]
 name = "copernicus-ems"
-version = "0.6.0"
+version = "0.7.0"
 description = "Client for Copernicus EMS Rapid Mapping: activations, observation masks, observed flood extents"
 readme = "README.md"
 keywords = ["copernicus", "emergency management", "rapid mapping", "flood", "geojson", "disaster", "remote sensing"]
