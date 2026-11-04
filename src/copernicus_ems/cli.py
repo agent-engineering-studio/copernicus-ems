@@ -33,6 +33,11 @@ EXPORT_CATEGORIES = ("Flood", "Storm")
 def main(argv: Sequence[str] | None = None, *, client: httpx.AsyncClient | None = None) -> int:
     """Run the command line; the exit status. ``client`` is for tests and embedding."""
     args = _parser().parse_args(argv)
+    if args.command == "mcp":  # pragma: no cover - blocks on stdio
+        from copernicus_ems.mcp_server import run
+
+        run(directory=args.dir)
+        return 0
     try:
         return asyncio.run(_run(args, client))
     except (EmsError, httpx.HTTPError) as exc:
@@ -86,6 +91,10 @@ def _parser() -> argparse.ArgumentParser:
     events(export)
     export.add_argument("-o", "--output", type=Path, required=True, help="the GeoJSON to write")
     export.add_argument("--masks", type=Path, help="also write the observation masks here")
+
+    commands.add_parser(
+        "mcp", help="serve the MCP tools on stdio, for LLM agents (needs the mcp extra)"
+    )
     return parser
 
 

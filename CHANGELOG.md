@@ -27,6 +27,12 @@ All notable changes to this project are documented here. The format follows
   bias; predictions outside the AOI reported, not counted) and training
   `chips`.
 
+- `copernicus-ems mcp` (extra `mcp`): an MCP server for LLM agents, with
+  the tools `list_activations`, `activation_summary`, `compare_products`
+  and `export_observed_events` and the prompt `situation_report`. Tools
+  return computed facts and file paths, never raw geometry; changes over
+  time are only computed between products of the same type.
+
 ### Changed
 
 - `fetch_observed_events` downloads the layers of an activation in

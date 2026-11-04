@@ -30,6 +30,8 @@ dependencies = [
 geo = ["shapely>=2.0", "pyproj>=3.6"]
 # Label rasters and mask-aware metrics for flood models.
 ml = ["copernicus-ems[geo]", "numpy>=1.26"]
+# MCP server for LLM agents: copernicus-ems mcp.
+mcp = ["copernicus-ems[geo]", "mcp>=2.3"]
 
 [project.scripts]
 copernicus-ems = "copernicus_ems.cli:main"
@@ -45,6 +47,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "mcp>=1.20",
     "mypy>=1.13",
     "numpy>=1.26",
     "pyproj>=3.6",

@@ -432,6 +432,19 @@ scores = evaluate(my_prediction, labels)  # CSI, POD, FAR only inside the AOI
 A model that predicts water outside the AOI is not penalised: nobody
 looked. Details: [Geometry & ML](https://agentengineering.it/copernicus-ems/ml/).
 
+### Ask an agent (MCP server, `[mcp]` extra)
+
+```bash
+pip install 'copernicus-ems[mcp]'
+claude mcp add copernicus-ems -- copernicus-ems mcp
+```
+
+Claude (or any MCP client) gets four tools: `list_activations`,
+`activation_summary`, `compare_products`, `export_observed_events`. They
+answer with computed facts (km², observation times, per AOI) and file
+paths, never thousands of polygons. Details:
+[MCP server](https://agentengineering.it/copernicus-ems/mcp/).
+
 ### Handle errors
 
 ```python
