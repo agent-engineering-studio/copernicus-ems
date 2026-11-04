@@ -18,7 +18,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Iterable
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 
@@ -37,7 +37,8 @@ from copernicus_ems.catalogue import Activation
 from copernicus_ems.client import ProductEvents, RapidMapping
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS, MASS_MOVEMENT_EVENT_TYPE
-from copernicus_ems.geo import ProductSummary, summarize
+from copernicus_ems.geo import ProductSummary, coverage, summarize
+from copernicus_ems.scenes import SENTINEL_1_GRD, SENTINEL_2_L2A, passes
 
 Hazard = Literal["flood", "landslide", "all"]
 
@@ -148,6 +149,40 @@ class AoiTimeline(TypedDict):
     hazard: str
     timeline: list[ProductChange]
     attribution: str
+
+
+class SourceImage(TypedDict):
+    sensor: str
+    sensor_type: str
+    resolution_class: str
+    acquisition_time: str
+
+
+class PassRow(TypedDict):
+    collection: str
+    platform: str
+    time: str
+    gap_hours: float
+    aoi_coverage: float
+    cloud_cover: float | None
+    scenes: list[str]
+    download_urls: list[str]
+
+
+class ProductScenes(TypedDict):
+    product: str
+    product_type: str
+    aoi_number: int
+    observed_time: str | None
+    made_from: list[SourceImage]
+    passes: list[PassRow]
+
+
+class SceneSearch(TypedDict):
+    code: str
+    window_days: float
+    products: list[ProductScenes]
+    note: str
 
 
 class Export(TypedDict):
@@ -285,6 +320,94 @@ async def export_observed_events(
     }
 
 
+_SENSORS = {"sentinel-1": SENTINEL_1_GRD, "sentinel-2": SENTINEL_2_L2A}
+
+SCENES_NOTE = (
+    "Searching the Copernicus Data Space catalogue is open; downloading a scene needs a "
+    "free account on https://dataspace.copernicus.eu. gap_hours is scene time minus the "
+    "product's observed_time: the larger it is, the more the water may have moved. "
+    "Sentinel-2 cloud_cover is for the whole tile, not the AOI."
+)
+
+
+async def find_scenes(
+    ems: RapidMapping,
+    code: str,
+    *,
+    aoi_number: int | None = None,
+    days: float = 3.0,
+    sensors: Iterable[str] = ("sentinel-1", "sentinel-2"),
+    max_cloud_cover: float | None = None,
+    min_coverage: float = 0.5,
+    per_product: int = 3,
+) -> SceneSearch:
+    """Open Sentinel passes over each product's AOI, nearest in time first."""
+    code = _code(code)
+    unknown = set(sensors) - set(_SENSORS)
+    if unknown:
+        raise ToolError(f"sensors must be among {', '.join(_SENSORS)}, got {sorted(unknown)}")
+    if not 0 < days <= 30:
+        raise ToolError("days must be between 0 and 30")
+    collections = [_SENSORS[s] for s in sensors]
+    events = await _events(ems, code, "all")
+    by_product = {e.product.label: e for e in events}
+    out: list[ProductScenes] = []
+    for product in await ems.products(code):
+        if aoi_number is not None and product.aoi_number != aoi_number:
+            continue
+        if product.observed_time is None or product.aoi_extent is None:
+            continue
+        found = passes(
+            await ems.scenes(
+                product,
+                collections=collections,
+                within=timedelta(days=days),
+                max_cloud_cover=max_cloud_cover,
+            )
+        )
+        event = by_product.get(product.label) or ProductEvents(product=product, features=[])
+        rows: list[PassRow] = []
+        for p in found:
+            share = await asyncio.to_thread(coverage, p.geometry, event)
+            if share < min_coverage:
+                continue
+            rows.append(
+                {
+                    "collection": p.collection,
+                    "platform": p.platform,
+                    "time": p.time.isoformat(),
+                    "gap_hours": round(p.gap_hours, 2),
+                    "aoi_coverage": round(share, 3),
+                    "cloud_cover": p.cloud_cover,
+                    "scenes": [s.id for s in p.scenes],
+                    "download_urls": [s.download_url for s in p.scenes if s.download_url],
+                }
+            )
+            if len(rows) >= per_product:
+                break
+        out.append(
+            {
+                "product": product.label,
+                "product_type": product.product_type,
+                "aoi_number": product.aoi_number,
+                "observed_time": product.observed_time.isoformat(),
+                "made_from": [
+                    {
+                        "sensor": i.sensor_name,
+                        "sensor_type": i.sensor_type,
+                        "resolution_class": i.resolution_class,
+                        "acquisition_time": i.acquisition_time.isoformat(),
+                    }
+                    for i in product.images
+                ],
+                "passes": rows,
+            }
+        )
+    if aoi_number is not None and not out:
+        raise ToolError(f"{code} has no product in AOI {aoi_number}")
+    return {"code": code, "window_days": days, "products": out, "note": SCENES_NOTE}
+
+
 def build_server(
     client: httpx.AsyncClient | None = None, *, directory: Path | None = None
 ) -> MCPServer[Any]:
@@ -355,6 +478,36 @@ def build_server(
         """Write the observed events of an activation (and its observation masks) as
         GeoJSON files on disk, for GIS tools; returns the paths, not the geometry."""
         return await _guard(export_observed_events(ems, code, hazard=hazard, with_masks=with_masks))
+
+    @server.tool(name="find_scenes", annotations=_READ_ONLY)
+    async def _scenes(
+        code: str,
+        aoi_number: int | None = None,
+        days: float = 3.0,
+        sensors: list[Literal["sentinel-1", "sentinel-2"]] | None = None,
+        max_cloud_cover: float | None = None,
+        min_coverage: float = 0.5,
+        per_product: int = 3,
+    ) -> SceneSearch:
+        """Open satellite passes (Sentinel-1 radar, Sentinel-2 optical) over each product's
+        AOI, within ± days of when the product was observed, nearest first.
+
+        Also says which (often commercial) images each product was made from.
+        aoi_coverage is the share of the AOI the pass covers; passes below
+        min_coverage are left out. Use it to pair labels with open imagery.
+        """
+        return await _guard(
+            find_scenes(
+                ems,
+                code,
+                aoi_number=aoi_number,
+                days=days,
+                sensors=sensors or ("sentinel-1", "sentinel-2"),
+                max_cloud_cover=max_cloud_cover,
+                min_coverage=min_coverage,
+                per_product=per_product,
+            )
+        )
 
     @server.prompt(name="situation_report", title="Situation report")
     def _report(code: str) -> str:

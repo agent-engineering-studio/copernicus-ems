@@ -41,6 +41,7 @@ copernicus-ems mcp            # stdio; --dir to choose the data directory
 | `activation_summary(code, hazard)` | per product: type, observed time, event km², observed (AOI) km², bbox; per AOI: largest and latest delineation |
 | `compare_products(code, aoi_number, hazard)` | one AOI's products in time order, with the change from the previous product **of the same type** |
 | `export_observed_events(code, hazard, with_masks)` | writes GeoJSON files (events, observation masks) and returns their **paths** |
+| `find_scenes(code, aoi_number, days, sensors, max_cloud_cover, min_coverage, per_product)` | per product: the images it was made from, and the open Sentinel-1/2 passes over its AOI with time gap, AOI coverage, cloud cover, download URLs ([details](scenes.md)) |
 
 `hazard` is `flood` (default), `landslide` or `all`. All tools are
 read-only towards Rapid Mapping; only `export_observed_events` writes, in

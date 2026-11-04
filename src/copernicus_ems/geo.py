@@ -79,6 +79,21 @@ def area_km2(geometry: BaseGeometry | dict[str, Any]) -> float:
     return abs(area) / 1e6
 
 
+def coverage(footprint: dict[str, Any] | BaseGeometry, event: ProductEvents) -> float:
+    """Share of the event's AOI inside ``footprint``, from 0 to 1.
+
+    ``footprint`` is lon/lat: ``Scene.geometry``, or ``ScenePass.geometry``
+    for every slice of one pass together.
+    """
+    aoi = mask(event)
+    total = area_km2(aoi)
+    if not total:
+        return 0.0
+    other = shape(footprint) if isinstance(footprint, dict) else footprint
+    seen = shapely.union_all(shapely.get_parts(shapely.make_valid(other)))
+    return min(area_km2(shapely.intersection(aoi, seen)) / total, 1.0)
+
+
 def summarize(event: ProductEvents) -> ProductSummary:
     """The :class:`ProductSummary` of one product."""
     found = flooded(event)

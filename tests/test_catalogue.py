@@ -188,3 +188,13 @@ def test_wkt_shapes() -> None:
     for bad in ["POINT (1 2)", "POLYGON ((0 0, 1 1)", "POLYGON ((a b, 1 1))", "POLYGON ((0 0)) x"]:
         with pytest.raises(EmsError):
             wkt_to_geojson(bad)
+
+
+def test_products_name_the_images_they_were_made_from() -> None:
+    products = parse_detail((FIXTURES / "detail_EMSR762.json").read_bytes())
+    (first,) = [p for p in products if p.label == "AOI01_DEL_PRODUCT"]
+    (image,) = first.images
+    assert image.sensor_name == "PAZ" and image.sensor_type == "sar"
+    assert image.resolution_class == "HR+"
+    assert image.acquisition_time == first.observed_time
+    assert all(p.images for p in products)

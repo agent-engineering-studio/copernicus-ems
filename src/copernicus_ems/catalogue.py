@@ -76,6 +76,21 @@ class Layer:
 
 
 @dataclass(frozen=True, slots=True)
+class Image:
+    """A satellite image a product was made from.
+
+    Often a commercial sensor (PAZ, COSMO-SkyMed, RADARSAT-2, Pléiades…),
+    not an open Sentinel one: see :mod:`copernicus_ems.scenes` for the
+    nearest open acquisitions.
+    """
+
+    acquisition_time: datetime
+    sensor_name: str
+    sensor_type: str
+    resolution_class: str
+
+
+@dataclass(frozen=True, slots=True)
 class Product:
     """One map product of one AOI."""
 
@@ -88,6 +103,7 @@ class Product:
     version: int
     acquisitions: tuple[datetime, ...]
     layers: dict[str, Layer] = field(default_factory=dict)
+    images: tuple[Image, ...] = ()
 
     @property
     def label(self) -> str:
@@ -260,6 +276,7 @@ def parse_detail(body: bytes | str) -> list[Product]:
                             )
                         ),
                         layers=_layers(product.get("layers") or []),
+                        images=_images(product.get("images") or []),
                     )
                 )
     return out
@@ -275,6 +292,20 @@ def _layers(raw: list[dict[str, Any]]) -> dict[str, Layer]:
         if found.kind not in out or found.version > out[found.kind].version:
             out[found.kind] = found
     return out
+
+
+def _images(raw: list[dict[str, Any]]) -> tuple[Image, ...]:
+    found = (
+        Image(
+            acquisition_time=when,
+            sensor_name=str(image.get("sensorName") or ""),
+            sensor_type=str(image.get("sensorType") or "").lower(),
+            resolution_class=str(image.get("resolutionClass") or ""),
+        )
+        for image in raw
+        if (when := parse_time(image.get("acquisitionTime"))) is not None
+    )
+    return tuple(sorted(found, key=lambda i: i.acquisition_time))
 
 
 def _countries(raw: Any) -> tuple[str, ...]:
