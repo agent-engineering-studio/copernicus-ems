@@ -40,7 +40,13 @@ from typing import Any, Literal
 
 import httpx
 
-from copernicus_ems.client import ProductEvents, RapidMapping, RetryTransport, default_directory
+from copernicus_ems.client import (
+    ProductEvents,
+    RapidMapping,
+    Send,
+    default_directory,
+    open_client,
+)
 from copernicus_ems.errors import EmsError
 from copernicus_ems.scenes import SENTINEL_1_GRD, SceneMatch, ScenePass, passes
 
@@ -239,6 +245,8 @@ class SentinelHub:
 
     Give it no ``client`` and it opens one that retries (see
     :class:`~copernicus_ems.RetryTransport`); use it as an async context manager.
+    With ``send`` (``async (httpx.Request) -> httpx.Response``) the token and
+    Process API requests go through the caller instead, with no retry here.
     """
 
     def __init__(
@@ -249,10 +257,15 @@ class SentinelHub:
         token_url: str = TOKEN_URL,
         process_url: str = PROCESS_URL,
         clock: Any = time.time,
+        send: Send | None = None,
     ) -> None:
+        if client is not None and send is not None:
+            raise ValueError("give client or send, not both")
         self._credentials = credentials
         self._own = client is None
-        self._client = client or httpx.AsyncClient(timeout=300, transport=RetryTransport(retries=3))
+        self._client = client or open_client(
+            timeout=300, retries=3, send=send, follow_redirects=False
+        )
         self._token_url = token_url
         self._process_url = process_url
         self._clock = clock
@@ -622,6 +635,25 @@ async def plan_pair(
     )
     labels = path.parent / f"{event.product.label}_{_res(grid)}m_{_grid_key(grid)}_labels.tif"
     return PairPlan(event, grid, chosen, share, pu, path, labels)
+
+
+def pu_to_spend(
+    plans: Sequence[PairPlan], references: Sequence[ReferencePlan | None] = ()
+) -> float:
+    """PU that :func:`make_pair` would spend on these plans (and references), all told.
+
+    Images already in the data directory cost nothing, and an image shared by
+    several products (one pass, one grid) is counted once: check this
+    against a budget before calling :func:`make_pair`.
+    """
+    unique: dict[Path, float] = {}
+    for plan in plans:
+        if plan.scene_pass is not None and plan.backscatter_path is not None:
+            unique.setdefault(plan.backscatter_path, plan.pu)
+    for ref in references:
+        if ref is not None and ref.scene_pass is not None and ref.backscatter_path is not None:
+            unique.setdefault(ref.backscatter_path, ref.pu)
+    return sum(pu for path, pu in unique.items() if not path.is_file())
 
 
 #: Sentinel-1 repeats a relative orbit every 12 days (6 with two satellites).

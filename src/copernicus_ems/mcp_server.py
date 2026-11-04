@@ -4,6 +4,13 @@ Needs the ``mcp`` extra (``pip install 'copernicus-ems[mcp]'``), then:
 
     copernicus-ems mcp                       # stdio, for Claude Desktop / Claude Code
     claude mcp add copernicus-ems -- copernicus-ems mcp
+    copernicus-ems-mcp --transport streamable-http --host 0.0.0.0 --port 8768
+
+Over HTTP the MCP endpoint is ``/mcp`` and ``GET /health`` answers
+``{"status": "ok"}`` for container healthchecks. Every option also reads an
+environment variable (``COPERNICUS_EMS_MCP_TRANSPORT``, ``_HOST``, ``_PORT``,
+``_ALLOWED_HOSTS``; the data directory from ``COPERNICUS_EMS_DATA_DIR``), so
+a compose file needs no command line.
 
 The tools answer with **facts and file paths**, never raw geometry: an
 activation can hold thousands of polygons, which help no model reason.
@@ -14,17 +21,22 @@ everywhere else in the library, so repeated questions cost nothing.
 
 from __future__ import annotations
 
+import argparse
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Iterable
+import os
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict, cast
 
 try:
     from mcp.server.mcpserver import MCPServer
     from mcp.server.mcpserver.exceptions import ToolError
+    from mcp.server.transport_security import TransportSecuritySettings
     from mcp_types import ToolAnnotations
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse, Response
 except ImportError as exc:  # pragma: no cover - exercised only without the extra
     raise ImportError(
         "copernicus_ems.mcp_server needs the mcp extra: pip install 'copernicus-ems[mcp]'"
@@ -526,15 +538,102 @@ def build_server(
             f"End with: {ATTRIBUTION}"
         )
 
+    async def health(_request: Request) -> Response:
+        """``GET /health`` over HTTP, for container healthchecks."""
+        from copernicus_ems import __version__
+
+        return JSONResponse({"status": "ok", "server": "copernicus-ems", "version": __version__})
+
+    # custom_route is untyped in the SDK: register the typed handler through a cast.
+    route = cast(Callable[[Any], Any], server.custom_route("/health", methods=["GET"]))
+    route(health)
+
     return server
 
 
-def run(directory: Path | None = None) -> None:  # pragma: no cover - blocks on stdio
-    """Serve on standard input and output."""
+TRANSPORTS = ("stdio", "streamable-http")
+#: The HTTP port when none is given (idrogeo-mcp uses 8767).
+DEFAULT_PORT = 8768
+
+
+def add_options(parser: argparse.ArgumentParser, environ: Mapping[str, str]) -> None:
+    """The transport options, each default from its ``COPERNICUS_EMS_MCP_*`` variable."""
+    parser.add_argument(
+        "--transport",
+        choices=TRANSPORTS,
+        default=environ.get("COPERNICUS_EMS_MCP_TRANSPORT", "stdio"),
+        help="stdio (default) or streamable-http, served at /mcp",
+    )
+    parser.add_argument(
+        "--host",
+        default=environ.get("COPERNICUS_EMS_MCP_HOST", "127.0.0.1"),
+        help="HTTP address (default 127.0.0.1; 0.0.0.0 in a container)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(environ.get("COPERNICUS_EMS_MCP_PORT", str(DEFAULT_PORT))),
+        help=f"HTTP port (default {DEFAULT_PORT})",
+    )
+    parser.add_argument(
+        "--allowed-host",
+        action="append",
+        default=[
+            h.strip()
+            for h in environ.get("COPERNICUS_EMS_MCP_ALLOWED_HOSTS", "").split(",")
+            if h.strip()
+        ],
+        metavar="HOST[:PORT]",
+        help="accept only these Host headers (DNS rebinding protection); repeatable",
+    )
+
+
+def options(
+    argv: Sequence[str] | None = None, environ: Mapping[str, str] = os.environ
+) -> argparse.Namespace:
+    """The command line of ``copernicus-ems-mcp``: flags win over the environment."""
+    parser = argparse.ArgumentParser(
+        prog="copernicus-ems-mcp", description="Copernicus EMS Rapid Mapping as an MCP server."
+    )
+    parser.add_argument(
+        "--dir", type=Path, help="data directory (default: $COPERNICUS_EMS_DATA_DIR or the cache)"
+    )
+    add_options(parser, environ)
+    args = parser.parse_args(argv)
+    if args.transport not in TRANSPORTS:
+        parser.error(f"unknown transport {args.transport!r}: one of {', '.join(TRANSPORTS)}")
+    return args
+
+
+def http_options(args: argparse.Namespace) -> dict[str, Any]:
+    """The keyword arguments of ``MCPServer.run`` for the HTTP transport."""
+    found: dict[str, Any] = {"host": args.host, "port": args.port, "streamable_http_path": "/mcp"}
+    if args.allowed_host:
+        found["transport_security"] = TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=[h.strip() for h in args.allowed_host],
+        )
+    return found
+
+
+def run(
+    directory: Path | None = None, args: argparse.Namespace | None = None
+) -> None:  # pragma: no cover - blocks on stdio or a socket
+    """Serve on stdio, or over streamable HTTP when ``args.transport`` says so."""
     import logging
 
     logging.getLogger("httpx").setLevel(logging.WARNING)  # one line per request otherwise
-    build_server(directory=directory).run("stdio")
+    server = build_server(directory=directory)
+    if args is None or args.transport == "stdio":
+        server.run("stdio")
+    else:
+        server.run("streamable-http", **http_options(args))
+
+
+def main(argv: Sequence[str] | None = None) -> None:  # pragma: no cover - runs a server
+    """Entry point of ``copernicus-ems-mcp``."""
+    args = options(argv)
+    run(directory=args.dir, args=args)
 
 
 async def _guard[T](call: Awaitable[T]) -> T:

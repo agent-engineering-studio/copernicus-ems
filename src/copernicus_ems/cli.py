@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
@@ -38,7 +39,7 @@ def main(argv: Sequence[str] | None = None, *, client: httpx.AsyncClient | None 
     if args.command == "mcp":  # pragma: no cover - blocks on stdio
         from copernicus_ems.mcp_server import run
 
-        run(directory=args.dir)
+        run(directory=args.dir, args=args)
         return 0
     try:
         return asyncio.run(_run(args, client))
@@ -172,9 +173,11 @@ def _parser() -> argparse.ArgumentParser:
         help="pairs with a pre-event image only; chips get VV_pre, VH_pre bands",
     )
 
-    commands.add_parser(
-        "mcp", help="serve the MCP tools on stdio, for LLM agents (needs the mcp extra)"
+    mcp = commands.add_parser(
+        "mcp",
+        help="serve the MCP tools on stdio or streamable HTTP, for LLM agents (mcp extra)",
     )
+    _mcp_options(mcp)
     return parser
 
 
@@ -403,6 +406,14 @@ def _dataset(ems: RapidMapping, args: argparse.Namespace) -> int:
         print(f"{split}\t{count} chips\t{', '.join(areas) or '-'}")
     print(f"{summary.chips} chips -> {summary.directory}", file=sys.stderr)
     return 0
+
+
+def _mcp_options(parser: argparse.ArgumentParser) -> None:
+    try:
+        from copernicus_ems.mcp_server import add_options
+    except ImportError:  # without the mcp extra: stdio only, and run() explains
+        return
+    add_options(parser, os.environ)
 
 
 def _done(path: Path | None) -> bool:

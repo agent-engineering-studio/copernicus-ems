@@ -6,6 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The MCP server over **streamable HTTP**: `copernicus-ems-mcp` (new console
+  script) and `copernicus-ems mcp` take `--transport stdio|streamable-http`,
+  `--host`, `--port` (default 8768) and `--allowed-host` (the `Host`-header
+  allowlist against DNS rebinding), each also from
+  `COPERNICUS_EMS_MCP_TRANSPORT` / `_HOST` / `_PORT` / `_ALLOWED_HOSTS`; the
+  endpoint is `/mcp`, and `GET /health` answers for container healthchecks.
+  stdio stays the default.
+- `send=` on `RapidMapping` and `SentinelHub`: an `async (httpx.Request) ->
+  httpx.Response` callable that every request goes through (Rapid Mapping,
+  layers, STAC, token, Process API), for applications with their own
+  client and retry policy; no `RetryTransport` is installed then.
+  `SendTransport`, `Send`.
+- `pu_to_spend(plans, references)`: the PU `make_pair` would spend, cached
+  and shared images counted once, to check a budget before sending.
+
 ## [0.6.0] - 2026-11-04
 
 ### Added

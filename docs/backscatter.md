@@ -200,6 +200,37 @@ async with RapidMapping() as ems, SentinelHub() as hub:
         image, labels = await make_pair(hub, plan, budget_pu=200)
 ```
 
+### Check a budget first, send through your own client
+
+`pu_to_spend(plans, references)` totals what `make_pair` would spend:
+cached images count zero, and an image shared by several products
+counts once. It is free, so an application can check its monthly budget
+before sending anything:
+
+```python
+from copernicus_ems.sentinelhub import plan_reference, pu_to_spend
+
+plans = [await plan_pair(ems, e, resolution_m=40) for e in events]
+refs = [await plan_reference(ems, p) for p in plans]
+if pu_to_spend(plans, refs) > budget_left:
+    ...
+```
+
+An application with its own HTTP policy (a shared client, its retries, a
+rate limit) passes `send`, an `async (httpx.Request) -> httpx.Response`
+callable, to both clients. Every request then goes through it: Rapid
+Mapping, layers, STAC, token, Process API. The library adds no retry of
+its own:
+
+```python
+async def send(request: httpx.Request) -> httpx.Response:
+    return await my_fetch_with_retry(shared_client, request)
+
+
+async with RapidMapping(send=send) as ems, SentinelHub(send=send) as hub:
+    ...
+```
+
 Lower level: `fetch_backscatter(hub, grid, start, end, path=…)` for any
 grid and time range, `backscatter_request` for the JSON the API receives,
 `estimate_pu`, `tiles`.

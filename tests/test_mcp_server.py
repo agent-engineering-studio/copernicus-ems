@@ -303,3 +303,63 @@ def test_export_as_geoparquet(data_dir: Path) -> None:
     assert out["events_path"].endswith("EMSR762_flood.parquet")
     assert pq.read_table(out["events_path"]).num_rows == 43
     assert out["masks_path"].endswith("_masks.parquet")
+
+
+def test_transport_options_from_flags_and_the_environment() -> None:
+    from copernicus_ems import mcp_server
+
+    default = mcp_server.options([], environ={})
+    assert (default.transport, default.host, default.port, default.allowed_host, default.dir) == (
+        "stdio",
+        "127.0.0.1",
+        8768,
+        [],
+        None,
+    )
+    env = {
+        "COPERNICUS_EMS_MCP_TRANSPORT": "streamable-http",
+        "COPERNICUS_EMS_MCP_HOST": "0.0.0.0",
+        "COPERNICUS_EMS_MCP_PORT": "9000",
+        "COPERNICUS_EMS_MCP_ALLOWED_HOSTS": "copernicus-ems-mcp:*, localhost:*,",
+    }
+    from_env = mcp_server.options([], environ=env)
+    assert (from_env.transport, from_env.host, from_env.port) == (
+        "streamable-http",
+        "0.0.0.0",
+        9000,
+    )
+    security = mcp_server.http_options(from_env)["transport_security"]
+    assert security.enable_dns_rebinding_protection
+    assert security.allowed_hosts == ["copernicus-ems-mcp:*", "localhost:*"]
+    flags = mcp_server.options(
+        ["--port", "8000", "--transport", "stdio", "--dir", "/d"], environ=env
+    )
+    assert (flags.port, flags.transport, flags.dir) == (8000, "stdio", Path("/d"))
+    assert mcp_server.http_options(default) == {
+        "host": "127.0.0.1",
+        "port": 8768,
+        "streamable_http_path": "/mcp",
+    }
+    with pytest.raises(SystemExit):
+        mcp_server.options([], environ={"COPERNICUS_EMS_MCP_TRANSPORT": "sse"})
+
+
+def test_the_cli_mcp_command_takes_the_same_options() -> None:
+    from copernicus_ems.cli import _parser
+
+    args = _parser().parse_args(["mcp", "--transport", "streamable-http", "--port", "8100"])
+    assert (args.transport, args.port, args.host) == ("streamable-http", 8100, "127.0.0.1")
+
+
+def test_health_and_mcp_over_http(tmp_path: Path) -> None:
+    from starlette.testclient import TestClient
+
+    from copernicus_ems import __version__
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    app = build_server(client, directory=tmp_path).streamable_http_app()
+    with TestClient(app) as http:
+        health = http.get("/health")
+        assert health.status_code == 200
+        assert health.json() == {"status": "ok", "server": "copernicus-ems", "version": __version__}
+        assert 400 <= http.get("/mcp").status_code < 500  # no session: refused, but alive

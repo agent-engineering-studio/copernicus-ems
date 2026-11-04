@@ -8,6 +8,7 @@ evolve?"* from the published layers, not from memory.
 ```bash
 pip install 'copernicus-ems[mcp]'
 copernicus-ems mcp            # stdio; --dir to choose the data directory
+copernicus-ems-mcp --transport streamable-http --port 8768   # HTTP, at /mcp
 ```
 
 ## Connect it
@@ -32,6 +33,44 @@ copernicus-ems mcp            # stdio; --dir to choose the data directory
       }
     }
     ```
+
+=== "Over HTTP (Docker)"
+
+    For an agent that reaches its tools over the network, serve the
+    streamable-HTTP transport. The MCP endpoint is `/mcp`, and `GET /health`
+    answers `{"status": "ok", "server": "copernicus-ems", "version": …}`
+    for the healthcheck. Every option has an environment variable, so a
+    compose file needs no command line:
+
+    ```yaml
+    copernicus-ems-mcp:
+      image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+      command: uvx --from 'copernicus-ems[mcp]~=0.7.0' copernicus-ems-mcp
+      environment:
+        COPERNICUS_EMS_MCP_TRANSPORT: streamable-http
+        COPERNICUS_EMS_MCP_HOST: 0.0.0.0            # listen inside the container
+        COPERNICUS_EMS_MCP_PORT: "8768"
+        COPERNICUS_EMS_MCP_ALLOWED_HOSTS: copernicus-ems-mcp:*,localhost:*
+        COPERNICUS_EMS_DATA_DIR: /data              # layers and exports persist here
+      volumes:
+        - ems-data:/data
+      healthcheck:
+        test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8768/health')"]
+    ```
+
+    | Variable | Flag | Default |
+    |---|---|---|
+    | `COPERNICUS_EMS_MCP_TRANSPORT` | `--transport` | `stdio` (or `streamable-http`) |
+    | `COPERNICUS_EMS_MCP_HOST` | `--host` | `127.0.0.1` |
+    | `COPERNICUS_EMS_MCP_PORT` | `--port` | `8768` |
+    | `COPERNICUS_EMS_MCP_ALLOWED_HOSTS` | `--allowed-host` (repeatable) | none |
+    | `COPERNICUS_EMS_DATA_DIR` | `--dir` | the user cache |
+
+    Flags win over the environment. On a `0.0.0.0` bind, set
+    `COPERNICUS_EMS_MCP_ALLOWED_HOSTS` to the names clients use: only those
+    `Host` headers are accepted, which guards against DNS rebinding. The
+    server has no authentication of its own: keep it on an internal
+    network. `copernicus-ems mcp` takes the same options.
 
 ## Tools
 
