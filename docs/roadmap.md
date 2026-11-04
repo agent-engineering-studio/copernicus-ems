@@ -38,7 +38,7 @@ flowchart LR
 | 4 | **Mask-aware evaluation metrics** for flood models | AI | very high | M | 0.4 :white_check_mark: |
 | 5 | **Tri-state label rasters** and ML chips | AI | very high | M | 0.4 :white_check_mark: |
 | 6 | **MCP server**: Rapid Mapping as tools for LLM agents | AI | high | S–M | 0.5 :white_check_mark: |
-| 7 | **Sentinel-1/2 pairing** via Copernicus Data Space STAC | AI | very high | L | 0.6 |
+| 7 | **Sentinel-1/2 pairing** via Copernicus Data Space STAC | AI | very high | L | 0.4 :white_check_mark: (search; download needs an account) |
 | 8 | Fine-tuning notebooks on EO foundation models | AI | medium | M | 0.6 |
 | 9 | LLM situation reports from computed facts | AI | medium | M | later |
 | 10 | Watch mode: new monitoring products → webhook / event | core | medium | M | later |
@@ -143,7 +143,7 @@ dataset.
 ### 3. MCP server: Rapid Mapping for LLM agents (0.5)
 
 !!! success "Done"
-    `copernicus-ems mcp`, with the four tools below and a
+    `copernicus-ems mcp`, with the tools below (and `find_scenes`) and a
     `situation_report` prompt. See [MCP server](mcp.md).
 
 Expose the library as a [Model Context Protocol](https://modelcontextprotocol.io/)
@@ -167,7 +167,17 @@ Design notes:
   `copernicus-ems mcp` command, usable from Claude Desktop / Claude Code
   with one line of configuration.
 
-### 4. Sentinel-1/2 pairing (0.6)
+### 4. Sentinel-1/2 pairing
+
+!!! success "Done: finding the scenes"
+    `find_scenes`, `passes`, `geo.coverage`, `copernicus-ems scenes` and
+    the MCP tool `find_scenes`. See [Open imagery](scenes.md). Downloading
+    and reading the rasters stay with the user (Data Space account,
+    rasterio).
+
+    Found on the way: products are mostly made from commercial images
+    (`Product.images`), so the open scene is a *neighbour* in time, and the
+    nearest one may cover a sliver of the AOI.
 
 Labels are only half of a dataset. For each product, find the satellite
 scene it was made from (or the nearest Sentinel-1 SAR / Sentinel-2

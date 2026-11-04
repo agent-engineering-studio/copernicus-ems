@@ -19,7 +19,7 @@ import asyncio
 import os
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from types import TracebackType
 from typing import Any
@@ -43,6 +43,7 @@ from copernicus_ems.events import (
     parse_layer,
     select_features,
 )
+from copernicus_ems.scenes import SceneMatch, find_scenes
 
 _RETRY_STATUS = frozenset({429, 502, 503, 504})
 
@@ -253,6 +254,23 @@ class RapidMapping:
     async def products(self, code: str) -> list[Product]:
         """The products of one activation (``EMSR762``)."""
         return await fetch_products(self._client, code)
+
+    async def scenes(
+        self,
+        product: Product,
+        *,
+        collections: Iterable[str] = ("sentinel-1-grd",),
+        within: timedelta = timedelta(days=3),
+        max_cloud_cover: float | None = None,
+    ) -> list[SceneMatch]:
+        """Open Sentinel scenes near the product, nearest first: see :func:`find_scenes`."""
+        return await find_scenes(
+            self._client,
+            product,
+            collections=collections,
+            within=within,
+            max_cloud_cover=max_cloud_cover,
+        )
 
     async def layer(self, product: Product, kind: str) -> dict[str, Any] | None:
         """One vector layer as GeoJSON, cached; ``None`` if the product has none of that kind."""

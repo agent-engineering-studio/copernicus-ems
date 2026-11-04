@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `Product.images`: the satellite images a product was made from (sensor,
+  type, resolution class, time), often commercial (PAZ, COSMO-SkyMed,
+  RADARSAT-2, Pléiades).
+- `copernicus_ems.scenes`: open Sentinel-1/2 scenes over a product's AOI
+  from the Copernicus Data Space STAC catalogue (no account to search):
+  `find_scenes` / `RapidMapping.scenes` nearest first with the time `gap`,
+  `passes` to group slices and tiles of one pass, pure `scene_search_body`
+  and `parse_scenes`.
+- `geo.coverage`: the share of an AOI a scene or a pass covers.
+- `copernicus-ems scenes CODE` and the MCP tool `find_scenes`.
+
 ## [0.3.0] - 2026-11-04
 
 ### Added

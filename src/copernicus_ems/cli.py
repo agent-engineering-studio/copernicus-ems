@@ -15,7 +15,7 @@ import asyncio
 import json
 import sys
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -25,6 +25,7 @@ from copernicus_ems.catalogue import Activation
 from copernicus_ems.client import ProductEvents, RapidMapping
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS
+from copernicus_ems.scenes import SENTINEL_1_GRD, SENTINEL_2_L2A, ScenePass, passes
 
 #: Many floods are filed as ``Storm``: the features are filtered on ``5-Flood`` anyway.
 EXPORT_CATEGORIES = ("Flood", "Storm")
@@ -92,6 +93,17 @@ def _parser() -> argparse.ArgumentParser:
     export.add_argument("-o", "--output", type=Path, required=True, help="the GeoJSON to write")
     export.add_argument("--masks", type=Path, help="also write the observation masks here")
 
+    scenes = commands.add_parser(
+        "scenes", help="open Sentinel passes over the products of an activation, nearest first"
+    )
+    scenes.add_argument("code", metavar="CODE", help="e.g. EMSR762")
+    scenes.add_argument("--aoi", type=int, help="only this AOI number")
+    scenes.add_argument("--days", type=float, default=3.0, help="search window, ± days (default 3)")
+    scenes.add_argument("--optical", action="store_true", help="add Sentinel-2 L2A to Sentinel-1")
+    scenes.add_argument("--max-cloud", type=float, help="drop optical scenes cloudier than this %%")
+    scenes.add_argument("--top", type=int, default=3, help="passes per product (default 3)")
+    scenes.add_argument("--json", action="store_true", help="one JSON object per pass")
+
     commands.add_parser(
         "mcp", help="serve the MCP tools on stdio, for LLM agents (needs the mcp extra)"
     )
@@ -110,6 +122,8 @@ async def _run(args: argparse.Namespace, client: httpx.AsyncClient | None) -> in
                 _report(code, found, sys.stderr)
             print(f"saved in {ems.directory}", file=sys.stderr)
             return 0
+        if args.command == "scenes":
+            return await _scenes(ems, args)
         return await _export(ems, args)
 
 
@@ -163,6 +177,63 @@ async def _export(ems: RapidMapping, args: argparse.Namespace) -> int:
         _write(args.masks, masks)
         print(f"{len(masks)} observation masks -> {args.masks}", file=sys.stderr)
     return 0
+
+
+async def _scenes(ems: RapidMapping, args: argparse.Namespace) -> int:
+    try:
+        from copernicus_ems.geo import coverage
+    except ImportError:  # pragma: no cover - without the geo extra
+        print("copernicus-ems: scenes needs the geo extra: pip install 'copernicus-ems[geo]'")
+        return 2
+    collections = [SENTINEL_1_GRD, SENTINEL_2_L2A] if args.optical else [SENTINEL_1_GRD]
+    products = await ems.products(args.code)
+    events = {
+        e.product.label: e
+        for e in await ems.observed_events(args.code, event_types=None, notations=None)
+    }
+    for product in products:
+        if args.aoi is not None and product.aoi_number != args.aoi:
+            continue
+        if product.observed_time is None or product.aoi_extent is None:
+            continue
+        found = passes(
+            await ems.scenes(
+                product,
+                collections=collections,
+                within=timedelta(days=args.days),
+                max_cloud_cover=args.max_cloud,
+            )
+        )[: args.top]
+        sources = ", ".join(f"{i.sensor_name} ({i.resolution_class})" for i in product.images)
+        if not args.json:
+            when = f"{product.observed_time:%Y-%m-%d %H:%M}"
+            print(f"{product.label}\t{when}\tmade from {sources or '?'}")
+        for p in found:
+            event = events.get(product.label) or ProductEvents(product=product, features=[])
+            print(_pass_line(p, coverage(p.geometry, event), as_json=args.json))
+    return 0
+
+
+def _pass_line(p: ScenePass, cover: float, *, as_json: bool) -> str:
+    if as_json:
+        return json.dumps(
+            {
+                "product": p.product.label,
+                "collection": p.collection,
+                "platform": p.platform,
+                "time": p.time.isoformat(),
+                "gap_hours": round(p.gap_hours, 2),
+                "aoi_coverage": round(cover, 3),
+                "cloud_cover": p.cloud_cover,
+                "scenes": [s.id for s in p.scenes],
+                "download_urls": [s.download_url for s in p.scenes if s.download_url],
+            }
+        )
+    cloud = "" if p.cloud_cover is None else f"\tcloud {p.cloud_cover:.0f}%"
+    return (
+        f"  {p.gap_hours:+7.1f} h\t{p.collection}\t{len(p.scenes)} scenes\t"
+        f"AOI {cover:.0%}{cloud}\t{p.scenes[0].id}"
+    )
 
 
 def _tags(event: ProductEvents) -> dict[str, Any]:

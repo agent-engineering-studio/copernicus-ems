@@ -48,6 +48,7 @@ def test_the_tools_and_prompt_are_advertised() -> None:
         "activation_summary",
         "compare_products",
         "export_observed_events",
+        "find_scenes",
     }
     assert by_name["activation_summary"].annotations.read_only_hint is True
     assert by_name["export_observed_events"].annotations.read_only_hint is False
@@ -235,3 +236,61 @@ def test_changes_compare_like_with_like() -> None:
     (aoi,) = _aois(rows)
     assert aoi["latest_product"] == "AOI01_DEL_MONIT01"  # not the later GRA map
     assert aoi["product_types"] == ["DEL", "GRA"]
+
+
+def test_find_scenes_pairs_products_with_open_passes() -> None:
+    from test_scenes import stac_handler
+
+    transport = httpx.MockTransport(stac_handler)
+    error, out = call(
+        "find_scenes", {"code": "EMSR762", "aoi_number": 1, "min_coverage": 0}, transport
+    )
+    assert not error
+    assert "account" in out["note"]
+    first = next(p for p in out["products"] if p["product"] == "AOI01_DEL_PRODUCT")
+    assert first["made_from"][0]["sensor"] == "PAZ"
+    assert 0 < len(first["passes"]) <= 3
+    gaps = [abs(p["gap_hours"]) for p in first["passes"]]
+    assert gaps == sorted(gaps)
+    assert all(p["download_urls"] for p in first["passes"])
+
+    _, radar = call(
+        "find_scenes",
+        {"code": "EMSR762", "aoi_number": 1, "sensors": ["sentinel-1"], "min_coverage": 0},
+        transport,
+    )
+    first = next(p for p in radar["products"] if p["product"] == "AOI01_DEL_PRODUCT")
+    assert {p["collection"] for p in first["passes"]} == {"sentinel-1-grd"}
+
+    _, strict = call(
+        "find_scenes", {"code": "EMSR762", "aoi_number": 1, "min_coverage": 1.01}, transport
+    )
+    assert all(p["passes"] == [] for p in strict["products"])
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        ({"code": "EMSR762", "days": 0}, "days"),
+        ({"code": "EMSR762", "aoi_number": 99}, "AOI 99"),
+    ],
+)
+def test_find_scenes_rejects_bad_arguments(arguments: dict[str, Any], message: str) -> None:
+    from test_scenes import stac_handler
+
+    error, text = call("find_scenes", arguments, httpx.MockTransport(stac_handler))
+    assert error and message in text
+
+
+def test_find_scenes_unknown_sensor() -> None:
+    from mcp.server.mcpserver.exceptions import ToolError
+
+    from copernicus_ems import RapidMapping
+    from copernicus_ems.mcp_server import find_scenes
+
+    async def main() -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+            await find_scenes(RapidMapping(http), "EMSR762", sensors=["landsat"])
+
+    with pytest.raises(ToolError, match="sensors"):
+        asyncio.run(main())

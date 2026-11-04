@@ -432,6 +432,18 @@ scores = evaluate(my_prediction, labels)  # CSI, POD, FAR only inside the AOI
 A model that predicts water outside the AOI is not penalised: nobody
 looked. Details: [Geometry & ML](https://agentengineering.it/copernicus-ems/ml/).
 
+### Open imagery to pair with the labels
+
+```bash
+copernicus-ems scenes EMSR664 --aoi 1 --optical --max-cloud 30
+```
+
+Products are often made from commercial images (`Product.images`); this
+finds the nearest open **Sentinel-1/2** passes over each AOI in the
+Copernicus Data Space catalogue, with the time gap and the share of the
+AOI they cover. Searching needs no account, downloading does. Details:
+[Open imagery](https://agentengineering.it/copernicus-ems/scenes/).
+
 ### Ask an agent (MCP server, `[mcp]` extra)
 
 ```bash
@@ -439,8 +451,9 @@ pip install 'copernicus-ems[mcp]'
 claude mcp add copernicus-ems -- copernicus-ems mcp
 ```
 
-Claude (or any MCP client) gets four tools: `list_activations`,
-`activation_summary`, `compare_products`, `export_observed_events`. They
+Claude (or any MCP client) gets five tools: `list_activations`,
+`activation_summary`, `compare_products`, `export_observed_events`,
+`find_scenes`. They
 answer with computed facts (km², observation times, per AOI) and file
 paths, never thousands of polygons. Details:
 [MCP server](https://agentengineering.it/copernicus-ems/mcp/).
@@ -570,7 +583,7 @@ above 90%, and contributions are accepted under Apache-2.0.
 |---|---|---|
 | 🔥 **Presets for other hazards** (burnt areas, landslides) | Same API, other events | intermediate |
 | 📊 **Area statistics and GeoParquet export** (`[geo]` extra) | Numbers and files for GIS and ML | intermediate |
-| 🛰️ **Sentinel-1/2 pairing** for the label rasters | Image + label pairs for training | advanced |
+| 🧱 **GeoTIFF labels and GeoParquet export** | Files every GIS and ML tool reads | intermediate |
 | 🏛️ **Legacy activations** (before 2023) | Ten more years of floods | advanced |
 
 ---

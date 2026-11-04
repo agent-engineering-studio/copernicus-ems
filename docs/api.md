@@ -31,6 +31,12 @@ Generated from the docstrings of the package.
     options:
       show_root_heading: false
 
+## Open imagery (Sentinel scenes)
+
+::: copernicus_ems.scenes
+    options:
+      show_root_heading: false
+
 ## Geometry (`[geo]` extra)
 
 ::: copernicus_ems.geo

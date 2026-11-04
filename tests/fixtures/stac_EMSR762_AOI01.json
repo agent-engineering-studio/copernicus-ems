@@ -1,0 +1,562 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "stac_version": "1.1.0",
+   "id": "S1A_IW_GRDH_1SDV_20240921T165840_20240921T165905_055766_06CFFC_F73E_COG",
+   "collection": "sentinel-1-grd",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       12.002831,
+       45.222549
+      ],
+      [
+       12.420342,
+       43.724308
+      ],
+      [
+       15.664261,
+       44.131668
+      ],
+      [
+       15.33155,
+       45.629848
+      ],
+      [
+       12.002831,
+       45.222549
+      ]
+     ]
+    ]
+   },
+   "bbox": [
+    12.002831,
+    43.724308,
+    15.664261,
+    45.629848
+   ],
+   "properties": {
+    "datetime": "2024-09-21T16:58:40.108097Z",
+    "start_datetime": "2024-09-21T16:58:40.108097Z",
+    "end_datetime": "2024-09-21T16:59:05.105426Z",
+    "platform": "sentinel-1a",
+    "constellation": "sentinel-1",
+    "sat:orbit_state": "ascending",
+    "sat:relative_orbit": 44,
+    "sar:polarizations": [
+     "VV",
+     "VH"
+    ],
+    "sar:instrument_mode": "IW",
+    "eopf:datatake_id": "446460",
+    "product:type": "IW_GRDH_1S"
+   },
+   "assets": {
+    "vh": {
+     "href": "s3://eodata/Sentinel-1/SAR/IW_GRDH_1S-COG/2024/09/21/S1A_IW_GRDH_1SDV_20240921T165840_20240921T165905_055766_06CFFC_F73E_COG.SAFE/measurement/s1a-iw-grd-vh-20240921t165840-20240921t165905-055766-06cffc-002-cog.tiff",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "vv": {
+     "href": "s3://eodata/Sentinel-1/SAR/IW_GRDH_1S-COG/2024/09/21/S1A_IW_GRDH_1SDV_20240921T165840_20240921T165905_055766_06CFFC_F73E_COG.SAFE/measurement/s1a-iw-grd-vv-20240921t165840-20240921t165905-055766-06cffc-001-cog.tiff",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "Product": {
+     "href": "https://download.dataspace.copernicus.eu/odata/v1/Products(98fc8653-5826-4914-9f57-a6d24b763b0f)/$value",
+     "type": "application/zip"
+    },
+    "thumbnail": {
+     "href": "https://datahub.creodias.eu/odata/v1/Assets(8cebbeb4-ecf7-44bb-bd90-d014dc5e4126)/$value",
+     "type": "image/png"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "stac_version": "1.1.0",
+   "id": "S2A_MSIL2A_20240921T100031_N0511_R122_T32TQQ_20240921T141950",
+   "collection": "sentinel-2-l2a",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       11.840391166803348,
+       44.128504090048196
+      ],
+      [
+       12.86998676642133,
+       44.099770918209835
+      ],
+      [
+       12.936097556086393,
+       45.08595696049961
+      ],
+      [
+       12.169283759908039,
+       45.10773088573558
+      ],
+      [
+       11.840391166803348,
+       44.128504090048196
+      ]
+     ]
+    ]
+   },
+   "bbox": [
+    11.840391166803348,
+    44.099770918209835,
+    12.936097556086393,
+    45.10773088573558
+   ],
+   "properties": {
+    "datetime": "2024-09-21T10:00:31.024000Z",
+    "start_datetime": "2024-09-21T10:00:31.024000Z",
+    "end_datetime": "2024-09-21T10:00:31.024000Z",
+    "platform": "sentinel-2a",
+    "constellation": "sentinel-2",
+    "sat:orbit_state": "descending",
+    "sat:relative_orbit": 122,
+    "eo:cloud_cover": 4.35,
+    "eopf:datatake_id": "GS2A_20240921T100031_048310_N05.11",
+    "product:type": "S2MSI2A"
+   },
+   "assets": {
+    "Product": {
+     "href": "https://download.dataspace.copernicus.eu/odata/v1/Products(39f1a863-36bd-430b-9b18-b6c5769ca520)/$value",
+     "type": "application/zip"
+    },
+    "TCI_10m": {
+     "href": "s3://eodata/Sentinel-2/MSI/L2A/2024/09/21/S2A_MSIL2A_20240921T100031_N0511_R122_T32TQQ_20240921T141950.SAFE/GRANULE/L2A_T32TQQ_A048310_20240921T100754/IMG_DATA/R10m/T32TQQ_20240921T100031_TCI_10m.jp2",
+     "type": "image/jp2"
+    },
+    "thumbnail": {
+     "href": "https://datahub.creodias.eu/odata/v1/Assets(44c9f589-636f-4477-b60d-20c8c543254f)/$value",
+     "type": "image/jpeg"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "stac_version": "1.1.0",
+   "id": "S2A_MSIL2A_20240921T100031_N0511_R122_T32TQP_20240921T141950",
+   "collection": "sentinel-2-l2a",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       11.548400955191557,
+       43.23592118560653
+      ],
+      [
+       12.8126316594684,
+       43.201211355403785
+      ],
+      [
+       12.875738946275197,
+       44.1876215842718
+      ],
+      [
+       11.86898359500237,
+       44.215761461325464
+      ],
+      [
+       11.548400955191557,
+       43.23592118560653
+      ]
+     ]
+    ]
+   },
+   "bbox": [
+    11.548400955191555,
+    43.201211355403785,
+    12.875738946275199,
+    44.215761461325464
+   ],
+   "properties": {
+    "datetime": "2024-09-21T10:00:31.024000Z",
+    "start_datetime": "2024-09-21T10:00:31.024000Z",
+    "end_datetime": "2024-09-21T10:00:31.024000Z",
+    "platform": "sentinel-2a",
+    "constellation": "sentinel-2",
+    "sat:orbit_state": "descending",
+    "sat:relative_orbit": 122,
+    "eo:cloud_cover": 40.22,
+    "eopf:datatake_id": "GS2A_20240921T100031_048310_N05.11",
+    "product:type": "S2MSI2A"
+   },
+   "assets": {
+    "Product": {
+     "href": "https://download.dataspace.copernicus.eu/odata/v1/Products(6f7ecd96-e9d9-4fb4-8426-29b12a7e1bb1)/$value",
+     "type": "application/zip"
+    },
+    "TCI_10m": {
+     "href": "s3://eodata/Sentinel-2/MSI/L2A/2024/09/21/S2A_MSIL2A_20240921T100031_N0511_R122_T32TQP_20240921T141950.SAFE/GRANULE/L2A_T32TQP_A048310_20240921T100754/IMG_DATA/R10m/T32TQP_20240921T100031_TCI_10m.jp2",
+     "type": "image/jp2"
+    },
+    "thumbnail": {
+     "href": "https://datahub.creodias.eu/odata/v1/Assets(64d64a53-8bdf-40d8-8dbb-cbcf9c86b634)/$value",
+     "type": "image/jpeg"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "stac_version": "1.1.0",
+   "id": "S2B_MSIL2A_20240919T101019_N0511_R022_T32TQQ_20240919T161503",
+   "collection": "sentinel-2-l2a",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       11.542631357244325,
+       45.12552488296481
+      ],
+      [
+       11.499848789004083,
+       44.13800768802703
+      ],
+      [
+       12.869986766421333,
+       44.099770918209835
+      ],
+      [
+       12.936097556086393,
+       45.08595696049961
+      ],
+      [
+       11.542631357244325,
+       45.12552488296481
+      ]
+     ]
+    ]
+   },
+   "bbox": [
+    11.499848789004083,
+    44.099770918209835,
+    12.936097556086393,
+    45.12552488296481
+   ],
+   "properties": {
+    "datetime": "2024-09-19T10:10:19.025000Z",
+    "start_datetime": "2024-09-19T10:10:19.025000Z",
+    "end_datetime": "2024-09-19T10:10:19.025000Z",
+    "platform": "sentinel-2b",
+    "constellation": "sentinel-2",
+    "sat:orbit_state": "descending",
+    "sat:relative_orbit": 22,
+    "eo:cloud_cover": 100.0,
+    "eopf:datatake_id": "GS2B_20240919T101019_039373_N05.11",
+    "product:type": "S2MSI2A"
+   },
+   "assets": {
+    "Product": {
+     "href": "https://download.dataspace.copernicus.eu/odata/v1/Products(ba3e80fc-e2af-45b0-a515-b569f67729fc)/$value",
+     "type": "application/zip"
+    },
+    "TCI_10m": {
+     "href": "s3://eodata/Sentinel-2/MSI/L2A/2024/09/19/S2B_MSIL2A_20240919T101019_N0511_R022_T32TQQ_20240919T161503.SAFE/GRANULE/L2A_T32TQQ_A039373_20240919T101702/IMG_DATA/R10m/T32TQQ_20240919T101019_TCI_10m.jp2",
+     "type": "image/jp2"
+    },
+    "thumbnail": {
+     "href": "https://datahub.creodias.eu/odata/v1/Assets(25819e06-2531-4831-8f77-3b52addbd450)/$value",
+     "type": "image/jpeg"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "stac_version": "1.1.0",
+   "id": "S2B_MSIL2A_20240919T101019_N0511_R022_T32TQP_20240919T161503",
+   "collection": "sentinel-2-l2a",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       12.81956749285545,
+       43.309623194113556
+      ],
+      [
+       12.875738946275199,
+       44.18762158427181
+      ],
+      [
+       11.50357106719914,
+       44.22597512802537
+      ],
+      [
+       11.462735477691947,
+       43.238273156784096
+      ],
+      [
+       12.778099501639371,
+       43.20215944607325
+      ],
+      [
+       12.803459000684684,
+       43.27013235674693
+      ],
+      [
+       12.81956749285545,
+       43.309623194113556
+      ]
+     ]
+    ]
+   },
+   "bbox": [
+    11.462735477691947,
+    43.20215944607325,
+    12.875738946275199,
+    44.22597512802537
+   ],
+   "properties": {
+    "datetime": "2024-09-19T10:10:19.025000Z",
+    "start_datetime": "2024-09-19T10:10:19.025000Z",
+    "end_datetime": "2024-09-19T10:10:19.025000Z",
+    "platform": "sentinel-2b",
+    "constellation": "sentinel-2",
+    "sat:orbit_state": "descending",
+    "sat:relative_orbit": 22,
+    "eo:cloud_cover": 99.97,
+    "eopf:datatake_id": "GS2B_20240919T101019_039373_N05.11",
+    "product:type": "S2MSI2A"
+   },
+   "assets": {
+    "Product": {
+     "href": "https://download.dataspace.copernicus.eu/odata/v1/Products(1f167200-d02e-4fce-b05c-9e383406ca6b)/$value",
+     "type": "application/zip"
+    },
+    "TCI_10m": {
+     "href": "s3://eodata/Sentinel-2/MSI/L2A/2024/09/19/S2B_MSIL2A_20240919T101019_N0511_R022_T32TQP_20240919T161503.SAFE/GRANULE/L2A_T32TQP_A039373_20240919T101702/IMG_DATA/R10m/T32TQP_20240919T101019_TCI_10m.jp2",
+     "type": "image/jp2"
+    },
+    "thumbnail": {
+     "href": "https://datahub.creodias.eu/odata/v1/Assets(44a1c3ae-0f24-4d6f-b0b2-781cac54ddc6)/$value",
+     "type": "image/jpeg"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "stac_version": "1.1.0",
+   "id": "S2B_MSIL2A_20240919T101019_N0511_R022_T32TPQ_20240919T161503",
+   "collection": "sentinel-2-l2a",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       10.272040967768444,
+       45.14675285555784
+      ],
+      [
+       10.250616924801538,
+       44.158520786393645
+      ],
+      [
+       11.622741209146946,
+       44.135250725162805
+      ],
+      [
+       11.66762107681286,
+       45.122671880514964
+      ],
+      [
+       10.272040967768444,
+       45.14675285555784
+      ]
+     ]
+    ]
+   },
+   "bbox": [
+    10.250616924801538,
+    44.135250725162805,
+    11.66762107681286,
+    45.14675285555784
+   ],
+   "properties": {
+    "datetime": "2024-09-19T10:10:19.025000Z",
+    "start_datetime": "2024-09-19T10:10:19.025000Z",
+    "end_datetime": "2024-09-19T10:10:19.025000Z",
+    "platform": "sentinel-2b",
+    "constellation": "sentinel-2",
+    "sat:orbit_state": "descending",
+    "sat:relative_orbit": 22,
+    "eo:cloud_cover": 99.15,
+    "eopf:datatake_id": "GS2B_20240919T101019_039373_N05.11",
+    "product:type": "S2MSI2A"
+   },
+   "assets": {
+    "Product": {
+     "href": "https://download.dataspace.copernicus.eu/odata/v1/Products(c6baabb9-d8e8-41c0-a786-99a316c28f6c)/$value",
+     "type": "application/zip"
+    },
+    "TCI_10m": {
+     "href": "s3://eodata/Sentinel-2/MSI/L2A/2024/09/19/S2B_MSIL2A_20240919T101019_N0511_R022_T32TPQ_20240919T161503.SAFE/GRANULE/L2A_T32TPQ_A039373_20240919T101702/IMG_DATA/R10m/T32TPQ_20240919T101019_TCI_10m.jp2",
+     "type": "image/jp2"
+    },
+    "thumbnail": {
+     "href": "https://datahub.creodias.eu/odata/v1/Assets(90c35f23-f743-42fc-a82b-d902e9caadb1)/$value",
+     "type": "image/jpeg"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "stac_version": "1.1.0",
+   "id": "S2B_MSIL2A_20240919T101019_N0511_R022_T32TPP_20240919T161503",
+   "collection": "sentinel-2-l2a",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       10.252480872223193,
+       44.24655093494868
+      ],
+      [
+       10.232032700041831,
+       43.25815531909012
+      ],
+      [
+       11.583808279580875,
+       43.235600960154144
+      ],
+      [
+       11.62664597371116,
+       44.22320974043625
+      ],
+      [
+       10.252480872223193,
+       44.24655093494868
+      ]
+     ]
+    ]
+   },
+   "bbox": [
+    10.232032700041831,
+    43.235600960154144,
+    11.62664597371116,
+    44.24655093494868
+   ],
+   "properties": {
+    "datetime": "2024-09-19T10:10:19.025000Z",
+    "start_datetime": "2024-09-19T10:10:19.025000Z",
+    "end_datetime": "2024-09-19T10:10:19.025000Z",
+    "platform": "sentinel-2b",
+    "constellation": "sentinel-2",
+    "sat:orbit_state": "descending",
+    "sat:relative_orbit": 22,
+    "eo:cloud_cover": 92.32,
+    "eopf:datatake_id": "GS2B_20240919T101019_039373_N05.11",
+    "product:type": "S2MSI2A"
+   },
+   "assets": {
+    "Product": {
+     "href": "https://download.dataspace.copernicus.eu/odata/v1/Products(93a9207e-3daa-43ea-b0e4-b2d6665aacdb)/$value",
+     "type": "application/zip"
+    },
+    "TCI_10m": {
+     "href": "s3://eodata/Sentinel-2/MSI/L2A/2024/09/19/S2B_MSIL2A_20240919T101019_N0511_R022_T32TPP_20240919T161503.SAFE/GRANULE/L2A_T32TPP_A039373_20240919T101702/IMG_DATA/R10m/T32TPP_20240919T101019_TCI_10m.jp2",
+     "type": "image/jp2"
+    },
+    "thumbnail": {
+     "href": "https://datahub.creodias.eu/odata/v1/Assets(46bcab14-70e6-4b6f-b28a-6099e81f8680)/$value",
+     "type": "image/jpeg"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "stac_version": "1.1.0",
+   "id": "S1A_IW_GRDH_1SDV_20240918T052757_20240918T052822_055715_06CE01_B005_COG",
+   "collection": "sentinel-1-grd",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       11.479921,
+       43.478672
+      ],
+      [
+       11.894914,
+       44.977119
+      ],
+      [
+       8.574174,
+       45.384972
+      ],
+      [
+       8.24304,
+       43.886677
+      ],
+      [
+       11.479921,
+       43.478672
+      ]
+     ]
+    ]
+   },
+   "bbox": [
+    8.24304,
+    43.478672,
+    11.894914,
+    45.384972
+   ],
+   "properties": {
+    "datetime": "2024-09-18T05:27:57.437895Z",
+    "start_datetime": "2024-09-18T05:27:57.437895Z",
+    "end_datetime": "2024-09-18T05:28:22.435915Z",
+    "platform": "sentinel-1a",
+    "constellation": "sentinel-1",
+    "sat:orbit_state": "descending",
+    "sat:relative_orbit": 168,
+    "sar:polarizations": [
+     "VV",
+     "VH"
+    ],
+    "sar:instrument_mode": "IW",
+    "eopf:datatake_id": "445953",
+    "product:type": "IW_GRDH_1S"
+   },
+   "assets": {
+    "vh": {
+     "href": "s3://eodata/Sentinel-1/SAR/IW_GRDH_1S-COG/2024/09/18/S1A_IW_GRDH_1SDV_20240918T052757_20240918T052822_055715_06CE01_B005_COG.SAFE/measurement/s1a-iw-grd-vh-20240918t052757-20240918t052822-055715-06ce01-002-cog.tiff",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "vv": {
+     "href": "s3://eodata/Sentinel-1/SAR/IW_GRDH_1S-COG/2024/09/18/S1A_IW_GRDH_1SDV_20240918T052757_20240918T052822_055715_06CE01_B005_COG.SAFE/measurement/s1a-iw-grd-vv-20240918t052757-20240918t052822-055715-06ce01-001-cog.tiff",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "Product": {
+     "href": "https://download.dataspace.copernicus.eu/odata/v1/Products(275592cb-4d2c-44dd-8439-d4a386c2d284)/$value",
+     "type": "application/zip"
+    },
+    "thumbnail": {
+     "href": "https://datahub.creodias.eu/odata/v1/Assets(e8e74e12-2a2f-491c-b549-5e90c77e9cef)/$value",
+     "type": "image/png"
+    }
+   }
+  }
+ ],
+ "links": [
+  {
+   "rel": "root",
+   "type": "application/json",
+   "href": "https://stac.dataspace.copernicus.eu/v1/"
+  },
+  {
+   "rel": "self",
+   "type": "application/json",
+   "href": "https://stac.dataspace.copernicus.eu/v1/search"
+  }
+ ],
+ "numberReturned": 8
+}
