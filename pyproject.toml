@@ -40,6 +40,7 @@ mcp = ["copernicus-ems[geo]", "mcp>=2.3"]
 
 [project.scripts]
 copernicus-ems = "copernicus_ems.cli:main"
+copernicus-ems-mcp = "copernicus_ems.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/agent-engineering-studio/copernicus-ems"

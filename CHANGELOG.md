@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The MCP server over **streamable HTTP**: `copernicus-ems-mcp` (new console
+  script) and `copernicus-ems mcp` take `--transport stdio|streamable-http`,
+  `--host`, `--port` (default 8768) and `--allowed-host` (the `Host`-header
+  allowlist against DNS rebinding), each also from
+  `COPERNICUS_EMS_MCP_TRANSPORT` / `_HOST` / `_PORT` / `_ALLOWED_HOSTS`; the
+  endpoint is `/mcp`, and `GET /health` answers for container healthchecks.
+  stdio stays the default.
+
 ## [0.6.0] - 2026-11-04
 
 ### Added
