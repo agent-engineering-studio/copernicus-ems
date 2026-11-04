@@ -31,6 +31,18 @@ Generated from the docstrings of the package.
     options:
       show_root_heading: false
 
+## Geometry (`[geo]` extra)
+
+::: copernicus_ems.geo
+    options:
+      show_root_heading: false
+
+## Labels and scores (`[ml]` extra)
+
+::: copernicus_ems.ml
+    options:
+      show_root_heading: false
+
 ## Errors
 
 ::: copernicus_ems.errors.EmsError
