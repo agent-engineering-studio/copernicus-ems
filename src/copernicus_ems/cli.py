@@ -15,7 +15,7 @@ import asyncio
 import json
 import sys
 from collections.abc import Sequence
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import TextIO
 
@@ -132,6 +132,17 @@ def _parser() -> argparse.ArgumentParser:
         "--budget-pu", type=float, default=500.0, help="stop above this many PU (default 500)"
     )
     pairs.add_argument(
+        "--reference",
+        action="store_true",
+        help="also a pre-event pass of the same orbit, for change detection (about 2x PU)",
+    )
+    pairs.add_argument(
+        "--reference-days",
+        type=float,
+        default=36.0,
+        help="look this far back before the flood for it (default 36)",
+    )
+    pairs.add_argument(
         "--dry-run", action="store_true", help="show the plan and its PU, send nothing"
     )
 
@@ -155,6 +166,11 @@ def _parser() -> argparse.ArgumentParser:
         help="train,val,test ratios by area (default 0.7,0.15,0.15)",
     )
     dataset.add_argument("--seed", type=int, default=0, help="split seed (default 0)")
+    dataset.add_argument(
+        "--reference",
+        action="store_true",
+        help="pairs with a pre-event image only; chips get VV_pre, VH_pre bands",
+    )
 
     commands.add_parser(
         "mcp", help="serve the MCP tools on stdio, for LLM agents (needs the mcp extra)"
@@ -267,7 +283,13 @@ async def _scenes(ems: RapidMapping, args: argparse.Namespace) -> int:
 
 async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
     try:
-        from copernicus_ems.sentinelhub import SentinelHub, make_pair, plan_pair
+        from copernicus_ems.sentinelhub import (
+            ReferencePlan,
+            SentinelHub,
+            make_pair,
+            plan_pair,
+            plan_reference,
+        )
     except ImportError:  # pragma: no cover - without the cdse extra
         print("copernicus-ems: pairs needs: pip install 'copernicus-ems[cdse]'", file=sys.stderr)
         return 2
@@ -292,28 +314,46 @@ async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
         )
         for e in events
     ]
-    unique = {
-        p.backscatter_path: p
-        for p in plans
-        if p.scene_pass is not None and not _done(p.backscatter_path)
-    }
-    to_fetch = list(unique.values())  # one request per pass and grid, shared by products
-    total = sum(p.pu for p in to_fetch)
+    references: dict[str, ReferencePlan] = {}
+    if args.reference:
+        flood_start = await _event_time(ems, args.code)
+        before = flood_start - timedelta(days=1) if flood_start else None
+        for p in plans:
+            if p.scene_pass is not None:
+                references[p.product] = await plan_reference(
+                    ems,
+                    p,
+                    before=before,
+                    lookback=timedelta(days=args.reference_days),
+                    min_coverage=args.min_coverage,
+                )
+    # one request per pass and grid, shared by products (event or reference)
+    unique: dict[Path, tuple[str, float]] = {}
+    for p in plans:
+        if p.scene_pass is not None and p.backscatter_path and not _done(p.backscatter_path):
+            unique.setdefault(p.backscatter_path, (p.product, p.pu))
+        ref = references.get(p.product)
+        if ref and ref.backscatter_path and not _done(ref.backscatter_path):
+            unique.setdefault(ref.backscatter_path, (f"{p.product} (reference)", ref.pu))
+    total = sum(pu for _, pu in unique.values())
     for plan in plans:
         if plan.scene_pass is None:
             print(f"{plan.product}\tskipped: {plan.reason}")
             continue
-        if _done(plan.backscatter_path):
-            state = "cached"
-        elif unique.get(plan.backscatter_path) is plan:
-            state = f"{plan.pu:.1f} PU"
-        else:
-            state = f"shares the image of {unique[plan.backscatter_path].product}"
-        print(
+        state = _state(plan.backscatter_path, plan.product, unique)
+        line = (
             f"{plan.product}\t{plan.grid.width}x{plan.grid.height} px\t"
             f"{plan.scene_pass.gap_hours:+.1f} h\tAOI {plan.coverage:.0%}\t{state}"
         )
-    print(f"{len(to_fetch)} images to fetch, {total:.1f} PU estimated", file=sys.stderr)
+        ref = references.get(plan.product)
+        if ref is not None and ref.scene_pass is not None:
+            lead = (plan.scene_pass.time - ref.scene_pass.time).total_seconds() / 86400
+            ref_state = _state(ref.backscatter_path, f"{plan.product} (reference)", unique)
+            line += f"\treference -{lead:.0f} d, orbit {ref.relative_orbit}: {ref_state}"
+        elif ref is not None:
+            line += f"\tno reference: {ref.reason}"
+        print(line)
+    print(f"{len(unique)} images to fetch, {total:.1f} PU estimated", file=sys.stderr)
     if args.dry_run or not any(p.scene_pass for p in plans):
         return 0
     if total > args.budget_pu:
@@ -326,8 +366,10 @@ async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
         for plan in plans:
             if plan.scene_pass is None:
                 continue
-            image, labels = await make_pair(hub, plan)
-            print(f"{plan.product}\t{image.path}\t{labels}")
+            ref = references.get(plan.product)
+            image, labels = await make_pair(hub, plan, reference=ref)
+            extra = f"\t{ref.backscatter_path}" if ref and ref.backscatter_path else ""
+            print(f"{plan.product}\t{image.path}\t{labels}{extra}")
     print(f"{hub.pu_estimated:.1f} PU spent (estimated)", file=sys.stderr)
     return 0
 
@@ -354,6 +396,7 @@ def _dataset(ems: RapidMapping, args: argparse.Namespace) -> int:
         min_flooded=args.min_flooded,
         ratios=ratios,
         seed=args.seed,
+        reference=args.reference,
     )
     for split, count in summary.per_split.items():
         areas = sorted(g for g, s in summary.groups.items() if s == split)
@@ -364,6 +407,21 @@ def _dataset(ems: RapidMapping, args: argparse.Namespace) -> int:
 
 def _done(path: Path | None) -> bool:
     return path is not None and path.is_file()
+
+
+def _state(path: Path | None, owner: str, unique: dict[Path, tuple[str, float]]) -> str:
+    if path is None or _done(path):
+        return "cached"
+    first, pu = unique[path]
+    return f"{pu:.1f} PU" if first == owner else f"shares the image of {first}"
+
+
+async def _event_time(ems: RapidMapping, code: str) -> datetime | None:
+    """When the flood began, according to the activation (``None`` if not listed)."""
+    for activation in await ems.activations():
+        if activation.code.upper() == code.upper():
+            return activation.event_time
+    return None
 
 
 def _pass_line(p: ScenePass, cover: float, *, as_json: bool) -> str:

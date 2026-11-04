@@ -453,6 +453,7 @@ With a free Copernicus Data Space account (`CDSE_CLIENT_ID` /
 ```bash
 copernicus-ems pairs EMSR664 --dry-run   # the plan and its processing units, free
 copernicus-ems pairs EMSR664 --aoi 3     # VV, VH on exactly the label grid, + labels + manifest
+copernicus-ems pairs EMSR664 --reference # + a pre-event pass of the same orbit (change detection)
 ```
 
 For each product it picks the nearest Sentinel-1 pass covering the AOI,

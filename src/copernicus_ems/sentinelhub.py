@@ -42,7 +42,7 @@ import httpx
 
 from copernicus_ems.client import ProductEvents, RapidMapping, RetryTransport, default_directory
 from copernicus_ems.errors import EmsError
-from copernicus_ems.scenes import SENTINEL_1_GRD, ScenePass, passes
+from copernicus_ems.scenes import SENTINEL_1_GRD, SceneMatch, ScenePass, passes
 
 try:
     import numpy as np
@@ -624,10 +624,102 @@ async def plan_pair(
     return PairPlan(event, grid, chosen, share, pu, path, labels)
 
 
+#: Sentinel-1 repeats a relative orbit every 12 days (6 with two satellites).
+REPEAT_CYCLE = timedelta(days=12)
+
+
+@dataclass(frozen=True, slots=True)
+class ReferencePlan:
+    """A pre-event pass for change detection, and what it would cost."""
+
+    scene_pass: ScenePass | None
+    coverage: float
+    pu: float
+    backscatter_path: Path | None
+    #: Why no pass was chosen, when ``scene_pass`` is ``None``.
+    reason: str | None = None
+
+    @property
+    def relative_orbit(self) -> int | None:
+        return self.scene_pass.scenes[0].relative_orbit if self.scene_pass else None
+
+
+async def plan_reference(
+    ems: RapidMapping,
+    plan: PairPlan,
+    *,
+    before: datetime | None = None,
+    lookback: timedelta = 3 * REPEAT_CYCLE,
+    min_coverage: float = 0.9,
+    directory: Path | None = None,
+) -> ReferencePlan:
+    """The latest Sentinel-1 pass of the **same relative orbit** as the plan's pass,
+    acquired before ``before``, priced on the same grid. No PU is spent.
+
+    Same orbit means same viewing geometry: the difference between the two
+    images is change on the ground (water came), not a change of incidence
+    angle. ``before`` should be the start of the flood (an activation's
+    ``event_time``); by default it is one repeat cycle before the event pass,
+    which is right only for floods that rose within those days.
+    """
+    from copernicus_ems.geo import coverage
+
+    if plan.scene_pass is None:
+        return ReferencePlan(None, 0.0, 0.0, None, f"no event pass: {plan.reason}")
+    event_pass = plan.scene_pass
+    orbit = event_pass.scenes[0].relative_orbit
+    if orbit is None:
+        return ReferencePlan(None, 0.0, 0.0, None, "the event pass has no relative orbit")
+    product = plan.event.product
+    geometry = product.aoi_extent
+    if geometry is None:  # pragma: no cover - plan_pair already needed it
+        return ReferencePlan(None, 0.0, 0.0, None, "the product has no AOI extent")
+    end = min(before or event_pass.time - REPEAT_CYCLE / 2, event_pass.time - timedelta(hours=1))
+    found = await ems.search_scenes(geometry, end - lookback, end, collections=[SENTINEL_1_GRD])
+    observed = product.observed_time or event_pass.time
+    matches = [
+        SceneMatch(product=product, scene=s, gap=s.time - observed)
+        for s in found
+        if s.relative_orbit == orbit and s.time <= end
+    ]
+    seen = 0.0
+    for candidate in passes(matches):  # latest first: nearest to the observation
+        share = coverage(candidate.geometry, plan.event)
+        seen = max(seen, share)
+        if share >= min_coverage:
+            start, stop = pass_window(candidate.time)
+            path = backscatter_path(
+                plan.grid,
+                start,
+                stop,
+                activation=product.activation_code,
+                directory=directory or ems.directory,
+                orbit=candidate.scenes[0].orbit_state,
+            )
+            return ReferencePlan(candidate, share, plan.pu, path)
+    days = lookback.total_seconds() / 86400
+    if not matches:
+        reason = f"no pass of relative orbit {orbit} in the {days:g} days before {_iso(end)}"
+    else:
+        reason = (
+            f"no pass of relative orbit {orbit} before {_iso(end)} covers "
+            f"{min_coverage:.0%} of the AOI (best {seen:.0%})"
+        )
+    return ReferencePlan(None, seen, 0.0, None, reason)
+
+
 async def make_pair(
-    hub: SentinelHub, plan: PairPlan, *, budget_pu: float | None = None
+    hub: SentinelHub,
+    plan: PairPlan,
+    *,
+    reference: ReferencePlan | None = None,
+    budget_pu: float | None = None,
 ) -> tuple[Backscatter, Path]:
-    """The backscatter GeoTIFF of the plan's pass and the label GeoTIFF on the same grid."""
+    """The backscatter GeoTIFF of the plan's pass and the label GeoTIFF on the same grid.
+
+    With a ``reference`` that found a pass, its image is fetched too (same
+    grid, same options) and named in the manifest under ``"reference"``.
+    """
     from copernicus_ems.ml import rasterize
 
     if plan.scene_pass is None or plan.backscatter_path is None or plan.labels_path is None:
@@ -650,9 +742,30 @@ async def make_pair(
             "scenes": " ".join(s.id for s in chosen.scenes),
         },
     )
+    pre: Backscatter | None = None
+    if reference is not None and reference.scene_pass is not None:
+        assert reference.backscatter_path is not None
+        ref_pass = reference.scene_pass
+        ref_start, ref_end = pass_window(ref_pass.time)
+        pre = await fetch_backscatter(
+            hub,
+            plan.grid,
+            ref_start,
+            ref_end,
+            path=reference.backscatter_path,
+            orbit_direction=ref_pass.scenes[0].orbit_state,
+            budget_pu=budget_pu,
+            tags={
+                "activation": plan.event.product.activation_code,
+                "pass_time": ref_pass.time.isoformat(),
+                "platform": ref_pass.platform,
+                "scenes": " ".join(s.id for s in ref_pass.scenes),
+                "role": "pre-event reference",
+            },
+        )
     # always rewritten: local and free, and labels follow the event selection
     rasterize(plan.event, grid=plan.grid).to_geotiff(plan.labels_path)
-    manifest = {
+    manifest: dict[str, Any] = {
         "activation": plan.event.product.activation_code,
         "product": plan.product,
         "observed_time": observed.isoformat() if observed else None,
@@ -666,6 +779,7 @@ async def make_pair(
         "gap_hours": round(chosen.gap_hours, 2),
         "aoi_coverage": round(plan.coverage, 3),
         "scenes": [s.id for s in chosen.scenes],
+        "relative_orbit": chosen.scenes[0].relative_orbit,
         "grid": {"crs": plan.grid.crs, "transform": plan.grid.transform},
         "bands": ["VV", "VH", "dataMask"],
         "labels_values": {"flooded": 1, "dry": 0, "not_observed": 255},
@@ -675,6 +789,17 @@ async def make_pair(
             f"{SENTINEL_CREDIT} {chosen.time.year}.",
         ],
     }
+    if pre is not None and reference is not None and reference.scene_pass is not None:
+        manifest["reference"] = {
+            "image": pre.path.name,
+            "pass_time": reference.scene_pass.time.isoformat(),
+            "lead_days": round(
+                (chosen.time - reference.scene_pass.time).total_seconds() / 86400, 2
+            ),
+            "relative_orbit": reference.relative_orbit,
+            "aoi_coverage": round(reference.coverage, 3),
+            "scenes": [s.id for s in reference.scene_pass.scenes],
+        }
     pair_json = plan.labels_path.with_name(
         plan.labels_path.name.removesuffix("_labels.tif") + "_pair.json"
     )
