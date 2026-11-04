@@ -113,6 +113,28 @@ def _parser() -> argparse.ArgumentParser:
     scenes.add_argument("--top", type=int, default=3, help="passes per product (default 3)")
     scenes.add_argument("--json", action="store_true", help="one JSON object per pass")
 
+    pairs = commands.add_parser(
+        "pairs",
+        help="Sentinel-1 backscatter + labels on the same grid, per product (cdse extra)",
+    )
+    pairs.add_argument("code", metavar="CODE", help="e.g. EMSR664")
+    pairs.add_argument("--aoi", type=int, help="only this AOI number")
+    pairs.add_argument("--product", help="only this product, e.g. AOI01_DEL_MONIT01")
+    pairs.add_argument("--resolution", type=float, default=20.0, help="metres (default 20)")
+    pairs.add_argument("--days", type=float, default=2.0, help="search window, ± days (default 2)")
+    pairs.add_argument(
+        "--max-gap-hours", type=float, default=24.0, help="pass to observation (default 24)"
+    )
+    pairs.add_argument(
+        "--min-coverage", type=float, default=0.9, help="share of the AOI (default 0.9)"
+    )
+    pairs.add_argument(
+        "--budget-pu", type=float, default=500.0, help="stop above this many PU (default 500)"
+    )
+    pairs.add_argument(
+        "--dry-run", action="store_true", help="show the plan and its PU, send nothing"
+    )
+
     commands.add_parser(
         "mcp", help="serve the MCP tools on stdio, for LLM agents (needs the mcp extra)"
     )
@@ -133,6 +155,8 @@ async def _run(args: argparse.Namespace, client: httpx.AsyncClient | None) -> in
             return 0
         if args.command == "scenes":
             return await _scenes(ems, args)
+        if args.command == "pairs":
+            return await _pairs(ems, args)
         return await _export(ems, args)
 
 
@@ -216,6 +240,75 @@ async def _scenes(ems: RapidMapping, args: argparse.Namespace) -> int:
             event = events.get(product.label) or ProductEvents(product=product, features=[])
             print(_pass_line(p, coverage(p.geometry, event), as_json=args.json))
     return 0
+
+
+async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
+    try:
+        from copernicus_ems.sentinelhub import SentinelHub, make_pair, plan_pair
+    except ImportError:  # pragma: no cover - without the cdse extra
+        print("copernicus-ems: pairs needs: pip install 'copernicus-ems[cdse]'", file=sys.stderr)
+        return 2
+    events = [
+        e
+        for e in await ems.observed_events(args.code, event_types=None, notations=None)
+        if (args.aoi is None or e.product.aoi_number == args.aoi)
+        and (args.product is None or e.product.label == args.product)
+        and e.product.observed_time is not None
+        and e.product.aoi_extent is not None
+    ]
+    plans = [
+        await plan_pair(
+            ems,
+            e,
+            resolution_m=args.resolution,
+            within=timedelta(days=args.days),
+            min_coverage=args.min_coverage,
+            max_gap=timedelta(hours=args.max_gap_hours),
+        )
+        for e in events
+    ]
+    unique = {
+        p.backscatter_path: p
+        for p in plans
+        if p.scene_pass is not None and not _done(p.backscatter_path)
+    }
+    to_fetch = list(unique.values())  # one request per pass and grid, shared by products
+    total = sum(p.pu for p in to_fetch)
+    for plan in plans:
+        if plan.scene_pass is None:
+            print(f"{plan.product}\tskipped: {plan.reason}")
+            continue
+        if _done(plan.backscatter_path):
+            state = "cached"
+        elif unique.get(plan.backscatter_path) is plan:
+            state = f"{plan.pu:.1f} PU"
+        else:
+            state = f"shares the image of {unique[plan.backscatter_path].product}"
+        print(
+            f"{plan.product}\t{plan.grid.width}x{plan.grid.height} px\t"
+            f"{plan.scene_pass.gap_hours:+.1f} h\tAOI {plan.coverage:.0%}\t{state}"
+        )
+    print(f"{len(to_fetch)} images to fetch, {total:.1f} PU estimated", file=sys.stderr)
+    if args.dry_run or not to_fetch:
+        return 0
+    if total > args.budget_pu:
+        print(
+            f"copernicus-ems: {total:.1f} PU is over --budget-pu {args.budget_pu:.0f}",
+            file=sys.stderr,
+        )
+        return 2
+    async with SentinelHub() as hub:
+        for plan in plans:
+            if plan.scene_pass is None:
+                continue
+            image, labels = await make_pair(hub, plan)
+            print(f"{plan.product}\t{image.path}\t{labels}")
+    print(f"{hub.pu_estimated:.1f} PU spent (estimated)", file=sys.stderr)
+    return 0
+
+
+def _done(path: Path | None) -> bool:
+    return path is not None and path.is_file()
 
 
 def _pass_line(p: ScenePass, cover: float, *, as_json: bool) -> str:

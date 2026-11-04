@@ -6,6 +6,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `copernicus_ems.sentinelhub` (extra `cdse`) and `copernicus-ems pairs`:
+  Sentinel-1 backscatter (VV, VH, dataMask; calibrated, orthorectified)
+  from the Sentinel Hub Process API of the Copernicus Data Space, cut to
+  exactly the grid of the label raster, with the labels and a
+  `_pair.json` manifest, in the data directory (a Docker volume; no
+  bucket). Credentials from `CDSE_CLIENT_ID` / `CDSE_CLIENT_SECRET` or
+  `CDSE_CREDENTIALS_FILE`; token reused until it expires; `estimate_pu`
+  and `budget_pu` before any request; large grids tiled and mosaicked;
+  answers off the asked grid refused; one image per pass and grid, shared
+  by the products it serves; `--dry-run` without credentials.
+- A live test of the Process API (~1 PU) when the repository has the
+  `CDSE_CLIENT_ID` / `CDSE_CLIENT_SECRET` secrets.
+
 ## [0.4.0] - 2026-11-04
 
 ### Added

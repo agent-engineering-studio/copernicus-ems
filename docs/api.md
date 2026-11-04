@@ -43,6 +43,12 @@ Generated from the docstrings of the package.
     options:
       show_root_heading: false
 
+## Sentinel-1 backscatter (`[cdse]` extra)
+
+::: copernicus_ems.sentinelhub
+    options:
+      show_root_heading: false
+
 ## Geometry (`[geo]` extra)
 
 ::: copernicus_ems.geo

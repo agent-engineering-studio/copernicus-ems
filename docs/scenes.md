@@ -86,6 +86,12 @@ The same AOI on EMSR664 shows why both matter:
 
 ## Pairing with the label rasters
 
+!!! tip "With a CDSE account, one command"
+    `copernicus-ems pairs EMSR664` asks the Sentinel Hub Process API for
+    the backscatter on the labels' grid and writes both: see
+    [Sentinel-1 backscatter](backscatter.md). The recipe below is for
+    scenes you download yourself.
+
 Read the scene (e.g. its `vv` / `vh` Cloud-Optimised GeoTIFF with
 rasterio, after authenticating to the Data Space), then rasterize the
 labels **on the scene's grid**, so pixels line up:
