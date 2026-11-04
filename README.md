@@ -474,6 +474,9 @@ Details:
 goes from the Italian floods mapped since 2023 to two Sentinel-1 flood
 detectors (a VV threshold and a per-pixel classifier), split by area and
 scored only where EMS observed. About 94 PU the first time, nothing after.
+On labels drawn on the same Sentinel-1 image the threshold reaches CSI 0.39;
+on labels from other sensors both detectors stay under CSI 0.1 — the honest
+baseline for the next models.
 See [Notebooks](https://agentengineering.it/copernicus-ems/notebooks/).
 
 ### Ask an agent (MCP server, `[mcp]` extra)
