@@ -572,7 +572,12 @@ async def plan_pair(
     directory: Path | None = None,
 ) -> PairPlan:
     """Choose the Sentinel-1 pass nearest in time among those covering ``min_coverage``
-    of the AOI within ``max_gap``, and price it on the labels' grid. No PU is spent."""
+    of the AOI within ``max_gap``, and price it on the labels' grid. No PU is spent.
+
+    Every feature of ``event`` becomes the *flooded* label: pass events
+    selected for floods (the default of ``observed_events``), not
+    ``event_types=None``, which would label landslides as water.
+    """
     from copernicus_ems.geo import coverage
     from copernicus_ems.ml import grid_for
 
@@ -645,8 +650,8 @@ async def make_pair(
             "scenes": " ".join(s.id for s in chosen.scenes),
         },
     )
-    if not plan.labels_path.is_file():
-        rasterize(plan.event, grid=plan.grid).to_geotiff(plan.labels_path)
+    # always rewritten: local and free, and labels follow the event selection
+    rasterize(plan.event, grid=plan.grid).to_geotiff(plan.labels_path)
     manifest = {
         "activation": plan.event.product.activation_code,
         "product": plan.product,
