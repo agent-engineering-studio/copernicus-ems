@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-04
+
 ### Added
 
 - `notebooks/01_flood_segmentation_s1.ipynb`: Italian EMS floods as labels,
