@@ -195,6 +195,9 @@ class RetryTransport(httpx.AsyncBaseTransport):
         await self._transport.aclose()
 
 
+#: Headers that describe the body as sent, not as decoded by the caller's client.
+_ENCODED_BODY = frozenset({"content-encoding", "content-length", "transfer-encoding"})
+
 #: ``async (request) -> response``: sends one request in the caller's own way.
 Send = Callable[[httpx.Request], Awaitable[httpx.Response]]
 
@@ -211,9 +214,14 @@ class SendTransport(httpx.AsyncBaseTransport):
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         response = await self._send(request)
         await response.aread()  # the bytes, whatever stream the caller's client used
+        # .content is already decoded by the caller's client: drop the headers
+        # that describe the encoded body, or httpx would decode it a second time
+        headers = [
+            (k, v) for k, v in response.headers.multi_items() if k.lower() not in _ENCODED_BODY
+        ]
         return httpx.Response(
             response.status_code,
-            headers=response.headers,
+            headers=headers,
             content=response.content,
             request=request,
             extensions={k: v for k, v in response.extensions.items() if k != "network_stream"},
