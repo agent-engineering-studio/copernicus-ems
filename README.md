@@ -430,7 +430,7 @@ scores = evaluate(my_prediction, labels)  # CSI, POD, FAR only inside the AOI
 ```
 
 A model that predicts water outside the AOI is not penalised: nobody
-looked. Details: [Geometry & ML](https://agent-engineering-studio.github.io/copernicus-ems/ml/).
+looked. Details: [Geometry & ML](https://agentengineering.it/copernicus-ems/ml/).
 
 ### Handle errors
 
