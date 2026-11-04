@@ -43,7 +43,25 @@ saved in /home/you/.cache/copernicus-ems
 Run it again: the 11 layers are read from disk and the only request left is
 the activation detail (12.7 s the first time, 2.1 s the second, on EMSR664).
 
-## Every flood of a country, in one file
+## From the command line
+
+The package installs a `copernicus-ems` command (also `python -m copernicus_ems`):
+
+```bash
+copernicus-ems list --country Italy --since 2025-01-01        # code, date, category, name
+copernicus-ems list --category Flood --json                   # one JSON object per line
+copernicus-ems fetch EMSR762 EMSR664                          # layers into the cache
+copernicus-ems export --country Italy -o italy.geojson --masks italy_masks.geojson
+copernicus-ems export EMSR762 -o emsr762.geojson --all-events # landslides too
+```
+
+`export` tags every feature with its `activation`, `product`, `aoi_name`
+and `observed_time`; `--masks` writes the observation mask of each product
+as a second GeoJSON. By country it reads the `Flood` and `Storm`
+activations (`--category` to change it), and keeps the flood features.
+`--dir` sets where the layers are saved.
+
+## Every flood of a country, from Python
 
 [`examples/italy_floods.py`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/examples/italy_floods.py)
 writes one GeoJSON with every flood polygon of a country, each tagged with

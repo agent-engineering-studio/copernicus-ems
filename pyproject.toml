@@ -25,6 +25,9 @@ dependencies = [
     "httpx>=0.27",
 ]
 
+[project.scripts]
+copernicus-ems = "copernicus_ems.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/agent-engineering-studio/copernicus-ems"
 Issues = "https://github.com/agent-engineering-studio/copernicus-ems/issues"
@@ -69,6 +72,7 @@ addopts = "--strict-markers"
 
 [tool.coverage.run]
 source = ["copernicus_ems"]
+omit = ["*/copernicus_ems/__main__.py"]
 
 [tool.coverage.report]
 fail_under = 90

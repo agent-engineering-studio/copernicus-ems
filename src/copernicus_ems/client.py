@@ -19,6 +19,7 @@ import asyncio
 import os
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from types import TracebackType
 from typing import Any
@@ -130,24 +131,32 @@ async def fetch_observed_events(
     event_types: Iterable[str] | None = (FLOOD_EVENT_TYPE,),
     notations: Iterable[str] | None = FLOOD_NOTATIONS,
     directory: Path | None = None,
+    concurrency: int = 4,
 ) -> list[ProductEvents]:
     """The observed events of every product of an activation (floods by default).
 
     Products without an ``observedEventA`` layer, and products where no
     feature passes the filter, are left out. Layers are cached as in
-    :func:`fetch_layer`.
+    :func:`fetch_layer`, and downloaded ``concurrency`` at a time; the
+    result keeps the order of the products.
     """
+    if concurrency < 1:
+        raise ValueError("concurrency must be at least 1")
     types = tuple(event_types) if event_types is not None else None
     marks = tuple(notations) if notations is not None else None
-    out: list[ProductEvents] = []
-    for product in await fetch_products(client, code):
-        collection = await fetch_layer(client, product, OBSERVED_EVENT, directory=directory)
+    gate = asyncio.Semaphore(concurrency)
+
+    async def one(product: Product) -> ProductEvents | None:
+        async with gate:
+            collection = await fetch_layer(client, product, OBSERVED_EVENT, directory=directory)
         if collection is None:
-            continue
+            return None
         features = select_features(collection, event_types=types, notations=marks)
-        if features:
-            out.append(ProductEvents(product=product, features=features))
-    return out
+        return ProductEvents(product=product, features=features) if features else None
+
+    products = await fetch_products(client, code)
+    found = await asyncio.gather(*(one(p) for p in products))
+    return [events for events in found if events is not None]
 
 
 class RetryTransport(httpx.AsyncBaseTransport):
@@ -228,11 +237,18 @@ class RapidMapping:
             await self._client.aclose()
 
     async def activations(
-        self, *, country: str | None = None, categories: Iterable[str] | None = None
+        self,
+        *,
+        country: str | None = None,
+        categories: Iterable[str] | None = None,
+        since: date | datetime | None = None,
+        until: date | datetime | None = None,
     ) -> list[Activation]:
         """Public activations, oldest first, filtered as :func:`select_activations` does."""
         found = await fetch_activations(self._client)
-        return select_activations(found, country=country, categories=categories)
+        return select_activations(
+            found, country=country, categories=categories, since=since, until=until
+        )
 
     async def products(self, code: str) -> list[Product]:
         """The products of one activation (``EMSR762``)."""
@@ -248,6 +264,7 @@ class RapidMapping:
         *,
         event_types: Iterable[str] | None = (FLOOD_EVENT_TYPE,),
         notations: Iterable[str] | None = FLOOD_NOTATIONS,
+        concurrency: int = 4,
     ) -> list[ProductEvents]:
         """The observed events of every product of an activation (floods by default)."""
         return await fetch_observed_events(
@@ -256,4 +273,5 @@ class RapidMapping:
             event_types=event_types,
             notations=notations,
             directory=self.directory,
+            concurrency=concurrency,
         )

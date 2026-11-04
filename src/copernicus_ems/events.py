@@ -22,6 +22,9 @@ from copernicus_ems.errors import EmsError
 OBSERVED_EVENT = "observedEventA"
 FLOOD_EVENT_TYPE = "5-Flood"
 FLOOD_NOTATIONS = ("Flooded area", "Flood trace")
+#: The landslides a flood activation also maps: ``event_types=[MASS_MOVEMENT_EVENT_TYPE],
+#: notations=None``.
+MASS_MOVEMENT_EVENT_TYPE = "6-Mass Movement"
 
 
 def parse_layer(body: bytes | str) -> dict[str, Any]:

@@ -166,7 +166,25 @@ Run it again: the 11 layers are read from disk and the only request left is
 the activation detail (12.7 s the first time, 2.1 s the second, on
 EMSR664).
 
-### 3. Every flood of a country, in one file
+### 3. From the command line
+
+The package installs a `copernicus-ems` command (also `python -m copernicus_ems`):
+
+```bash
+copernicus-ems list --country Italy --since 2025-01-01        # code, date, category, name
+copernicus-ems list --category Flood --json                   # one JSON object per line
+copernicus-ems fetch EMSR762 EMSR664                          # layers into the cache
+copernicus-ems export --country Italy -o italy.geojson --masks italy_masks.geojson
+copernicus-ems export EMSR762 -o emsr762.geojson --all-events # landslides too
+```
+
+`export` tags every feature with its `activation`, `product`, `aoi_name`
+and `observed_time`; `--masks` writes the observation mask of each product
+as a second GeoJSON. By country it reads the `Flood` and `Storm`
+activations (`--category` to change it), and keeps the flood features.
+`--dir` sets where the layers are saved.
+
+### 4. Every flood of a country, from Python
 
 [`examples/italy_floods.py`](examples/italy_floods.py) writes one GeoJSON
 with every flood polygon of a country, each tagged with its activation,
@@ -393,7 +411,7 @@ everything = await ems.observed_events("EMSR762", event_types=None, notations=No
 import shapely  # pip install shapely
 from shapely.geometry import shape
 
-mask = shapely.from_wkt(event.product.aoi_extent_wkt)
+mask = shape(event.product.aoi_extent)  # GeoJSON; or shapely.from_wkt(aoi_extent_wkt)
 flooded = shapely.union_all([shape(f["geometry"]) for f in event.features])
 observed_dry = mask.difference(flooded)
 ```
@@ -455,10 +473,12 @@ but the parts that matter are undocumented, and each one fails **quietly**:
 | Name | What it does |
 |---|---|
 | `RapidMapping(client=None, *, directory=None, retries=3)` | The async client; async context manager. |
-| `.activations(country=, categories=)` | Public activations, oldest first. |
+| `.activations(country=, categories=, since=, until=)` | Public activations, oldest first. |
 | `.products(code)` | The products of an activation. |
 | `.layer(product, kind)` | One layer as GeoJSON (cached), or `None`. |
-| `.observed_events(code, event_types=, notations=)` | Selected features of each product. |
+| `.observed_events(code, event_types=, notations=, concurrency=4)` | Selected features of each product, layers downloaded in parallel. |
+| `Product.aoi_extent` | The observation mask as a GeoJSON geometry (`aoi_extent_wkt` as WKT). |
+| `copernicus-ems list / fetch / export` | The command line. |
 | `default_directory()` | Where layers go when no directory is given. |
 | `ENV_DATA_DIR` | `"COPERNICUS_EMS_DATA_DIR"`. |
 | `fetch_activations` · `fetch_products` · `fetch_layer` · `fetch_observed_events` | The same, as functions over your client. |
@@ -467,7 +487,7 @@ but the parts that matter are undocumented, and each one fails **quietly**:
 
 Lower level, for your own HTTP layer: `activations_url` /
 `parse_activations` / `select_activations`, `detail_url` / `parse_detail`,
-`parse_layer` / `select_features`, `layer_path`, `parse_time`.
+`parse_layer` / `select_features`, `layer_path`, `parse_time`, `wkt_to_geojson`.
 
 ---
 
@@ -519,11 +539,9 @@ above 90%, and contributions are accepted under Apache-2.0.
 
 | Idea | Why it matters | Good for |
 |---|---|---|
-| 🖥️ **Command-line tool** (`copernicus-ems fetch EMSR762`) | Download without writing Python | first contribution |
-| 🗺️ **Observation masks as GeoJSON** | Today they are WKT | first contribution |
 | 🔥 **Presets for other hazards** (burnt areas, landslides) | Same API, other events | intermediate |
-| 📅 **Filter activations by date** | A season, not the whole archive | first contribution |
-| ⚡ **Parallel layer downloads** with a concurrency limit | A country in seconds | intermediate |
+| 📊 **Area statistics and GeoParquet export** (`[geo]` extra) | Numbers and files for GIS and ML | intermediate |
+| 🎯 **Mask-aware metrics** (CSI, POD, FAR) for flood models | Score only where someone looked | intermediate |
 | 🏛️ **Legacy activations** (before 2023) | Ten more years of floods | advanced |
 
 ---

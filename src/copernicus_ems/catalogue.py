@@ -29,7 +29,7 @@ import json
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from copernicus_ems.errors import EmsError
@@ -40,6 +40,9 @@ DETAIL_URL = f"{API_URL}/public-activations/"
 
 #: ``EMSR762/AOI01/DEL_PRODUCT/EMSR762_AOI01_DEL_PRODUCT_observedEventA_v1_VT``
 _LAYER_RE = re.compile(r"_(?P<kind>[A-Za-z]+)_v(?P<version>\d+)_VT$")
+_WKT_RE = re.compile(
+    r"^\s*(?P<kind>MULTIPOLYGON|POLYGON)\s*(?:Z\s*|M\s*|ZM\s*)?(?P<body>\(.*\))\s*$", re.I | re.S
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +100,50 @@ class Product:
         """The earliest image the product was made from: when the satellite saw it."""
         return min(self.acquisitions, default=None)
 
+    @property
+    def aoi_extent(self) -> dict[str, Any] | None:
+        """The observation mask as a GeoJSON geometry (lon/lat), from :attr:`aoi_extent_wkt`."""
+        return wkt_to_geojson(self.aoi_extent_wkt) if self.aoi_extent_wkt else None
+
+
+def wkt_to_geojson(wkt: str) -> dict[str, Any]:
+    """A WKT ``POLYGON`` or ``MULTIPOLYGON`` as a GeoJSON geometry.
+
+    Those are the only shapes Rapid Mapping uses for an AOI; anything else
+    raises :class:`EmsError`. Z and M values are dropped.
+    """
+    match = _WKT_RE.match(wkt)
+    if match is None:
+        raise EmsError(f"not a WKT polygon: {wkt[:80]!r}")
+    try:
+        nested = _wkt_nesting(match["body"])
+    except (ValueError, IndexError) as exc:
+        raise EmsError(f"malformed WKT: {wkt[:80]!r}") from exc
+    if match["kind"].upper() == "POLYGON":
+        return {"type": "Polygon", "coordinates": nested}
+    return {"type": "MultiPolygon", "coordinates": nested}
+
+
+def _wkt_nesting(body: str) -> Any:
+    """``((1 2, 3 4))`` -> ``[[[1.0, 2.0], [3.0, 4.0]]]``."""
+    stack: list[list[Any]] = [[]]
+    token = ""
+    for char in body:
+        if char == "(":
+            stack.append([])
+        elif char in ",)":
+            if token.strip():
+                stack[-1].append([float(v) for v in token.split()[:2]])
+            token = ""
+            if char == ")":
+                done = stack.pop()
+                stack[-1].append(done)
+        else:
+            token += char
+    if len(stack) != 1 or len(stack[0]) != 1 or token.strip():
+        raise ValueError("unbalanced")
+    return stack[0][0]
+
 
 def parse_time(raw: Any) -> datetime | None:
     """An ISO time from the API, as aware UTC (the API omits the zone)."""
@@ -149,8 +196,14 @@ def select_activations(
     *,
     country: str | None = None,
     categories: Iterable[str] | None = None,
+    since: date | datetime | None = None,
+    until: date | datetime | None = None,
 ) -> list[Activation]:
-    """Activations in ``country`` and ``categories`` (case-insensitive), oldest first."""
+    """Activations in ``country`` and ``categories`` (case-insensitive), oldest first.
+
+    ``since`` and ``until`` bound the event time, both included; a ``date``
+    means that whole day (UTC), a naive ``datetime`` is taken as UTC.
+    """
     wanted = {c.lower() for c in categories} if categories is not None else None
     return sorted(
         (
@@ -158,9 +211,26 @@ def select_activations(
             for a in activations
             if (country is None or country in a.countries)
             and (wanted is None or a.category.lower() in wanted)
+            and _within(a.event_time, since, until)
         ),
         key=lambda a: a.event_time,
     )
+
+
+def _within(when: datetime, since: date | datetime | None, until: date | datetime | None) -> bool:
+    if since is not None:
+        if isinstance(since, datetime):
+            if when < (since if since.tzinfo else since.replace(tzinfo=UTC)):
+                return False
+        elif when.astimezone(UTC).date() < since:
+            return False
+    if until is not None:
+        if isinstance(until, datetime):
+            if when > (until if until.tzinfo else until.replace(tzinfo=UTC)):
+                return False
+        elif when.astimezone(UTC).date() > until:
+            return False
+    return True
 
 
 def parse_detail(body: bytes | str) -> list[Product]:

@@ -32,8 +32,8 @@ flowchart LR
 
 | # | Feature | Kind | Impact | Effort | Target |
 |---|---|---|---|---|---|
-| 1 | CLI (`copernicus-ems fetch / list / export`) | core | high | S | 0.3 |
-| 2 | Observation masks as GeoJSON, filter by date, parallel downloads | core | high | S | 0.3 |
+| 1 | CLI (`copernicus-ems fetch / list / export`) | core | high | S | 0.3 :white_check_mark: |
+| 2 | Observation masks as GeoJSON, filter by date, parallel downloads | core | high | S | 0.3 :white_check_mark: |
 | 3 | `[geo]` extra: area stats, GeoParquet / GeoPackage export | geo | high | M | 0.3 |
 | 4 | **Mask-aware evaluation metrics** for flood models | AI | very high | M | 0.4 |
 | 5 | **Tri-state label rasters** and ML chips | AI | very high | M | 0.4 |
@@ -52,30 +52,25 @@ S = days, M = one or two weeks, L = more.
 
 These are not AI, but every AI feature below needs them.
 
-### Command-line tool
+### Done
 
-```bash
-copernicus-ems list --country Italy --since 2024-01-01
-copernicus-ems fetch EMSR762 EMSR664          # into the cache directory
-copernicus-ems export --country Italy -o italy.parquet --with-masks
-```
-
-A `[project.scripts]` entry point over the existing functions, `argparse`
-only, so no new dependency. It turns `examples/italy_floods.py` into a
-supported command.
-
-### Small API gaps
-
-- **`Product.aoi_extent` as GeoJSON** next to the WKT: today callers need
-  shapely just to read the mask.
+- **Command-line tool**: `copernicus-ems list / fetch / export`, `argparse`
+  only, no new dependency; `export --masks` writes the observation masks
+  too. See [Getting started](getting-started.md#from-the-command-line).
+- **`Product.aoi_extent`**: the mask as a GeoJSON geometry, no shapely
+  needed (`wkt_to_geojson`).
 - **`activations(since=, until=)`**: a season, not the whole archive.
-- **Parallel layer downloads** with a concurrency limit
-  (`asyncio.Semaphore`, default 4): a country in seconds instead of
-  minutes, gentle on the API that already answers 502.
+- **Parallel layer downloads**: `concurrency=4` by default, gentle on an
+  API that already answers 502.
+- **`MASS_MOVEMENT_EVENT_TYPE`** next to `FLOOD_EVENT_TYPE`.
+
+### Still open
+
 - **Typed features**: a `TypedDict` for the Rapid Mapping attributes
   (`event_type`, `notation`, `obj_desc`, `det_method`, `area`).
-- **Other hazard presets**: `BURNT_AREA`, `LANDSLIDE` constants, like
-  `FLOOD_EVENT_TYPE` today.
+- **Burnt-area preset**: the wildfire `event_type` and notations, once
+  checked on real wildfire activations (EMSR830, EMSR873).
+- **GeoParquet output** for `export`, with the `[geo]` extra below.
 
 ### `[geo]` extra
 

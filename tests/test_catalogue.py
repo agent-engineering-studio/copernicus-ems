@@ -136,3 +136,55 @@ def test_times_are_utc_even_without_a_zone() -> None:
 def test_urls() -> None:
     assert activations_url(page_size=10).endswith("public-activations-info/?limit=10")
     assert detail_url("EMSR762").endswith("public-activations/?code=EMSR762")
+
+
+def test_select_by_date_includes_both_ends() -> None:
+    from datetime import UTC, date, datetime
+
+    from copernicus_ems import Activation, select_activations
+
+    def act(code: str, when: datetime) -> Activation:
+        return Activation(code=code, name=code, category="Flood", event_time=when, countries=())
+
+    acts = [
+        act("A", datetime(2024, 1, 1, 0, 0, tzinfo=UTC)),
+        act("B", datetime(2024, 6, 30, 23, 59, tzinfo=UTC)),
+        act("C", datetime(2024, 7, 1, 8, 0, tzinfo=UTC)),
+    ]
+    assert [
+        a.code for a in select_activations(acts, since=date(2024, 1, 1), until=date(2024, 6, 30))
+    ] == ["A", "B"]
+    assert [a.code for a in select_activations(acts, since=datetime(2024, 1, 1, 1))] == ["B", "C"]
+    assert [
+        a.code for a in select_activations(acts, until=datetime(2024, 7, 1, 8, tzinfo=UTC))
+    ] == ["A", "B", "C"]
+    assert [a.code for a in select_activations(acts, until=datetime(2024, 7, 1, 7))] == ["A", "B"]
+
+
+def test_the_aoi_extent_as_geojson() -> None:
+    products = parse_detail((FIXTURES / "detail_EMSR762.json").read_bytes())
+    for product in products:
+        geometry = product.aoi_extent
+        assert geometry is not None
+        assert geometry["type"] == "Polygon"
+        ring = geometry["coordinates"][0]
+        assert ring[0] == ring[-1]
+        assert all(10 < lon < 13 and 43 < lat < 45 for lon, lat in ring)
+
+
+def test_wkt_shapes() -> None:
+    from copernicus_ems import EmsError, wkt_to_geojson
+
+    assert wkt_to_geojson("POLYGON ((0 0, 1 0, 1 1, 0 0), (0.2 0.2, 0.3 0.2, 0.2 0.2))") == {
+        "type": "Polygon",
+        "coordinates": [
+            [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 0.0]],
+            [[0.2, 0.2], [0.3, 0.2], [0.2, 0.2]],
+        ],
+    }
+    multi = wkt_to_geojson("MULTIPOLYGON Z (((0 0 5, 1 0 5, 0 0 5)), ((2 2 1, 3 2 1, 2 2 1)))")
+    assert multi["type"] == "MultiPolygon"
+    assert multi["coordinates"][1][0][0] == [2.0, 2.0]
+    for bad in ["POINT (1 2)", "POLYGON ((0 0, 1 1)", "POLYGON ((a b, 1 1))", "POLYGON ((0 0)) x"]:
+        with pytest.raises(EmsError):
+            wkt_to_geojson(bad)
