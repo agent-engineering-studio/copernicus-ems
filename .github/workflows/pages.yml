@@ -1,0 +1,47 @@
+# Builds the documentation site (zensical.toml, docs/, the docstrings) with Zensical and
+# deploys it to GitHub Pages. Needs, once: Settings → Pages → Source:
+# "GitHub Actions".
+name: pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ["docs/**", "zensical.toml", "src/**", "CHANGELOG.md", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --locked --only-group docs
+      - run: uv run --no-sync zensical build --strict --clean
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

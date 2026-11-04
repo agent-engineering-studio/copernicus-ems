@@ -41,6 +41,10 @@ dev = [
     "pytest-cov>=6.0",
     "ruff>=0.8",
 ]
+docs = [
+    "mkdocstrings[python]>=1.0.8",
+    "zensical>=0.0.74",
+]
 
 [tool.ruff]
 line-length = 100

@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Documentation site on GitHub Pages (Zensical, API reference from
+  the docstrings) with a roadmap page: improvements and AI features.
+
 ## [0.2.0] - 2026-11-03
 
 ### Added
