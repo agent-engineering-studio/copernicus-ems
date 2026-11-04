@@ -98,18 +98,22 @@ The chips and the test areas are the same as in notebook 01.
 - **Where the label shares the image, change helps.** The change
   threshold raises CSI from 0.39 to 0.42 and cuts false alarms (FAR 0.42 to
   0.37). The change classifier gains 0.06 CSI over the one-image classifier.
-- **On independent labels it does not help, and the figure shows why.**
-  Those test maps were drawn on Pléiades and SPOT, very-high-resolution
-  optical images, as many small scattered polygons. At 40 m most of them are
-  a pixel or two, and ΔVV shows hardly any change there: the water was
-  shallow, short-lived or under cover, or it had receded in the 5–17 h
-  between the two acquisitions. The change threshold becomes very cautious
-  (bias 0.05, FAR 0.11): what it marks is mostly right, but it finds almost
-  nothing.
-- **What would move the independent score:** a finer grid (20 m or 10 m,
-  4–16 × the PU), keeping only pairs with a small `gap_hours`, and more
-  activations with independent maps of large floods. 28 test chips from two
-  areas are too few to separate the models from the label type.
+- **On independent labels it does not help.** The test maps were drawn on
+  Pléiades, SPOT and WorldView optical images, and ΔVV shows hardly any
+  change under most of their polygons. The water was shallow, short-lived
+  or under cover, or it had receded in the 5–17 h between the two
+  acquisitions. The change threshold becomes very cautious (bias 0.05,
+  FAR 0.11): what it marks is mostly right, but it finds almost nothing.
+- **Resolution is not the main cause.** Measured on the EMS polygons
+  themselves, only 2.7 % of the independent flood area lies in polygons
+  smaller than 4 pixels at 40 m (0.7 % at 20 m). The share is higher in the
+  small test floods (19 % for EMSR795 AOI02, 44 % for EMSR843 AOI01 DEL),
+  but most of their area is still in larger polygons.
+- **The independent test is too small.** It holds about 2 km² of mapped
+  flood, against 149 km² of independent labels in all. The large
+  independent maps (EMSR664 AOI01 and AOI07, 109 km²) are all in training.
+  A cross-validation by activation would score every area once and say
+  much more than a finer grid.
 
 The notebooks are stored without outputs. Each one saves its figure in
 `docs/images/`.
