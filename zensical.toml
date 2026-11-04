@@ -5,7 +5,7 @@
 [project]
 site_name = "copernicus-ems"
 site_description = "Copernicus EMS Rapid Mapping in Python: observed flood extents and observation masks as GeoJSON."
-site_url = "https://agent-engineering-studio.github.io/copernicus-ems/"
+site_url = "https://agentengineering.it/copernicus-ems/"
 repo_url = "https://github.com/agent-engineering-studio/copernicus-ems"
 repo_name = "agent-engineering-studio/copernicus-ems"
 edit_uri = "edit/main/docs/"
