@@ -18,6 +18,8 @@ All notable changes to this project are documented here. The format follows
 - `Grid.from_transform`, to rasterize labels on a scene's grid.
 - `copernicus_ems.export`: `tagged_features`, `mask_features`,
   `write_geojson`, `write_features`, shared by the CLI and the MCP server.
+- Weekly contract tests against the live services (`tests/test_live.py`,
+  marker `live`, `COPERNICUS_EMS_LIVE=1`); a failure opens an issue.
 
 ## [0.3.0] - 2026-11-04
 
