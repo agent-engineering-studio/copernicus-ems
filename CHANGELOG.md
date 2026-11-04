@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- GeoParquet 1.1 output (extra `parquet`: pyarrow): `copernicus-ems export
+  -o x.parquet` (and `--masks`), `export_observed_events(file_format=
+  "geoparquet")` in the MCP server, `export.write_geoparquet`. EMSR664:
+  17.5 MB instead of 68 MB of GeoJSON; reads in GeoPandas and DuckDB.
+- GeoTIFF labels (the `ml` extra now includes rasterio):
+  `LabelRaster.to_geotiff` / `from_geotiff`, `Chip.save(file_format="tif")`;
+  `255` is nodata, the provenance is in the tags.
+- `Grid.from_transform`, to rasterize labels on a scene's grid.
+- `copernicus_ems.export`: `tagged_features`, `mask_features`,
+  `write_geojson`, `write_features`, shared by the CLI and the MCP server.
+
 ## [0.3.0] - 2026-11-04
 
 ### Added

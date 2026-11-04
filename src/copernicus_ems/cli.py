@@ -17,7 +17,7 @@ import sys
 from collections.abc import Sequence
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TextIO
 
 import httpx
 
@@ -25,6 +25,7 @@ from copernicus_ems.catalogue import Activation
 from copernicus_ems.client import ProductEvents, RapidMapping
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS
+from copernicus_ems.export import mask_features, tagged_features, write_features
 from copernicus_ems.scenes import SENTINEL_1_GRD, SENTINEL_2_L2A, ScenePass, passes
 
 #: Many floods are filed as ``Storm``: the features are filtered on ``5-Flood`` anyway.
@@ -90,8 +91,16 @@ def _parser() -> argparse.ArgumentParser:
     export.add_argument("codes", nargs="*", metavar="CODE", help="activations (or use --country)")
     filters(export, EXPORT_CATEGORIES)
     events(export)
-    export.add_argument("-o", "--output", type=Path, required=True, help="the GeoJSON to write")
-    export.add_argument("--masks", type=Path, help="also write the observation masks here")
+    export.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        required=True,
+        help="the file to write: .geojson, or .parquet for GeoParquet (parquet extra)",
+    )
+    export.add_argument(
+        "--masks", type=Path, help="also write the observation masks here (.geojson or .parquet)"
+    )
 
     scenes = commands.add_parser(
         "scenes", help="open Sentinel passes over the products of an activation, nearest first"
@@ -156,25 +165,20 @@ async def _export(ems: RapidMapping, args: argparse.Namespace) -> int:
         print("copernicus-ems: give activation codes or --country", file=sys.stderr)
         return 2
 
-    features: list[dict[str, Any]] = []
-    masks: list[dict[str, Any]] = []
+    events: list[ProductEvents] = []
     for code in codes:
         found = await _events(ems, code, args)
         _report(code, found, sys.stderr)
-        for event in found:
-            tags = _tags(event)
-            features.extend(
-                {**f, "properties": {**(f.get("properties") or {}), **tags}} for f in event.features
-            )
-            if (mask := event.product.aoi_extent) is not None:
-                masks.append({"type": "Feature", "geometry": mask, "properties": tags})
+        events.extend(found)
+    features = tagged_features(events)
+    masks = mask_features(events)
 
-    _write(args.output, features)
+    write_features(args.output, features)
     print(
         f"{len(features)} features from {len(codes)} activations -> {args.output}", file=sys.stderr
     )
     if args.masks is not None:
-        _write(args.masks, masks)
+        write_features(args.masks, masks)
         print(f"{len(masks)} observation masks -> {args.masks}", file=sys.stderr)
     return 0
 
@@ -236,16 +240,6 @@ def _pass_line(p: ScenePass, cover: float, *, as_json: bool) -> str:
     )
 
 
-def _tags(event: ProductEvents) -> dict[str, Any]:
-    observed = event.product.observed_time
-    return {
-        "activation": event.product.activation_code,
-        "product": event.product.label,
-        "aoi_name": event.product.aoi_name,
-        "observed_time": observed.isoformat() if observed else None,
-    }
-
-
 def _listing(activation: Activation, *, as_json: bool) -> str:
     if as_json:
         return json.dumps(
@@ -265,8 +259,3 @@ def _listing(activation: Activation, *, as_json: bool) -> str:
 def _report(code: str, found: list[ProductEvents], out: TextIO) -> None:
     count = sum(len(e.features) for e in found)
     print(f"{code}: {count} features in {len(found)} products", file=out)
-
-
-def _write(path: Path, features: list[dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"type": "FeatureCollection", "features": features}))

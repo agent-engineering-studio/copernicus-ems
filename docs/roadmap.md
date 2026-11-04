@@ -34,7 +34,7 @@ flowchart LR
 |---|---|---|---|---|---|
 | 1 | CLI (`copernicus-ems fetch / list / export`) | core | high | S | 0.3 :white_check_mark: |
 | 2 | Observation masks as GeoJSON, filter by date, parallel downloads | core | high | S | 0.3 :white_check_mark: |
-| 3 | `[geo]` extra: area stats :white_check_mark:, GeoParquet / GeoPackage export | geo | high | M | 0.3 |
+| 3 | `[geo]` extra: area stats, GeoParquet export | geo | high | M | 0.3 / 0.4 :white_check_mark: |
 | 4 | **Mask-aware evaluation metrics** for flood models | AI | very high | M | 0.4 :white_check_mark: |
 | 5 | **Tri-state label rasters** and ML chips | AI | very high | M | 0.4 :white_check_mark: |
 | 6 | **MCP server**: Rapid Mapping as tools for LLM agents | AI | high | S–M | 0.5 :white_check_mark: |
@@ -70,7 +70,7 @@ These are not AI, but every AI feature below needs them.
   (`event_type`, `notation`, `obj_desc`, `det_method`, `area`).
 - **Burnt-area preset**: the wildfire `event_type` and notations, once
   checked on real wildfire activations (EMSR830, EMSR873).
-- **GeoParquet output** for `export`, with the `[geo]` extra below.
+- ~~GeoParquet output~~ for `export`: done in 0.4 (`parquet` extra).
 
 ### `[geo]` extra
 
@@ -116,8 +116,9 @@ scores = evaluate(prediction, events, resolution_m=20)
 ### 2. Tri-state label rasters and ML chips (0.4)
 
 !!! success "Done"
-    `rasterize` and `chips`, saved as `.npy` with a JSON sidecar; GeoTIFF
-    output (rasterio) is still open. See [Geometry & ML](ml.md).
+    `rasterize` and `chips`, saved as `.npy` with a JSON sidecar or as
+    GeoTIFF (`to_geotiff`, `Chip.save(file_format="tif")`). See
+    [Geometry & ML](ml.md).
 
 Turn products into training data for segmentation models:
 

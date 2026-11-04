@@ -294,3 +294,12 @@ def test_find_scenes_unknown_sensor() -> None:
 
     with pytest.raises(ToolError, match="sensors"):
         asyncio.run(main())
+
+
+def test_export_as_geoparquet(data_dir: Path) -> None:
+    import pyarrow.parquet as pq
+
+    _, out = call("export_observed_events", {"code": "EMSR762", "file_format": "geoparquet"})
+    assert out["events_path"].endswith("EMSR762_flood.parquet")
+    assert pq.read_table(out["events_path"]).num_rows == 43
+    assert out["masks_path"].endswith("_masks.parquet")

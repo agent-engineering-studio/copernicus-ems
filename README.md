@@ -176,6 +176,7 @@ copernicus-ems list --category Flood --json                   # one JSON object 
 copernicus-ems fetch EMSR762 EMSR664                          # layers into the cache
 copernicus-ems export --country Italy -o italy.geojson --masks italy_masks.geojson
 copernicus-ems export EMSR762 -o emsr762.geojson --all-events # landslides too
+copernicus-ems export EMSR664 -o emsr664.parquet              # GeoParquet ([parquet] extra)
 ```
 
 `export` tags every feature with its `activation`, `product`, `aoi_name`
@@ -583,7 +584,7 @@ above 90%, and contributions are accepted under Apache-2.0.
 |---|---|---|
 | 🔥 **Presets for other hazards** (burnt areas, landslides) | Same API, other events | intermediate |
 | 📊 **Area statistics and GeoParquet export** (`[geo]` extra) | Numbers and files for GIS and ML | intermediate |
-| 🧱 **GeoTIFF labels and GeoParquet export** | Files every GIS and ML tool reads | intermediate |
+| 🧪 **Fine-tuning notebook** on an EO foundation model | Labels + Sentinel-1 → a flood model, scored with `evaluate` | advanced |
 | 🏛️ **Legacy activations** (before 2023) | Ten more years of floods | advanced |
 
 ---
