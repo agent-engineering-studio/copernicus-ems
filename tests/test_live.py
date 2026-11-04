@@ -141,3 +141,33 @@ def test_the_sentinel_catalogue() -> None:
     assert recorded <= live, f"scenes gone from the catalogue: {sorted(recorded - live)}"
     radar = [m.scene for m in matches if m.scene.collection == SENTINEL_1_GRD]
     assert radar and radar[0].download_url and radar[0].datatake_id
+
+
+@pytest.mark.skipif(
+    not (os.environ.get("CDSE_CLIENT_ID") or os.environ.get("CDSE_CREDENTIALS_FILE")),
+    reason="needs CDSE credentials (CDSE_CLIENT_ID / CDSE_CLIENT_SECRET)",
+)
+def test_sentinel1_backscatter_lands_on_the_label_grid(tmp_path: Path) -> None:
+    """A small real request (~1 PU): the image must be on exactly the labels' grid."""
+    import rasterio
+
+    from copernicus_ems.ml import Grid
+    from copernicus_ems.sentinelhub import SentinelHub, make_pair, plan_pair
+
+    async def body(ems: RapidMapping) -> Any:
+        events = await ems.observed_events("EMSR664", event_types=None, notations=None)
+        (small,) = [e for e in events if e.product.label == "AOI04_GRA_PRODUCT"]  # Faenza
+        plan = await plan_pair(ems, small, resolution_m=40, directory=tmp_path)
+        assert plan.scene_pass is not None, plan.reason
+        assert plan.pu < 2
+        async with SentinelHub() as hub:
+            return await make_pair(hub, plan)
+
+    image, labels = run(body)
+    with rasterio.open(image.path) as img, rasterio.open(labels) as lab:
+        assert Grid.from_transform(img.crs, img.transform, img.width, img.height) == (
+            Grid.from_transform(lab.crs, lab.transform, lab.width, lab.height)
+        )
+        vv, _vh, mask = img.read()
+    assert mask.mean() > 0.9, "most of the AOI should have data"
+    assert 0 < float(vv[mask > 0].mean()) < 1, "linear backscatter is mostly below 1"

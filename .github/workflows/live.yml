@@ -26,6 +26,10 @@ jobs:
       - name: Live contract tests
         env:
           COPERNICUS_EMS_LIVE: "1"
+          # Optional: with these repository secrets, one small Process API
+          # request (~1 PU) checks Sentinel-1 lands on the labels' grid.
+          CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
+          CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
         run: uv run pytest -m live --no-cov -v -p no:cacheprovider
 
   report:

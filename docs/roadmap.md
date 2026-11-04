@@ -193,6 +193,21 @@ emit image + label pairs.
 - Large effort and new credentials (Data Space needs an account), so it
   belongs in a separate package or the `[ml]` extra, not in the core.
 
+### 4b. Sentinel-1 backscatter on the labels' grid
+
+!!! success "Done"
+    `copernicus-ems pairs` and `copernicus_ems.sentinelhub` (`[cdse]`
+    extra): analysis-ready Sentinel-1 from the Sentinel Hub Process API of
+    the Copernicus Data Space, cut to the label grid, written to the data
+    directory with the labels and a manifest; PU estimated and budgeted
+    before any request. See [Sentinel-1 backscatter](backscatter.md).
+
+    Next with the same account: the Statistical API (water time series
+    over an AOI between EMS maps, kept apart from the analysts' ground
+    truth), the Copernicus DEM and a pre-event reference scene as model
+    features. BYOC only for serving rasters of our own (e.g. Limen's
+    forecasts) next to Sentinel-1.
+
 ### 5. Fine-tuning notebooks on EO foundation models (0.6)
 
 With pairs from (4) and labels from (2), show how to fine-tune an open

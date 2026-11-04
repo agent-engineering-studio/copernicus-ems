@@ -235,6 +235,12 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+cdse = [
+    { name = "numpy" },
+    { name = "pyproj" },
+    { name = "rasterio" },
+    { name = "shapely" },
+]
 geo = [
     { name = "pyproj" },
     { name = "shapely" },
@@ -280,6 +286,7 @@ requires-dist = [
     { name = "copernicus-ems", extras = ["geo"], marker = "extra == 'mcp'" },
     { name = "copernicus-ems", extras = ["geo"], marker = "extra == 'ml'" },
     { name = "copernicus-ems", extras = ["geo"], marker = "extra == 'parquet'" },
+    { name = "copernicus-ems", extras = ["ml"], marker = "extra == 'cdse'" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.3" },
     { name = "numpy", marker = "extra == 'ml'", specifier = ">=1.26" },
@@ -288,7 +295,7 @@ requires-dist = [
     { name = "rasterio", marker = "extra == 'ml'", specifier = ">=1.4" },
     { name = "shapely", marker = "extra == 'geo'", specifier = ">=2.0" },
 ]
-provides-extras = ["geo", "ml", "parquet", "mcp"]
+provides-extras = ["geo", "ml", "cdse", "parquet", "mcp"]
 
 [package.metadata.requires-dev]
 dev = [

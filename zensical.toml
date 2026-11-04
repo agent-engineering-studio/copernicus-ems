@@ -17,6 +17,7 @@ nav = [
   { "Recipes" = "recipes.md" },
   { "Geometry & ML" = "ml.md" },
   { "Open imagery" = "scenes.md" },
+  { "Sentinel-1 backscatter" = "backscatter.md" },
   { "MCP server" = "mcp.md" },
   { "API reference" = "api.md" },
   { "Roadmap & AI" = "roadmap.md" },

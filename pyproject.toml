@@ -31,6 +31,8 @@ dependencies = [
 geo = ["shapely>=2.0", "pyproj>=3.6"]
 # Label rasters and mask-aware metrics for flood models.
 ml = ["copernicus-ems[geo]", "numpy>=1.26", "rasterio>=1.4"]
+# Sentinel-1 backscatter from the Copernicus Data Space (needs a CDSE account).
+cdse = ["copernicus-ems[ml]"]
 # GeoParquet export.
 parquet = ["copernicus-ems[geo]", "pyarrow>=17"]
 # MCP server for LLM agents: copernicus-ems mcp.

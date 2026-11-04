@@ -445,6 +445,23 @@ Copernicus Data Space catalogue, with the time gap and the share of the
 AOI they cover. Searching needs no account, downloading does. Details:
 [Open imagery](https://agentengineering.it/copernicus-ems/scenes/).
 
+### Sentinel-1 backscatter on the labels' grid (`[cdse]` extra)
+
+With a free Copernicus Data Space account (`CDSE_CLIENT_ID` /
+`CDSE_CLIENT_SECRET`, or `CDSE_CREDENTIALS_FILE` for a Docker secret):
+
+```bash
+copernicus-ems pairs EMSR664 --dry-run   # the plan and its processing units, free
+copernicus-ems pairs EMSR664 --aoi 3     # VV, VH on exactly the label grid, + labels + manifest
+```
+
+For each product it picks the nearest Sentinel-1 pass covering the AOI,
+asks the Sentinel Hub Process API for calibrated, orthorectified
+backscatter cut to the labels' grid, and writes image, labels and a
+`_pair.json` (time gap, coverage, credits) into the data directory, the
+same Docker volume as the layers. Details:
+[Sentinel-1 backscatter](https://agentengineering.it/copernicus-ems/backscatter/).
+
 ### Ask an agent (MCP server, `[mcp]` extra)
 
 ```bash
@@ -591,7 +608,8 @@ above 90%, and contributions are accepted under Apache-2.0.
 |---|---|---|
 | 🔥 **Presets for other hazards** (burnt areas, landslides) | Same API, other events | intermediate |
 | 📊 **Area statistics and GeoParquet export** (`[geo]` extra) | Numbers and files for GIS and ML | intermediate |
-| 🧪 **Fine-tuning notebook** on an EO foundation model | Labels + Sentinel-1 → a flood model, scored with `evaluate` | advanced |
+| 🧪 **Fine-tuning notebook** on an EO foundation model | `pairs` → a flood model, scored with `evaluate` | advanced |
+| 📈 **Statistical API water time series** (CDSE) | Water between EMS maps, for Limen | intermediate |
 | 🏛️ **Legacy activations** (before 2023) | Ten more years of floods | advanced |
 
 ---
