@@ -416,6 +416,22 @@ flooded = shapely.union_all([shape(f["geometry"]) for f in event.features])
 observed_dry = mask.difference(flooded)
 ```
 
+### Areas, label rasters, scores (`[geo]`, `[ml]` extras)
+
+```python
+from copernicus_ems.geo import summary  # pip install 'copernicus-ems[geo]'
+from copernicus_ems.ml import evaluate, rasterize  # pip install 'copernicus-ems[ml]'
+
+for s in summary(events):
+    print(s.product, f"{s.flooded_km2:.2f} km² flooded of {s.observed_km2:.1f} observed")
+
+labels = rasterize(events[0], resolution_m=20)  # 1 flooded, 0 dry, 255 not observed
+scores = evaluate(my_prediction, labels)  # CSI, POD, FAR only inside the AOI
+```
+
+A model that predicts water outside the AOI is not penalised: nobody
+looked. Details: [Geometry & ML](https://agentengineering.it/copernicus-ems/ml/).
+
 ### Handle errors
 
 ```python
@@ -541,7 +557,7 @@ above 90%, and contributions are accepted under Apache-2.0.
 |---|---|---|
 | 🔥 **Presets for other hazards** (burnt areas, landslides) | Same API, other events | intermediate |
 | 📊 **Area statistics and GeoParquet export** (`[geo]` extra) | Numbers and files for GIS and ML | intermediate |
-| 🎯 **Mask-aware metrics** (CSI, POD, FAR) for flood models | Score only where someone looked | intermediate |
+| 🛰️ **Sentinel-1/2 pairing** for the label rasters | Image + label pairs for training | advanced |
 | 🏛️ **Legacy activations** (before 2023) | Ten more years of floods | advanced |
 
 ---

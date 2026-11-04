@@ -19,6 +19,14 @@ All notable changes to this project are documented here. The format follows
   `RapidMapping.activations`, both ends included.
 - `MASS_MOVEMENT_EVENT_TYPE` (`6-Mass Movement`).
 
+- `copernicus_ems.geo` (extra `geo`: shapely, pyproj): `flooded`,
+  `observed_dry`, `mask`, geodesic `area_km2`, `summary` per product.
+- `copernicus_ems.ml` (extra `ml`: + numpy): tri-state label rasters
+  (`rasterize`: 1 flooded, 0 dry, 255 not observed) in the AOI's UTM zone,
+  mask-aware scores (`evaluate`, `evaluate_geometry`: CSI, POD, FAR, F1,
+  bias; predictions outside the AOI reported, not counted) and training
+  `chips`.
+
 ### Changed
 
 - `fetch_observed_events` downloads the layers of an activation in

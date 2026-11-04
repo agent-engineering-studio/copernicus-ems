@@ -15,6 +15,7 @@ nav = [
   { "Getting started" = "getting-started.md" },
   { "How it works" = "concepts.md" },
   { "Recipes" = "recipes.md" },
+  { "Geometry & ML" = "ml.md" },
   { "API reference" = "api.md" },
   { "Roadmap & AI" = "roadmap.md" },
   { "Changelog" = "changelog.md" },

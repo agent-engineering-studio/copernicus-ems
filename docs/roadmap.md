@@ -34,9 +34,9 @@ flowchart LR
 |---|---|---|---|---|---|
 | 1 | CLI (`copernicus-ems fetch / list / export`) | core | high | S | 0.3 :white_check_mark: |
 | 2 | Observation masks as GeoJSON, filter by date, parallel downloads | core | high | S | 0.3 :white_check_mark: |
-| 3 | `[geo]` extra: area stats, GeoParquet / GeoPackage export | geo | high | M | 0.3 |
-| 4 | **Mask-aware evaluation metrics** for flood models | AI | very high | M | 0.4 |
-| 5 | **Tri-state label rasters** and ML chips | AI | very high | M | 0.4 |
+| 3 | `[geo]` extra: area stats :white_check_mark:, GeoParquet / GeoPackage export | geo | high | M | 0.3 |
+| 4 | **Mask-aware evaluation metrics** for flood models | AI | very high | M | 0.4 :white_check_mark: |
+| 5 | **Tri-state label rasters** and ML chips | AI | very high | M | 0.4 :white_check_mark: |
 | 6 | **MCP server**: Rapid Mapping as tools for LLM agents | AI | high | S–M | 0.5 |
 | 7 | **Sentinel-1/2 pairing** via Copernicus Data Space STAC | AI | very high | L | 0.6 |
 | 8 | Fine-tuning notebooks on EO foundation models | AI | medium | M | 0.6 |
@@ -88,6 +88,10 @@ With `shapely` and `pyarrow` installed:
 
 ### 1. Mask-aware evaluation metrics (0.4) — *the differentiator*
 
+!!! success "Done"
+    `copernicus_ems.ml.evaluate` / `evaluate_geometry`: see
+    [Geometry & ML](ml.md#scoring-a-flood-model-only-where-someone-looked).
+
 Every flood model (a forecast, a hazard map, a segmentation network) ends
 up compared with observed extents. The common mistake is to score it on
 the whole map, counting as false alarms the areas nobody observed. The
@@ -110,6 +114,10 @@ scores = evaluate(prediction, events, resolution_m=20)
   other open library does it.
 
 ### 2. Tri-state label rasters and ML chips (0.4)
+
+!!! success "Done"
+    `rasterize` and `chips`, saved as `.npy` with a JSON sidecar; GeoTIFF
+    output (rasterio) is still open. See [Geometry & ML](ml.md).
 
 Turn products into training data for segmentation models:
 
