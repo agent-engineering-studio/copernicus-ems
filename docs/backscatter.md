@@ -226,6 +226,7 @@ its own:
 async def send(request: httpx.Request) -> httpx.Response:
     return await my_fetch_with_retry(shared_client, request)
 
+
 async with RapidMapping(send=send) as ems, SentinelHub(send=send) as hub:
     ...
 ```
