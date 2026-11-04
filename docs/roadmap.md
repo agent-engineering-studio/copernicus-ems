@@ -38,7 +38,7 @@ flowchart LR
 | 4 | **Mask-aware evaluation metrics** for flood models | AI | very high | M | 0.4 :white_check_mark: |
 | 5 | **Tri-state label rasters** and ML chips | AI | very high | M | 0.4 :white_check_mark: |
 | 6 | **MCP server**: Rapid Mapping as tools for LLM agents | AI | high | S–M | 0.5 :white_check_mark: |
-| 7 | **Sentinel-1/2 pairing** via Copernicus Data Space STAC | AI | very high | L | 0.4 :white_check_mark: (search; download needs an account) |
+| 7 | **Sentinel-1/2 pairing** via Copernicus Data Space STAC | AI | very high | L | 0.3 :white_check_mark: (search; download needs an account) |
 | 8 | Fine-tuning notebooks on EO foundation models | AI | medium | M | 0.6 |
 | 9 | LLM situation reports from computed facts | AI | medium | M | later |
 | 10 | Watch mode: new monitoring products → webhook / event | core | medium | M | later |
