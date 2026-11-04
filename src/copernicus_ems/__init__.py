@@ -15,6 +15,7 @@ from copernicus_ems.catalogue import (
     parse_detail,
     parse_time,
     select_activations,
+    wkt_to_geojson,
 )
 from copernicus_ems.client import (
     ENV_DATA_DIR,
@@ -32,6 +33,7 @@ from copernicus_ems.errors import EmsError
 from copernicus_ems.events import (
     FLOOD_EVENT_TYPE,
     FLOOD_NOTATIONS,
+    MASS_MOVEMENT_EVENT_TYPE,
     OBSERVED_EVENT,
     parse_layer,
     select_features,
@@ -45,6 +47,7 @@ __all__ = [
     "ENV_DATA_DIR",
     "FLOOD_EVENT_TYPE",
     "FLOOD_NOTATIONS",
+    "MASS_MOVEMENT_EVENT_TYPE",
     "OBSERVED_EVENT",
     "Activation",
     "ActivationsPage",
@@ -69,4 +72,5 @@ __all__ = [
     "parse_time",
     "select_activations",
     "select_features",
+    "wkt_to_geojson",
 ]

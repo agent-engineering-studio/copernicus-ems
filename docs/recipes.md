@@ -21,10 +21,22 @@ products = await fetch_products(client, "EMSR762")
 depth = await fetch_layer(client, products[0], "floodDepthA")  # None if absent
 ```
 
+## A season, not the whole archive
+
+```python
+from datetime import date
+
+autumn = await ems.activations(country="Italy", since=date(2024, 9, 1), until=date(2024, 11, 30))
+```
+
 ## Other hazards: landslides, everything
 
 ```python
-landslides = await ems.observed_events("EMSR762", event_types=["6-Mass Movement"], notations=None)
+from copernicus_ems import MASS_MOVEMENT_EVENT_TYPE
+
+landslides = await ems.observed_events(
+    "EMSR762", event_types=[MASS_MOVEMENT_EVENT_TYPE], notations=None
+)
 everything = await ems.observed_events("EMSR762", event_types=None, notations=None)
 ```
 
@@ -34,7 +46,7 @@ everything = await ems.observed_events("EMSR762", event_types=None, notations=No
 import shapely  # pip install shapely
 from shapely.geometry import shape
 
-mask = shapely.from_wkt(event.product.aoi_extent_wkt)
+mask = shape(event.product.aoi_extent)  # GeoJSON; or shapely.from_wkt(aoi_extent_wkt)
 flooded = shapely.union_all([shape(f["geometry"]) for f in event.features])
 observed_dry = mask.difference(flooded)
 ```

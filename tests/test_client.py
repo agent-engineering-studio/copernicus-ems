@@ -204,3 +204,49 @@ def test_other_errors_are_not_retried() -> None:
     transport, waits = retrying([404])
     assert status_after(transport) == 404
     assert waits == []
+
+
+def test_layers_download_concurrently_and_keep_the_product_order(tmp_path: Path) -> None:
+    in_flight = peak = 0
+
+    async def slow(request: httpx.Request) -> httpx.Response:
+        nonlocal in_flight, peak
+        if "public-activations/" not in str(request.url):
+            in_flight += 1
+            peak = max(peak, in_flight)
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+        return handler(request)
+
+    async def main(concurrency: int) -> list[str]:
+        nonlocal peak
+        peak = 0
+        async with httpx.AsyncClient(transport=httpx.MockTransport(slow)) as client:
+            events = await fetch_observed_events(
+                client,
+                "EMSR762",
+                event_types=None,
+                notations=None,
+                concurrency=concurrency,
+                directory=tmp_path / str(concurrency),
+            )
+        return [e.product.label for e in events]
+
+    assert asyncio.run(main(1)) == ["AOI01_DEL_PRODUCT"]
+    assert peak == 1
+    asyncio.run(main(3))
+    assert peak == 3
+
+
+def test_concurrency_must_be_positive() -> None:
+    with pytest.raises(ValueError, match="concurrency"):
+        run(lambda c: fetch_observed_events(c, "EMSR762", concurrency=0))
+
+
+def test_rapid_mapping_filters_activations_by_date() -> None:
+    from datetime import date
+
+    async def body(c: httpx.AsyncClient) -> Any:
+        return await RapidMapping(c).activations(since=date(2026, 10, 9), until=date(2026, 10, 9))
+
+    assert [a.code for a in run(body)] == ["EMSR934"]

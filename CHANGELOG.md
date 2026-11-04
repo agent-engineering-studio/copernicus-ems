@@ -10,6 +10,19 @@ All notable changes to this project are documented here. The format follows
 
 - Documentation site on GitHub Pages (Zensical, API reference from
   the docstrings) with a roadmap page: improvements and AI features.
+- `copernicus-ems` command (`list`, `fetch`, `export`, also
+  `python -m copernicus_ems`): export tags each feature with activation,
+  product, AOI and observation time, and can write the observation masks.
+- `Product.aoi_extent`: the observation mask as a GeoJSON geometry;
+  `wkt_to_geojson` for WKT polygons and multipolygons.
+- `since=` / `until=` on `select_activations` and
+  `RapidMapping.activations`, both ends included.
+- `MASS_MOVEMENT_EVENT_TYPE` (`6-Mass Movement`).
+
+### Changed
+
+- `fetch_observed_events` downloads the layers of an activation in
+  parallel, `concurrency=4` at a time; the order of the products is kept.
 
 ## [0.2.0] - 2026-11-03
 
