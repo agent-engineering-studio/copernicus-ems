@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `copernicus_ems.dataset` and `copernicus-ems dataset -o DIR`: the pairs
+  already fetched become a training dataset, offline: aligned image and
+  label chips (GeoTIFF), `index.csv` with the provenance of each chip,
+  `dataset.json` with bands, label values, splits, statistics and credits.
+  Train / val / test are assigned by area (activation + AOI), never by
+  chip; label pixels without image data become `255`.
+
 ## [0.5.0] - 2026-11-04
 
 ### Added

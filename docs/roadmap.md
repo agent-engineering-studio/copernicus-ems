@@ -202,6 +202,9 @@ emit image + label pairs.
     directory with the labels and a manifest; PU estimated and budgeted
     before any request. See [Sentinel-1 backscatter](backscatter.md).
 
+    Then `copernicus-ems dataset`: aligned chips, `index.csv` and
+    train / val / test **by area** (no AOI in two splits), offline.
+
     Next with the same account: the Statistical API (water time series
     over an AOI between EMS maps, kept apart from the analysts' ground
     truth), the Copernicus DEM and a pre-event reference scene as model

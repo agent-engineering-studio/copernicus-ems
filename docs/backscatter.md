@@ -86,6 +86,39 @@ EMSR664/sentinel-1/
 - Each answer is checked to be on the asked grid; a shifted tile is
   refused, not written.
 
+## From pairs to a training dataset
+
+`dataset` reads the pairs already in the data directory, so it is free
+and offline, and cuts them into aligned chips with an index and the splits:
+
+```bash
+copernicus-ems pairs EMSR664 EMSR762 …            # once: images (PU)
+copernicus-ems dataset -o ./floods-s1 --size 256  # any number of times: free
+```
+
+```text
+floods-s1/
+├── images/EMSR664_AOI03_GRA_PRODUCT_r0_c256.tif  # VV, VH, dataMask
+├── labels/EMSR664_AOI03_GRA_PRODUCT_r0_c256.tif  # 1 flooded, 0 dry, 255 ignore
+├── index.csv                                     # split, provenance, shares, bounds
+└── dataset.json                                  # bands, values, splits, credits
+```
+
+- **Splits by area, not by chip.** The products of one AOI (DEL, its
+  monitoring updates, GRA) overlap in space: their chips all go to the
+  same split, so no ground is in training and in test. Areas are given to
+  train / val / test (`--split 0.7,0.15,0.15`, `--seed`) so that chip counts
+  approach the ratios.
+- **No image, no label.** Where the image has no data (`dataMask` 0) the
+  label becomes `255`; chips with less than 90% of image data over their
+  observed pixels are dropped.
+- `--min-observed` (default 0.5) and `--min-flooded` (default 0) filter the
+  chips, `--stride` makes them overlap, positional codes restrict to some
+  activations.
+- `index.csv` keeps for each chip its activation, product, observation and
+  pass times, `gap_hours`, observed and flooded shares, CRS and origin;
+  `dataset.json` the flooded share per split, to check the balance.
+
 ## In Docker
 
 The images go where the layers go: a persistent volume. The credentials
