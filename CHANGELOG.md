@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-04
+
 ### Added
 
 - GeoParquet 1.1 output (extra `parquet`: pyarrow): `copernicus-ems export
