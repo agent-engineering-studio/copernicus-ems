@@ -53,6 +53,7 @@ copernicus-ems list --category Flood --json                   # one JSON object 
 copernicus-ems fetch EMSR762 EMSR664                          # layers into the cache
 copernicus-ems export --country Italy -o italy.geojson --masks italy_masks.geojson
 copernicus-ems export EMSR762 -o emsr762.geojson --all-events # landslides too
+copernicus-ems export EMSR664 -o emsr664.parquet              # GeoParquet ([parquet] extra)
 ```
 
 `export` tags every feature with its `activation`, `product`, `aoi_name`
@@ -60,6 +61,11 @@ and `observed_time`; `--masks` writes the observation mask of each product
 as a second GeoJSON. By country it reads the `Flood` and `Storm`
 activations (`--category` to change it), and keeps the flood features.
 `--dir` sets where the layers are saved.
+
+A `.parquet` output (or `--masks`) is written as **GeoParquet 1.1**, with
+the `parquet` extra (`pip install 'copernicus-ems[parquet]'`): EMSR664 is
+17.5 MB instead of 68 MB of GeoJSON, opens in GeoPandas, DuckDB and QGIS,
+and `observed_time` is a real UTC timestamp.
 
 ## Every flood of a country, from Python
 

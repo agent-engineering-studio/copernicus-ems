@@ -15,7 +15,6 @@ everywhere else in the library, so repeated questions cost nothing.
 from __future__ import annotations
 
 import asyncio
-import json
 from collections.abc import AsyncIterator, Awaitable, Iterable
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
@@ -37,6 +36,7 @@ from copernicus_ems.catalogue import Activation
 from copernicus_ems.client import ProductEvents, RapidMapping
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS, MASS_MOVEMENT_EVENT_TYPE
+from copernicus_ems.export import mask_features, tagged_features, write_features
 from copernicus_ems.geo import ProductSummary, coverage, summarize
 from copernicus_ems.scenes import SENTINEL_1_GRD, SENTINEL_2_L2A, passes
 
@@ -282,33 +282,24 @@ async def export_observed_events(
     *,
     hazard: Hazard = "flood",
     with_masks: bool = True,
+    file_format: Literal["geojson", "geoparquet"] = "geojson",
     directory: Path | None = None,
 ) -> Export:
-    """Write the events (and the observation masks) of an activation as GeoJSON files."""
+    """Write the events (and the observation masks) of an activation as files."""
     code = _code(code)
+    if file_format == "geoparquet":
+        try:
+            import pyarrow  # noqa: F401
+        except ImportError as exc:  # pragma: no cover - without the parquet extra
+            raise ToolError("geoparquet needs: pip install 'copernicus-ems[parquet]'") from exc
     events = await _events(ems, code, hazard)
     out = directory or ems.directory / "exports"
-    out.mkdir(parents=True, exist_ok=True)
-    features: list[dict[str, Any]] = []
-    masks: list[dict[str, Any]] = []
-    for event in events:
-        tags = {
-            "activation": code,
-            "product": event.product.label,
-            "aoi_name": event.product.aoi_name,
-            "observed_time": _iso(event),
-        }
-        features.extend(
-            {**f, "properties": {**(f.get("properties") or {}), **tags}} for f in event.features
-        )
-        if (geometry := event.product.aoi_extent) is not None:
-            masks.append({"type": "Feature", "geometry": geometry, "properties": tags})
-    events_path = out / f"{code}_{hazard}.geojson"
-    _write(events_path, features)
+    suffix = ".parquet" if file_format == "geoparquet" else ".geojson"
+    features = tagged_features(events)
+    events_path = write_features(out / f"{code}_{hazard}{suffix}", features)
     masks_path = None
     if with_masks:
-        masks_path = out / f"{code}_{hazard}_masks.geojson"
-        _write(masks_path, masks)
+        masks_path = write_features(out / f"{code}_{hazard}_masks{suffix}", mask_features(events))
     return {
         "code": code,
         "hazard": hazard,
@@ -474,10 +465,20 @@ def build_server(
             read_only_hint=False, open_world_hint=True, idempotent_hint=True
         ),
     )
-    async def _export(code: str, hazard: Hazard = "flood", with_masks: bool = True) -> Export:
+    async def _export(
+        code: str,
+        hazard: Hazard = "flood",
+        with_masks: bool = True,
+        file_format: Literal["geojson", "geoparquet"] = "geojson",
+    ) -> Export:
         """Write the observed events of an activation (and its observation masks) as
-        GeoJSON files on disk, for GIS tools; returns the paths, not the geometry."""
-        return await _guard(export_observed_events(ems, code, hazard=hazard, with_masks=with_masks))
+        GeoJSON or GeoParquet files on disk, for GIS tools; returns the paths, not the
+        geometry."""
+        return await _guard(
+            export_observed_events(
+                ems, code, hazard=hazard, with_masks=with_masks, file_format=file_format
+            )
+        )
 
     @server.tool(name="find_scenes", annotations=_READ_ONLY)
     async def _scenes(
@@ -623,9 +624,3 @@ def _aois(rows: Iterable[ProductRow]) -> list[AoiRow]:
 def _iso(event: ProductEvents) -> str | None:
     observed = event.product.observed_time
     return observed.isoformat() if observed else None
-
-
-def _write(path: Path, features: list[dict[str, Any]]) -> None:
-    partial = path.with_suffix(".part")
-    partial.write_text(json.dumps({"type": "FeatureCollection", "features": features}))
-    partial.replace(path)

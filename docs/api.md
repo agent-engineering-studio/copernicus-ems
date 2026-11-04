@@ -37,6 +37,12 @@ Generated from the docstrings of the package.
     options:
       show_root_heading: false
 
+## Files (GeoJSON, GeoParquet)
+
+::: copernicus_ems.export
+    options:
+      show_root_heading: false
+
 ## Geometry (`[geo]` extra)
 
 ::: copernicus_ems.geo

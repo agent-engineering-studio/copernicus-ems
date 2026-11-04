@@ -24,10 +24,10 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 try:
     import numpy as np
@@ -74,6 +74,15 @@ class Grid:
     def pixel_area_km2(self) -> float:
         return self.resolution_m**2 / 1e6
 
+    @classmethod
+    def from_transform(cls, crs: Any, transform: Sequence[float], width: int, height: int) -> Grid:
+        """The grid of a raster, e.g. ``Grid.from_transform(src.crs, src.transform,
+        src.width, src.height)`` for a rasterio dataset: north-up, square pixels."""
+        a, b, c, d, e, f = (float(v) for v in tuple(transform)[:6])
+        if b or d or a <= 0 or not math.isclose(-e, a):
+            raise ValueError("only north-up grids with square pixels are supported")
+        return cls(crs=str(crs), x0=c, y0=f, resolution_m=a, width=width, height=height)
+
     def window(self, row: int, col: int, height: int, width: int) -> Grid:
         """The sub-grid starting at pixel ``(row, col)``."""
         return replace(
@@ -92,6 +101,21 @@ class LabelRaster:
     labels: npt.NDArray[np.uint8]
     grid: Grid
     meta: dict[str, Any] = field(default_factory=dict)
+
+    def to_geotiff(self, path: Path) -> Path:
+        """A single-band ``uint8`` GeoTIFF (deflate, tiled), ``255`` as nodata,
+        the provenance (activation, product, observed time, credit) as tags."""
+        return _write_geotiff(path, self.labels, self.grid, self.meta)
+
+    @classmethod
+    def from_geotiff(cls, path: Path) -> LabelRaster:
+        """A label raster written by :meth:`to_geotiff` (or any north-up ``uint8`` band)."""
+        rasterio = _rasterio()
+        with rasterio.open(path) as src:
+            labels = src.read(1).astype(np.uint8)
+            grid = Grid.from_transform(src.crs, src.transform, src.width, src.height)
+            meta = {k: v for k, v in src.tags().items() if k != "AREA_OR_POINT"}
+        return cls(labels=labels, grid=grid, meta=meta)
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,11 +215,16 @@ class Chip:
         observed = int(np.count_nonzero(self.labels != IGNORE))
         return int(np.count_nonzero(self.labels == FLOODED)) / observed if observed else 0.0
 
-    def save(self, directory: Path) -> Path:
-        """``labels`` as ``.npy`` and a ``.json`` sidecar (grid, provenance); the ``.npy`` path."""
+    def save(self, directory: Path, *, file_format: Literal["npy", "tif"] = "npy") -> Path:
+        """The chip as ``.npy`` + ``.json`` sidecar (grid, provenance), or as a
+        GeoTIFF (``file_format="tif"``, provenance in its tags); the file's path."""
         directory.mkdir(parents=True, exist_ok=True)
         stem = "_".join(str(self.meta.get(k, "")) for k in ("activation", "product")).strip("_")
-        path = directory / f"{stem or 'chip'}_r{self.row}_c{self.col}.npy"
+        name = f"{stem or 'chip'}_r{self.row}_c{self.col}"
+        if file_format == "tif":
+            tags = {**self.meta, "row": self.row, "col": self.col}
+            return _write_geotiff(directory / f"{name}.tif", self.labels, self.grid, tags)
+        path = directory / f"{name}.npy"
         np.save(path, self.labels)
         sidecar = {
             "crs": self.grid.crs,
@@ -344,6 +373,44 @@ def chips(
             observed = np.count_nonzero(tile != IGNORE) / tile.size
             if observed >= min_observed and observed > 0 and chip.flooded_share >= min_flooded:
                 yield chip
+
+
+def _rasterio() -> Any:
+    try:
+        import rasterio
+    except ImportError as exc:  # pragma: no cover - exercised only without rasterio
+        raise ImportError("GeoTIFF needs rasterio: pip install 'copernicus-ems[ml]'") from exc
+    return rasterio
+
+
+def _write_geotiff(
+    path: Path, labels: npt.NDArray[np.uint8], grid: Grid, meta: dict[str, Any]
+) -> Path:
+    rasterio = _rasterio()
+    from rasterio.transform import Affine
+
+    height, width = labels.shape
+    tiled = height >= 256 and width >= 256
+    profile: dict[str, Any] = {
+        "driver": "GTiff",
+        "height": height,
+        "width": width,
+        "count": 1,
+        "dtype": "uint8",
+        "crs": grid.crs,
+        "transform": Affine(*grid.transform),
+        "nodata": IGNORE,
+        "compress": "deflate",
+        **({"tiled": True, "blockxsize": 256, "blockysize": 256} if tiled else {}),
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(path.name + ".part")
+    with rasterio.open(partial, "w", **profile) as dst:
+        dst.write(labels, 1)
+        dst.update_tags(**{k: str(v) for k, v in meta.items() if v is not None})
+        dst.set_band_description(1, f"flooded={FLOODED} dry={DRY} not observed={IGNORE}")
+    partial.replace(path)
+    return path
 
 
 def _geometry(value: BaseGeometry | dict[str, Any]) -> BaseGeometry:

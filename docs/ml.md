@@ -98,8 +98,21 @@ from pathlib import Path
 from copernicus_ems.ml import chips
 
 for chip in chips(raster, size=256, min_observed=0.5, min_flooded=0.01):
-    chip.save(Path("dataset/labels"))  # .npy + .json sidecar (CRS, transform, provenance)
+    chip.save(Path("dataset/labels"))  # .npy + .json sidecar
+    chip.save(Path("dataset/labels"), file_format="tif")  # or a GeoTIFF
 ```
+
+## GeoTIFF
+
+```python
+raster.to_geotiff(Path("labels/EMSR664_AOI07.tif"))
+back = LabelRaster.from_geotiff(Path("labels/EMSR664_AOI07.tif"))
+```
+
+Single band `uint8`, deflate-compressed and tiled, `255` as **nodata**, so
+QGIS and GDAL show only what was observed; the provenance (activation,
+product, observed time, Copernicus credit) is in the file's tags. GeoTIFF
+needs rasterio, which the `ml` extra installs.
 
 `stride=` makes overlapping tiles; edge tiles are padded with `255`. On
 EMSR664, 256 × 20 m chips with at least 1% flood: 185.

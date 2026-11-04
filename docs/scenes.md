@@ -94,9 +94,7 @@ labels **on the scene's grid**, so pixels line up:
 from copernicus_ems.ml import Grid, rasterize
 
 with rasterio.open(path) as src:  # your Sentinel-1 scene, reprojected to UTM
-    t = src.transform
-    grid = Grid(
-        crs=str(src.crs), x0=t.c, y0=t.f, resolution_m=t.a, width=src.width, height=src.height
-    )
+    grid = Grid.from_transform(src.crs, src.transform, src.width, src.height)
 labels = rasterize(event, grid=grid)  # 1 flooded, 0 dry, 255 not observed
+labels.to_geotiff(Path("pairs/labels.tif"))
 ```

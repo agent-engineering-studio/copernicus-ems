@@ -167,3 +167,48 @@ def test_chips_cover_the_observed_area(truth: LabelRaster, tmp_path: Path) -> No
     assert sidecar["activation"] == "EMSR762"
     overlapping = list(chips(truth, 128, stride=64, min_observed=0.0))
     assert len(overlapping) > len(every)
+
+
+def test_label_rasters_round_trip_through_geotiff(truth: LabelRaster, tmp_path: Path) -> None:
+    import rasterio
+
+    path = truth.to_geotiff(tmp_path / "labels" / "aoi01.tif")
+    with rasterio.open(path) as src:
+        assert src.dtypes == ("uint8",) and src.nodata == IGNORE
+        assert str(src.crs) == truth.grid.crs
+        assert src.descriptions[0].startswith("flooded=1")
+        assert src.profile["compress"] == "deflate" and src.profile["tiled"]
+        assert src.tags()["product"] == "AOI01_DEL_PRODUCT"
+    back = LabelRaster.from_geotiff(path)
+    assert np.array_equal(back.labels, truth.labels)
+    assert back.grid == truth.grid
+    assert back.meta["activation"] == "EMSR762" and "European Union" in back.meta["source"]
+    assert not list(tmp_path.rglob("*.part"))
+
+
+def test_chips_as_geotiff(truth: LabelRaster, tmp_path: Path) -> None:
+    chip = next(chips(truth, 64, min_flooded=0.0001))
+    path = chip.save(tmp_path, file_format="tif")
+    assert path.suffix == ".tif"
+    back = LabelRaster.from_geotiff(path)
+    assert np.array_equal(back.labels, chip.labels) and back.grid == chip.grid
+    assert back.meta["row"] == str(chip.row)
+
+
+def test_grids_from_a_raster_transform() -> None:
+    from rasterio.transform import Affine
+
+    from copernicus_ems.ml import Grid
+
+    grid = Grid.from_transform("EPSG:32633", Affine(10, 0, 500_000, 0, -10, 4_900_000), 20, 30)
+    assert (grid.x0, grid.y0, grid.resolution_m, grid.width, grid.height) == (
+        500_000,
+        4_900_000,
+        10,
+        20,
+        30,
+    )
+    assert Grid.from_transform(grid.crs, grid.transform, 20, 30) == grid
+    for bad in [(10, 1, 0, 0, -10, 0), (10, 0, 0, 0, -20, 0), (-10, 0, 0, 0, 10, 0)]:
+        with pytest.raises(ValueError, match="north-up"):
+            Grid.from_transform("EPSG:32633", bad, 1, 1)

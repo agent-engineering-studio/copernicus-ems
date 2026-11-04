@@ -30,7 +30,9 @@ dependencies = [
 # Geometry: observed dry area, areas in km², summaries.
 geo = ["shapely>=2.0", "pyproj>=3.6"]
 # Label rasters and mask-aware metrics for flood models.
-ml = ["copernicus-ems[geo]", "numpy>=1.26"]
+ml = ["copernicus-ems[geo]", "numpy>=1.26", "rasterio>=1.4"]
+# GeoParquet export.
+parquet = ["copernicus-ems[geo]", "pyarrow>=17"]
 # MCP server for LLM agents: copernicus-ems mcp.
 mcp = ["copernicus-ems[geo]", "mcp>=2.3"]
 
@@ -51,9 +53,11 @@ dev = [
     "mcp>=1.20",
     "mypy>=1.13",
     "numpy>=1.26",
+    "pyarrow>=17",
     "pyproj>=3.6",
     "pytest>=8.3",
     "pytest-cov>=6.0",
+    "rasterio>=1.4",
     "ruff>=0.8",
     "shapely>=2.0",
     "types-shapely>=2.1.0.20261030",
@@ -79,6 +83,11 @@ python_version = "3.12"
 files = ["src", "tests"]
 warn_unused_ignores = true
 warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+# No type information shipped.
+module = ["rasterio", "rasterio.*", "pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
