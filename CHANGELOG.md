@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-04
+
 ### Added
 
 - Documentation site on GitHub Pages (Zensical, API reference from
@@ -18,7 +20,6 @@ All notable changes to this project are documented here. The format follows
 - `since=` / `until=` on `select_activations` and
   `RapidMapping.activations`, both ends included.
 - `MASS_MOVEMENT_EVENT_TYPE` (`6-Mass Movement`).
-
 - `copernicus_ems.geo` (extra `geo`: shapely, pyproj): `flooded`,
   `observed_dry`, `mask`, geodesic `area_km2`, `summary` per product.
 - `copernicus_ems.ml` (extra `ml`: + numpy): tri-state label rasters
@@ -26,7 +27,6 @@ All notable changes to this project are documented here. The format follows
   mask-aware scores (`evaluate`, `evaluate_geometry`: CSI, POD, FAR, F1,
   bias; predictions outside the AOI reported, not counted) and training
   `chips`.
-
 - `copernicus-ems mcp` (extra `mcp`): an MCP server for LLM agents, with
   the tools `list_activations`, `activation_summary`, `compare_products`
   and `export_observed_events` and the prompt `situation_report`. Tools

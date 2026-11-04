@@ -1,6 +1,6 @@
 [project]
 name = "copernicus-ems"
-version = "0.2.0"
+version = "0.3.0"
 description = "Client for Copernicus EMS Rapid Mapping: activations, observation masks, observed flood extents"
 readme = "README.md"
 keywords = ["copernicus", "emergency management", "rapid mapping", "flood", "geojson", "disaster", "remote sensing"]
@@ -12,6 +12,7 @@ authors = [
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: GIS",
     "Framework :: AsyncIO",
