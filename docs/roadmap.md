@@ -213,6 +213,13 @@ emit image + label pairs.
 
 ### 5. Fine-tuning notebooks on EO foundation models (0.6)
 
+!!! success "First notebook done"
+    [`01_flood_segmentation_s1`](notebooks.md): pairs → dataset split by
+    area → a VV threshold and a per-pixel classifier on CPU, scored with
+    `evaluate`. The foundation-model fine-tuning (Prithvi-EO-2.0 /
+    TerraMind via TerraTorch, GPU) uses the same dataset and the same
+    scores: that is the next notebook.
+
 With pairs from (4) and labels from (2), show how to fine-tune an open
 Earth-observation foundation model for flood segmentation — for example
 [Prithvi](https://huggingface.co/ibm-nasa-geospatial),

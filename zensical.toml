@@ -19,6 +19,7 @@ nav = [
   { "Open imagery" = "scenes.md" },
   { "Sentinel-1 backscatter" = "backscatter.md" },
   { "MCP server" = "mcp.md" },
+  { "Notebooks" = "notebooks.md" },
   { "API reference" = "api.md" },
   { "Roadmap & AI" = "roadmap.md" },
   { "Changelog" = "changelog.md" },
