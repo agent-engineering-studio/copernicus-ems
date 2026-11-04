@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows
 - `build_dataset(..., reference=True)` / `dataset --reference`: chips with
   `VV, VH, VV_pre, VH_pre, dataMask` bands (mask = both passes have data),
   `reference_time` in `index.csv`. `Pair.reference`.
+- `notebooks/02_change_detection_s1.ipynb`: the floods of notebook 01 with a
+  pre-event reference each; VV threshold, change threshold and two
+  classifiers compared on the same chips, independent labels apart. The
+  `notebook` workflow takes the notebook to run as an input.
 
 ## [0.5.2] - 2026-11-04
 

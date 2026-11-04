@@ -3,6 +3,7 @@
 | Notebook | What it shows | Data | Cost |
 |---|---|---|---|
 | [`01_flood_segmentation_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/01_flood_segmentation_s1.ipynb) | Every Italian flood mapped by Copernicus EMS since 2023 as labels, the nearest Sentinel-1 pass as image: a VV threshold and a per-pixel classifier, trained on some areas and scored on others, only where EMS observed | 8 activations, 23 Sentinel-1 images at 40 m | ~94 PU once, then nothing |
+| [`02_change_detection_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/02_change_detection_s1.ipynb) | The same floods with a pre-event Sentinel-1 pass of the same orbit: four detectors (VV threshold, change threshold, a classifier on one image or on the change) compared on the same chips, independent labels apart | the 23 images of 01 + one reference each | ~94 PU once (01's images are reused) |
 
 ## Run them
 
@@ -16,8 +17,8 @@ jupyter lab
 or, from a clone, `uv sync --extra cdse --group notebooks`. The images are
 kept in the data directory: a second run spends no processing units.
 
-On GitHub, the **notebook** workflow (Actions → notebook → *Run workflow*)
-runs it with the repository's CDSE secrets, keeps the data directory in
+On GitHub, the **notebook** workflow (Actions → notebook → *Run workflow*,
+choose the notebook) runs it with the repository's CDSE secrets, keeps the data directory in
 the Actions cache, and uploads the executed notebook and its figure.
 
 ### Reuse the images elsewhere, at 0 PU
