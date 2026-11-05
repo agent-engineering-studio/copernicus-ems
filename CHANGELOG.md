@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `notebooks/03_cross_validation_s1.ipynb`: the four detectors of notebook
+  02 scored by leave-one-activation-out cross-validation, at 0 PU. On 130 km²
+  of independent labels the VV threshold reaches CSI 0.12; change detection
+  does not beat it across activations, and every detector over-predicts.
+
 ## [0.7.1] - 2026-11-04
 
 ### Fixed

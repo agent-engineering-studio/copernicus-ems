@@ -4,6 +4,7 @@
 |---|---|---|---|
 | [`01_flood_segmentation_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/01_flood_segmentation_s1.ipynb) | Every Italian flood mapped by Copernicus EMS since 2023 as labels, the nearest Sentinel-1 pass as image: a VV threshold and a per-pixel classifier, trained on some areas and scored on others, only where EMS observed | 8 activations, 23 Sentinel-1 images at 40 m | ~94 PU once, then nothing |
 | [`02_change_detection_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/02_change_detection_s1.ipynb) | The same floods with a pre-event Sentinel-1 pass of the same orbit: four detectors (VV threshold, change threshold, a classifier on one image or on the change) compared on the same chips, independent labels apart | the 23 images of 01 + one reference each | ~94 PU once (01's images are reused) |
+| [`03_cross_validation_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/03_cross_validation_s1.ipynb) | The four detectors of 02 scored by leave-one-activation-out cross-validation: each flood is the test once, tuned and trained on the others, all folds added | the pairs and references of 02 | 0 PU (reads the data directory) |
 
 ## Run them
 
@@ -112,8 +113,59 @@ The chips and the test areas are the same as in notebook 01.
 - **The independent test is too small.** It holds about 2 km² of mapped
   flood, against 149 km² of independent labels in all. The large
   independent maps (EMSR664 AOI01 and AOI07, 109 km²) are all in training.
-  A cross-validation by activation would score every area once and say
-  much more than a finer grid.
+  The cross-validation of notebook 03 scores every area once.
+
+## Results of notebook 03
+
+Run locally on the `ems-data` of workflow run 41853533004 (5 November
+2026), 0 PU: 404 chips, 7 folds (EMSR800 has no chip). Each activation
+is scored by detectors tuned and trained without it; the contingency
+tables of the folds are added. The independent labels now hold 129.7 km²
+of mapped flood (2 km² in the fixed test of 02), the same-image ones
+46.2 km².
+
+| Detector | Labels | CSI | POD | FAR | F1 | bias |
+|---|---|---:|---:|---:|---:|---:|
+| VV threshold | independent | **0.122** | 0.330 | 0.838 | 0.218 | 2.03 |
+| change threshold | independent | 0.115 | 0.396 | 0.861 | 0.206 | 2.85 |
+| classifier, one image | independent | 0.076 | 0.552 | 0.919 | 0.141 | 6.84 |
+| classifier, change | independent | 0.077 | 0.571 | 0.918 | 0.144 | 6.95 |
+| VV threshold | same image | 0.362 | 0.487 | 0.416 | 0.531 | 0.83 |
+| change threshold | same image | **0.370** | 0.466 | 0.358 | 0.540 | 0.73 |
+| classifier, one image | same image | 0.252 | 0.723 | 0.721 | 0.403 | 2.59 |
+| classifier, change | same image | 0.261 | 0.774 | 0.718 | 0.414 | 2.74 |
+
+CSI per activation (independent labels):
+
+| Activation | flooded km² | VV threshold | change threshold | classifier, one image | classifier, change |
+|---|---:|---:|---:|---:|---:|
+| EMSR664 | 111.2 | 0.116 | 0.109 | 0.070 | 0.073 |
+| EMSR762 | 11.8 | 0.218 | 0.268 | 0.158 | 0.164 |
+| EMSR705 | 5.3 | 0.219 | 0.216 | 0.188 | 0.156 |
+| EMSR795 | 0.7 | 0.032 | 0.091 | 0.070 | 0.102 |
+| EMSR843 | 0.6 | 0.075 | 0.041 | 0.036 | 0.011 |
+
+![Pooled CSI of the four detectors, independent and same-image labels](https://raw.githubusercontent.com/agent-engineering-studio/copernicus-ems/main/docs/images/notebook-cv-s1.png)
+
+**How to read them.**
+
+- **On independent labels the baseline is CSI ≈ 0.12, not 0.04.** The fixed
+  test of 02 was too small: scored on all 130 km², the VV threshold finds a
+  third of the mapped water (POD 0.33).
+- **False alarms are the problem, not missed water.** Every detector marks
+  two to seven times the mapped area (bias 2–7, FAR 0.84–0.92). Out of their
+  own activation, the thresholds and the classifiers are tuned on floods
+  that look different.
+- **Change detection does not help across activations.** The change
+  threshold matches the VV threshold (0.115 vs 0.122 independent, 0.370 vs
+  0.362 same image); the 0.42 of notebook 02 came from one split.
+- **The classifiers generalise worst.** Trained on six activations, they
+  over-predict on the seventh (bias ~7); per-activation calibration, class
+  weights or terrain (DEM, HAND) to remove dark slopes and shadow are the
+  next steps, before a finer grid or a bigger model.
+- **One flood weighs most.** EMSR664 holds 111 of the 130 independent km²,
+  so the pooled score is mostly its score (0.12); the smaller floods range
+  from 0.01 to 0.27.
 
 The notebooks are stored without outputs. Each one saves its figure in
 `docs/images/`.
