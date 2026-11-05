@@ -16,6 +16,9 @@ All notable changes to this project are documented here. The format follows
   two fixes scored the same way (0 PU). Dropping pixels already dark in the
   pre-event pass and patches under 4 pixels halves the false area on
   independent labels (221 to 111 km²) and lifts CSI from 0.12 to 0.16.
+- `notebooks/05_terrain_s1.ipynb`: slope and height above the local low from
+  the Copernicus DEM GLO-30 (0 PU) do not reduce those false alarms further
+  (CSI 0.159 to 0.154), since they lie on ground as flat as the mapped flood.
 
 ## [0.7.1] - 2026-11-04
 

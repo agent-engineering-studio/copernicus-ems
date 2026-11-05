@@ -6,6 +6,7 @@
 | [`02_change_detection_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/02_change_detection_s1.ipynb) | The same floods with a pre-event Sentinel-1 pass of the same orbit: four detectors (VV threshold, change threshold, a classifier on one image or on the change) compared on the same chips, independent labels apart | the 23 images of 01 + one reference each | ~94 PU once (01's images are reused) |
 | [`03_cross_validation_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/03_cross_validation_s1.ipynb) | The four detectors of 02 scored by leave-one-activation-out cross-validation: each flood is the test once, tuned and trained on the others, all folds added | the pairs and references of 02 | 0 PU (reads the data directory) |
 | [`04_false_alarms_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/04_false_alarms_s1.ipynb) | Where the false alarms of 03 fall, and two fixes scored the same way: drop pixels already dark in the pre-event pass, then patches under *n* pixels | the pairs and references of 02 | 0 PU (reads the data directory) |
+| [`05_terrain_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/05_terrain_s1.ipynb) | Whether slope and height above the local low (Copernicus DEM GLO-30) remove the false alarms left by 04: they do not | the pairs and references of 02, the public DEM | 0 PU (about 11 minutes of DEM reads the first time) |
 
 ## Run them
 
@@ -161,9 +162,8 @@ CSI per activation (independent labels):
   threshold matches the VV threshold (0.115 vs 0.122 independent, 0.370 vs
   0.362 same image); the 0.42 of notebook 02 came from one split.
 - **The classifiers generalise worst.** Trained on six activations, they
-  over-predict on the seventh (bias ~7); per-activation calibration, class
-  weights or terrain (DEM, HAND) to remove dark slopes and shadow are the
-  next steps, before a finer grid or a bigger model.
+  over-predict on the seventh (bias ~7). Notebook 04 looks at where the false
+  alarms fall.
 - **One flood weighs most.** EMSR664 holds 111 of the 130 independent km²,
   so the pooled score is mostly its score (0.12); the smaller floods range
   from 0.01 to 0.27.
@@ -208,9 +208,40 @@ Where the false alarms fall, on independent labels:
 - **Thresholds carry better than models.** Tuned on six floods, they score
   twice the CSI of the classifiers of notebook 03 on the seventh (0.159 vs
   0.077).
-- **Next:** terrain (HAND, slope) to drop the remaining change on high
-  ground, and a check of the "got darker" patches against optical images of
-  the same day.
+
+## Results of notebook 05
+
+Same data and folds, 0 PU, with the
+[Copernicus DEM GLO-30](https://registry.opendata.aws/copernicus-dem/)
+resampled to the 40 m chips.
+
+| Detector | Labels | CSI | POD | FAR | bias | false km² |
+|---|---|---:|---:|---:|---:|---:|
+| not dark before, min size | independent | **0.159** | 0.295 | 0.744 | 1.15 | 110.9 |
+| + terrain | independent | 0.154 | 0.298 | 0.758 | 1.23 | 121.4 |
+| not dark before, min size | same image | **0.395** | 0.444 | 0.219 | 0.57 | 5.8 |
+| + terrain | same image | 0.391 | 0.438 | 0.217 | 0.56 | 5.6 |
+
+Terrain under the independent labels:
+
+| | km² | slope p50 / p95 | height above the local low p50 / p95 |
+|---|---:|---:|---:|
+| mapped flood | 129.7 | 0.3° / 2.3° | 1.8 m / 6.8 m |
+| false alarms | 110.9 | 0.2° / 1.1° | 1.5 m / 4.6 m |
+
+![Share of mapped flood and false alarms below each slope and height](https://raw.githubusercontent.com/agent-engineering-studio/copernicus-ems/main/docs/images/notebook-terrain-s1.png)
+
+**How to read them.**
+
+- **Terrain does not help.** The score stays the same or gets slightly worse.
+  The false alarms lie on ground at least as flat and low as the mapped
+  flood, so a threshold cannot keep one and drop the other.
+- **The limit.** Height above the local low is a stand-in for HAND and does
+  not follow the drainage network, so this does not rule out a true HAND.
+  The sample is also mostly the Romagna plain; mountain valleys may differ.
+- **What this leaves open.** The false alarms that remain got darker on flat
+  ground, far from the mapped flood. Whether they are water the EMS maps do
+  not show can only be checked against another image of the same day.
 
 The notebooks are stored without outputs. Each one saves its figure in
 `docs/images/`.
