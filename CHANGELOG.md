@@ -19,6 +19,11 @@ All notable changes to this project are documented here. The format follows
 - `notebooks/05_terrain_s1.ipynb`: slope and height above the local low from
   the Copernicus DEM GLO-30 (0 PU) do not reduce those false alarms further
   (CSI 0.159 to 0.154), since they lie on ground as flat as the mapped flood.
+- `notebooks/06_optical_check_s2.ipynb`: those false alarms on EMSR664 against a
+  Sentinel-2 pass about 29 h later (~20 PU) and ESA WorldCover. 69 % are open water,
+  mostly on cropland, which is not yet proof of flood; two EMS maps of AOI01
+  share 0.5 of 52.1 km², and scoring against any map of an image lifts CSI from
+  0.16 to 0.23.
 
 ## [0.7.1] - 2026-11-04
 
