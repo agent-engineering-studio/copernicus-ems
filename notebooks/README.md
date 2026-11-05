@@ -5,6 +5,7 @@
 | [`01_flood_segmentation_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/01_flood_segmentation_s1.ipynb) | Every Italian flood mapped by Copernicus EMS since 2023 as labels, the nearest Sentinel-1 pass as image: a VV threshold and a per-pixel classifier, trained on some areas and scored on others, only where EMS observed | 8 activations, 23 Sentinel-1 images at 40 m | ~94 PU once, then nothing |
 | [`02_change_detection_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/02_change_detection_s1.ipynb) | The same floods with a pre-event Sentinel-1 pass of the same orbit: four detectors (VV threshold, change threshold, a classifier on one image or on the change) compared on the same chips, independent labels apart | the 23 images of 01 + one reference each | ~94 PU once (01's images are reused) |
 | [`03_cross_validation_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/03_cross_validation_s1.ipynb) | The four detectors of 02 scored by leave-one-activation-out cross-validation: each flood is the test once, tuned and trained on the others, all folds added | the pairs and references of 02 | 0 PU (reads the data directory) |
+| [`04_false_alarms_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/04_false_alarms_s1.ipynb) | Where the false alarms of 03 fall, and two fixes scored the same way: drop pixels already dark in the pre-event pass, then patches under *n* pixels | the pairs and references of 02 | 0 PU (reads the data directory) |
 
 ## Run them
 
@@ -166,6 +167,50 @@ CSI per activation (independent labels):
 - **One flood weighs most.** EMSR664 holds 111 of the 130 independent km²,
   so the pooled score is mostly its score (0.12); the smaller floods range
   from 0.01 to 0.27.
+
+## Results of notebook 04
+
+Same data and folds as notebook 03, 0 PU. In every fold the tuning chose
+VV < −15.5 dB and VV_pre ≥ −14 dB (−15 and −15 in the fold that leaves
+EMSR664 out) and patches of at least 4 pixels.
+
+| Detector | Labels | CSI | POD | FAR | F1 | bias |
+|---|---|---:|---:|---:|---:|---:|
+| VV threshold | independent | 0.122 | 0.330 | 0.838 | 0.218 | 2.03 |
+| not dark before | independent | 0.148 | 0.305 | 0.777 | 0.258 | 1.36 |
+| not dark before, min size | independent | **0.159** | 0.295 | 0.744 | 0.274 | 1.15 |
+| VV threshold | same image | 0.362 | 0.487 | 0.416 | 0.531 | 0.83 |
+| not dark before | same image | **0.395** | 0.459 | 0.261 | 0.566 | 0.62 |
+| not dark before, min size | same image | 0.395 | 0.444 | 0.219 | 0.566 | 0.57 |
+
+Where the false alarms fall, on independent labels:
+
+| Detector | false km² | dark before | got darker | other | within 120 m of the mapped flood |
+|---|---:|---:|---:|---:|---:|
+| VV threshold | 220.8 | 38 % | 44 % | 18 % | 4 % |
+| not dark before, min size | 110.9 | 0 % | 86 % | 14 % | 3 % |
+
+![Pooled CSI and bias of the three detectors](https://raw.githubusercontent.com/agent-engineering-studio/copernicus-ems/main/docs/images/notebook-false-alarms-s1.png)
+
+**How to read them.**
+
+- **Two thresholds and a size halve the false alarms.** On independent
+  labels the false area drops from 221 to 111 km², bias from 2.03 to 1.15,
+  and CSI rises from 0.122 to 0.159; on same-image labels FAR falls from
+  0.42 to 0.22. It costs some detection (POD 0.33 to 0.30): water over a
+  surface already dark before is lost.
+- **What is left got darker, far from the mapped flood.** 86 % of the
+  remaining false alarms are pixels that darkened by more than 3 dB between
+  the two passes, and only 3 % lie within 120 m of a mapped polygon. Part is
+  likely water the optical EMS maps do not show (drawn at another time);
+  part is other change (ploughing, wet soil). Scores against these labels
+  cannot tell the two apart.
+- **Thresholds carry better than models.** Tuned on six floods, they score
+  twice the CSI of the classifiers of notebook 03 on the seventh (0.159 vs
+  0.077).
+- **Next:** terrain (HAND, slope) to drop the remaining change on high
+  ground, and a check of the "got darker" patches against optical images of
+  the same day.
 
 The notebooks are stored without outputs. Each one saves its figure in
 `docs/images/`.
