@@ -24,6 +24,9 @@ All notable changes to this project are documented here. The format follows
   mostly on cropland, which is not yet proof of flood; two EMS maps of AOI01
   share 0.5 of 52.1 km², and scoring against any map of an image lifts CSI from
   0.16 to 0.23.
+- `notebooks/07_conflicting_maps_s1.ipynb`: the cross-validation under three label
+  rules (0 PU). Only one radar image has two maps; combining them lifts the
+  independent CSI over all floods from 0.17 to 0.23 and halves the false area.
 
 ## [0.7.1] - 2026-11-04
 

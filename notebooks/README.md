@@ -8,6 +8,7 @@
 | [`04_false_alarms_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/04_false_alarms_s1.ipynb) | Where the false alarms of 03 fall, and two fixes scored the same way: drop pixels already dark in the pre-event pass, then patches under *n* pixels | the pairs and references of 02 | 0 PU (reads the data directory) |
 | [`05_terrain_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/05_terrain_s1.ipynb) | Whether slope and height above the local low (Copernicus DEM GLO-30) remove the false alarms left by 04: they do not | the pairs and references of 02, the public DEM | 0 PU (about 11 minutes of DEM reads the first time) |
 | [`06_optical_check_s2.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/06_optical_check_s2.ipynb) | Whether the false alarms left on EMSR664 are water: a Sentinel-2 pass about 29 h after the radar, every EMS map of an area at once, and ESA WorldCover | the pairs and references of 02, 5 Sentinel-2 images at 40 m | ~20 PU once |
+| [`07_conflicting_maps_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/07_conflicting_maps_s1.ipynb) | The cross-validation of 04 under three label rules, since one radar image has two EMS maps that barely overlap: each map apart, any map of the image, without the smaller map | the pairs and references of 02 | 0 PU (reads the data directory) |
 
 ## Run them
 
@@ -155,7 +156,8 @@ CSI per activation (independent labels):
 - **On independent labels the baseline is CSI ≈ 0.12, not 0.04.** The fixed
   test of 02 was too small: scored on all 130 km², the VV threshold finds a
   third of the mapped water (POD 0.33).
-- **False alarms are the problem, not missed water.** Every detector marks
+- **False alarms look like the problem** (but see notebook 07: much of this
+  comes from one map). Every detector marks
   two to seven times the mapped area (bias 2–7, FAR 0.84–0.92). Out of their
   own activation, the thresholds and the classifiers are tuned on floods
   that look different.
@@ -290,6 +292,44 @@ least 4 pixels.
   mapped flood the radar misses is water for Sentinel-2. Water that receded or
   lay under vegetation fits both; this test cannot tell which.
 - **Limits.** One flood, one optical date, about 29 hours after the radar.
+
+## Results of notebook 07
+
+Same folds, 0 PU, on whole images. 24 maps on 23 radar images: only one image,
+EMSR664 AOI01, has two maps. Maps of one area on different passes are not
+combined, since they show different days.
+
+The two maps of AOI01 share 0.5 of 52.1 km². COSMO-SkyMed (44.9 km²) spans 41–77 %
+of the area's columns and 4–73 % of its rows; Pléiades (7.7 km²) only 55–64 % and
+55–69 %.
+
+Not dark before, min size, on independent labels (CSI on same-image labels stays
+at 0.40):
+
+| Label rule | CSI | POD | FAR | bias | mapped km² | false km² |
+|---|---:|---:|---:|---:|---:|---:|
+| every map apart | 0.166 | 0.308 | 0.736 | 1.17 | 149.4 | 128.3 |
+| any map of the image | **0.228** | 0.309 | 0.535 | 0.66 | 148.9 | 52.8 |
+| without the smaller map | 0.236 | 0.324 | 0.535 | 0.70 | 141.7 | 52.8 |
+
+The VV threshold moves the same way: 0.125, 0.178, 0.183.
+
+![CSI under the three label rules](https://raw.githubusercontent.com/agent-engineering-studio/copernicus-ems/main/docs/images/notebook-all-maps-s1.png)
+
+**How to read them.**
+
+- **One map moves the pooled score.** Combining the two maps halves the false
+  area and lifts CSI from 0.17 to 0.23. EMSR664 goes from 0.16 to 0.23; EMSR795
+  from 0.15 to 0.18, through a half-decibel change in tuning; the others barely
+  move. Quote 0.23, with the rule.
+- **The smaller map may be partial.** Its flood stays in a small part of AOI01,
+  and its label says dry everywhere else. That fits a map that looked at only
+  part of the area, but this test does not prove it.
+- **Now misses matter more.** With bias 0.66 and POD 0.31 the detector finds less
+  than the maps show. Water that receded or lay under vegetation could explain
+  that; these scores cannot tell which.
+- **Whole images differ a little from chips.** Every map apart gives 0.166 here
+  and 0.159 in notebook 04, which also leaves out chips with little observed area.
 
 The notebooks are stored without outputs. Each one saves its figure in
 `docs/images/`.
