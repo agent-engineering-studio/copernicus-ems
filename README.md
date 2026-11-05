@@ -485,6 +485,10 @@ detection lifts the same-image CSI to 0.42 on one split.
 scores every flood once, leaving its activation out (0 PU): on 130 km² of
 labels from other sensors the VV threshold reaches CSI 0.12, change
 detection does not beat it, and false alarms (bias 2–7) are the problem.
+[`notebooks/04_false_alarms_s1.ipynb`](notebooks/04_false_alarms_s1.ipynb)
+finds where they fall and halves them for free: dropping pixels already dark
+in the pre-event pass, then patches under 4 pixels, lifts that CSI to 0.16
+(bias 1.15).
 See [Notebooks](https://agentengineering.it/copernicus-ems/notebooks/).
 
 ### Ask an agent (MCP server, `[mcp]` extra)

@@ -12,6 +12,10 @@ All notable changes to this project are documented here. The format follows
   02 scored by leave-one-activation-out cross-validation, at 0 PU. On 130 km²
   of independent labels the VV threshold reaches CSI 0.12; change detection
   does not beat it across activations, and every detector over-predicts.
+- `notebooks/04_false_alarms_s1.ipynb`: where those false alarms fall, and
+  two fixes scored the same way (0 PU). Dropping pixels already dark in the
+  pre-event pass and patches under 4 pixels halves the false area on
+  independent labels (221 to 111 km²) and lifts CSI from 0.12 to 0.16.
 
 ## [0.7.1] - 2026-11-04
 
