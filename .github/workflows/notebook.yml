@@ -3,7 +3,7 @@
 # CDSE_CLIENT_SECRET secrets) only for images not in the cached data
 # directory: about 94 PU the first time for notebooks 01 and 02, then
 # none; notebooks 03, 04 and 05 only read what 02 fetched
-# (05 also reads the public Copernicus DEM, free). The executed
+# (05 also reads the public Copernicus DEM, free); 06 adds about 20 PU once. The executed
 # notebook and its figure are uploaded as an artifact, and so is the data
 # directory (`ems-data`: Sentinel-1 images, labels, pair manifests, EMS
 # layers), so other projects can reuse the images without spending PU:
@@ -25,6 +25,7 @@ on:
           - 03_cross_validation_s1
           - 04_false_alarms_s1
           - 05_terrain_s1
+          - 06_optical_check_s2
       budget_pu:
         description: "Processing units the run may spend at most"
         default: "100"
@@ -76,4 +77,5 @@ jobs:
           retention-days: 90
           path: |
             .ems-data/*/sentinel-1/
+            .ems-data/*/sentinel-2/
             .ems-data/*/*.geojson
