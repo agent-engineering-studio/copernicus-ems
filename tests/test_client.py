@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Callable, Coroutine
 from pathlib import Path
 from typing import Any
@@ -250,3 +251,36 @@ def test_rapid_mapping_filters_activations_by_date() -> None:
         return await RapidMapping(c).activations(since=date(2026, 10, 9), until=date(2026, 10, 9))
 
     assert [a.code for a in run(body)] == ["EMSR934"]
+
+
+def test_send_with_a_gzip_server() -> None:
+    """The caller's client decodes gzip: the library must not decode it again."""
+    import gzip
+
+    from copernicus_ems import SendTransport
+
+    body = json.dumps({"ok": True, "text": "x" * 500}).encode()
+
+    def gzipped(request: httpx.Request) -> httpx.Response:
+        packed = gzip.compress(body)
+        return httpx.Response(
+            200,
+            content=packed,
+            headers={"Content-Encoding": "gzip", "Content-Length": str(len(packed))},
+        )
+
+    async def go() -> httpx.Response:
+        shared = httpx.AsyncClient(transport=httpx.MockTransport(gzipped))
+
+        async def send(request: httpx.Request) -> httpx.Response:
+            return await shared.send(request)
+
+        async with httpx.AsyncClient(transport=SendTransport(send)) as client:
+            response = await client.get("https://example.test/x")
+        await shared.aclose()
+        return response
+
+    response = asyncio.run(go())
+    assert response.json()["ok"] is True and response.content == body
+    assert "content-encoding" not in response.headers
+    assert response.headers.get("content-length") in (None, str(len(body)))

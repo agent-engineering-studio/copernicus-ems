@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-04
+
+### Fixed
+
+- `send=` failed with `httpx.DecodingError` against any server that
+  compresses its answers (the real Rapid Mapping API does): the caller's
+  client had already decoded the body, but its `Content-Encoding` header was
+  kept, so httpx decoded it again. The encoding headers are now dropped.
+  Reported by Limen; regression test with a gzip server.
+
 ## [0.7.0] - 2026-11-04
 
 ### Added
