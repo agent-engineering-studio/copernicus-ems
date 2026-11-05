@@ -492,6 +492,10 @@ in the pre-event pass, then patches under 4 pixels, lifts that CSI to 0.16
 [`notebooks/05_terrain_s1.ipynb`](notebooks/05_terrain_s1.ipynb) shows that
 slope and height from the Copernicus DEM do not reduce them further: the
 remaining false alarms lie on ground as flat as the flood.
+[`notebooks/06_optical_check_s2.ipynb`](notebooks/06_optical_check_s2.ipynb)
+checks them on EMSR664 against Sentinel-2 (~20 PU): 69 % are open water about 29 h
+later, and two EMS maps of one area barely overlap, so the labels are part of the
+low score. Against any map of an image CSI goes from 0.16 to 0.23.
 See [Notebooks](https://agentengineering.it/copernicus-ems/notebooks/).
 
 ### Ask an agent (MCP server, `[mcp]` extra)

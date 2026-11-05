@@ -7,6 +7,7 @@
 | [`03_cross_validation_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/03_cross_validation_s1.ipynb) | The four detectors of 02 scored by leave-one-activation-out cross-validation: each flood is the test once, tuned and trained on the others, all folds added | the pairs and references of 02 | 0 PU (reads the data directory) |
 | [`04_false_alarms_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/04_false_alarms_s1.ipynb) | Where the false alarms of 03 fall, and two fixes scored the same way: drop pixels already dark in the pre-event pass, then patches under *n* pixels | the pairs and references of 02 | 0 PU (reads the data directory) |
 | [`05_terrain_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/05_terrain_s1.ipynb) | Whether slope and height above the local low (Copernicus DEM GLO-30) remove the false alarms left by 04: they do not | the pairs and references of 02, the public DEM | 0 PU (about 11 minutes of DEM reads the first time) |
+| [`06_optical_check_s2.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/06_optical_check_s2.ipynb) | Whether the false alarms left on EMSR664 are water: a Sentinel-2 pass about 29 h after the radar, every EMS map of an area at once, and ESA WorldCover | the pairs and references of 02, 5 Sentinel-2 images at 40 m | ~20 PU once |
 
 ## Run them
 
@@ -242,6 +243,53 @@ Terrain under the independent labels:
 - **What this leaves open.** The false alarms that remain got darker on flat
   ground, far from the mapped flood. Whether they are water the EMS maps do
   not show can only be checked against another image of the same day.
+
+## Results of notebook 06
+
+EMSR664 only, which holds 111 of the 130 km² of independent labels: the
+Sentinel-2 pass of 23 May 2023, 10:06 UTC, fetched in [workflow run
+42065152858](https://github.com/agent-engineering-studio/copernicus-ems/actions/runs/42065152858)
+for about 20 PU (estimated), 99.98 % clear over the observed area. EMSR762 is
+too cloudy on the nearby passes. Each radar image counts once here, on 4303 km²
+observed; a pixel is mapped flood if any map of that image says so. The
+detector, tuned without EMSR664, is VV < −15 dB, VV_pre ≥ −15 dB, patches of at
+least 4 pixels.
+
+| Group of pixels | km² | NDWI > 0 | NDWI > 0.2 | SCL water |
+|---|---:|---:|---:|---:|
+| dark in both radar passes | 60.1 | 94.7 % | 93.2 % | 90.5 % |
+| mapped flood, found by the radar | 40.8 | 77.1 % | 67.1 % | 70.6 % |
+| mapped flood, missed by the radar | 84.2 | 14.7 % | 11.2 % | 8.4 % |
+| **false alarms** | 51.1 | **68.9 %** | 61.0 % | 62.5 % |
+| quiet dry land | 4066.7 | 1.4 % | 0.8 % | 0.7 % |
+
+| Scored against | CSI | |
+|---|---:|---|
+| every map apart | 0.162 | false area 126.9 km² |
+| any map of the image | **0.232** | false area 51.1 km² |
+| + Sentinel-2 water outside permanent water and wetland | 0.402 | upper bound, 30.0 km² |
+| + Sentinel-2 water everywhere | 0.432 | upper bound, 35.2 km² |
+
+![Share of clear pixels that Sentinel-2 calls water, per group](https://raw.githubusercontent.com/agent-engineering-studio/copernicus-ems/main/docs/images/notebook-optical-s2.png)
+
+**How to read them.**
+
+- **The labels are part of the low score.** AOI01 has two EMS maps less than
+  a day apart (COSMO-SkyMed 44.9 km², Pléiades 7.7 km²) that share 0.5 km². The
+  same detector on the same image scores CSI 0.31 against one and 0.003 against
+  the other. Against any map of the image the score goes from 0.16 to 0.23,
+  with no optical data at all.
+- **Most remaining false alarms are open water the next day.** 69 % of them
+  are water for Sentinel-2, close to the 77 % of the mapped flood the radar
+  found, against 1.4 % of quiet dry land.
+- **That is not yet flood.** Only 12 % lie on permanent water or wetland
+  (ESA WorldCover); 78 % are on cropland, where open water may be flood the
+  maps do not show or fields flooded on purpose, as rice is in parts of the Po
+  plain. So CSI 0.40–0.43 is an upper bound, not a score.
+- **Most of the missed flood has no open water either.** Only 15 % of the
+  mapped flood the radar misses is water for Sentinel-2. Water that receded or
+  lay under vegetation fits both; this test cannot tell which.
+- **Limits.** One flood, one optical date, about 29 hours after the radar.
 
 The notebooks are stored without outputs. Each one saves its figure in
 `docs/images/`.
