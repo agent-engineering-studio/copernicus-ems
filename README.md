@@ -496,6 +496,9 @@ remaining false alarms lie on ground as flat as the flood.
 checks them on EMSR664 against Sentinel-2 (~20 PU): 69 % are open water about 29 h
 later, and two EMS maps of one area barely overlap, so the labels are part of the
 low score. Against any map of an image CSI goes from 0.16 to 0.23.
+[`notebooks/07_conflicting_maps_s1.ipynb`](notebooks/07_conflicting_maps_s1.ipynb)
+repeats the cross-validation under that rule (0 PU): over all floods, independent
+CSI goes from 0.17 to 0.23, nearly all from one map.
 See [Notebooks](https://agentengineering.it/copernicus-ems/notebooks/).
 
 ### Ask an agent (MCP server, `[mcp]` extra)
