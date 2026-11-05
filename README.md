@@ -489,6 +489,9 @@ detection does not beat it, and false alarms (bias 2–7) are the problem.
 finds where they fall and halves them for free: dropping pixels already dark
 in the pre-event pass, then patches under 4 pixels, lifts that CSI to 0.16
 (bias 1.15).
+[`notebooks/05_terrain_s1.ipynb`](notebooks/05_terrain_s1.ipynb) shows that
+slope and height from the Copernicus DEM do not reduce them further: the
+remaining false alarms lie on ground as flat as the flood.
 See [Notebooks](https://agentengineering.it/copernicus-ems/notebooks/).
 
 ### Ask an agent (MCP server, `[mcp]` extra)
