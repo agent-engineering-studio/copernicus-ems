@@ -1,7 +1,8 @@
 # Runs a notebook of notebooks/ on real data, on demand.
 # It spends Copernicus Data Space processing units (the CDSE_CLIENT_ID /
 # CDSE_CLIENT_SECRET secrets) only for images not in the cached data
-# directory: about 94 PU the first time for each notebook, then none. The executed
+# directory: about 94 PU the first time for notebooks 01 and 02, then
+# none; notebook 03 only reads what 02 fetched. The executed
 # notebook and its figure are uploaded as an artifact, and so is the data
 # directory (`ems-data`: Sentinel-1 images, labels, pair manifests, EMS
 # layers), so other projects can reuse the images without spending PU:
@@ -20,6 +21,7 @@ on:
         options:
           - 01_flood_segmentation_s1
           - 02_change_detection_s1
+          - 03_cross_validation_s1
       budget_pu:
         description: "Processing units the run may spend at most"
         default: "100"

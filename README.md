@@ -480,8 +480,11 @@ on labels from other sensors both detectors stay under CSI 0.1 — the honest
 baseline for the next models.
 [`notebooks/02_change_detection_s1.ipynb`](notebooks/02_change_detection_s1.ipynb)
 adds a pre-event pass of the same orbit (`pairs --reference`): change
-detection lifts the same-image CSI to 0.42; on labels from optical maps the
-score stays low, and the independent test set is still too small to say why.
+detection lifts the same-image CSI to 0.42 on one split.
+[`notebooks/03_cross_validation_s1.ipynb`](notebooks/03_cross_validation_s1.ipynb)
+scores every flood once, leaving its activation out (0 PU): on 130 km² of
+labels from other sensors the VV threshold reaches CSI 0.12, change
+detection does not beat it, and false alarms (bias 2–7) are the problem.
 See [Notebooks](https://agentengineering.it/copernicus-ems/notebooks/).
 
 ### Ask an agent (MCP server, `[mcp]` extra)
