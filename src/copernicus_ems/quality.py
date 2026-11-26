@@ -13,18 +13,26 @@ where the map observed (label ``!= 255``) and the radar is valid.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import asdict, dataclass, field, fields
+import json
+from collections.abc import Iterable, Mapping
+from dataclasses import asdict, dataclass, field, fields, replace
+from pathlib import Path
 from typing import Any
+
+from copernicus_ems.dataset import Pair, find_pairs
+from copernicus_ems.errors import EmsError
+from copernicus_ems.ml import LabelRaster
 
 try:
     import numpy as np
     import numpy.typing as npt
+    import rasterio
     from rasterio.features import sieve
 except ImportError as exc:  # pragma: no cover - exercised only without the extra
     raise ImportError(
         "copernicus_ems.quality needs the ml extra: pip install 'copernicus-ems[ml]'"
     ) from exc
+
 
 VV_DB = -15.5
 VV_PRE_DB = -14.0
@@ -280,3 +288,65 @@ def assess(
             "near_m": NEAR_M,
         },
     )
+
+
+def _read(path: Path, shape: tuple[int, ...]) -> tuple[Any, Any, float]:
+    """VV, valid mask and pixel size of a radar GeoTIFF (bands VV, VH, dataMask)."""
+    with rasterio.open(path) as src:
+        if (src.height, src.width) != shape:
+            raise EmsError(
+                f"{path.name}: grid {(src.height, src.width)} differs from the labels {shape}"
+            )
+        vv = src.read(1).astype(np.float32)
+        valid = src.read(3) > 0
+        return vv, valid, abs(src.transform.a)
+
+
+def check_pair(pair: Pair) -> QualityReport:
+    """Screen one pair on disk: reads the radar, the reference and the labels."""
+    inputs = {"image": pair.image.name, "labels": pair.labels.name}
+    reference = pair.reference
+    if reference is None:
+        report = assess(pair.meta, None, resolution_m=_resolution(pair, None), has_reference=False)
+        return replace(report, inputs=inputs)
+    inputs["reference"] = reference.name
+    raster = LabelRaster.from_geotiff(pair.labels)
+    shape = raster.labels.shape
+    vv, valid, resolution = _read(pair.image, shape)
+    vv_pre, valid_pre, _ = _read(reference, shape)
+    detected = detect(vv, vv_pre)
+    measurements = measure(
+        detected, raster.labels, valid & valid_pre, _resolution(pair, resolution)
+    )
+    report = assess(
+        pair.meta, measurements, resolution_m=_resolution(pair, resolution), has_reference=True
+    )
+    return replace(report, inputs=inputs)
+
+
+def _resolution(pair: Pair, from_image: float | None) -> float:
+    grid = pair.meta.get("grid")
+    if grid and grid.get("transform"):
+        return abs(float(grid["transform"][0]))
+    if from_image is not None:
+        return from_image
+    with rasterio.open(pair.image) as src:
+        return abs(float(src.transform.a))
+
+
+def quality_path(pair: Pair) -> Path:
+    """``…_pair.json`` becomes ``…_quality.json``."""
+    return pair.manifest.with_name(pair.manifest.name.replace("_pair.json", "_quality.json"))
+
+
+def check_pairs(
+    directory: Path, codes: Iterable[str] | None = None, *, write: bool = True
+) -> list[QualityReport]:
+    """Screen every pair under ``directory``; with ``write``, a ``_quality.json`` beside each."""
+    reports = []
+    for pair in find_pairs(directory, codes):
+        report = check_pair(pair)
+        if write:
+            quality_path(pair).write_text(json.dumps(report.as_dict(), indent=2))
+        reports.append(report)
+    return reports

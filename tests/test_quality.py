@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 pytest.importorskip("rasterio")
 
-from copernicus_ems import quality
+import rasterio
+from pairs import add_reference, write_pair
+
+from copernicus_ems import EmsError, quality
+from copernicus_ems.dataset import find_pairs
+from copernicus_ems.ml import Grid, LabelRaster
 
 
 def test_detect_thresholds_and_min_size() -> None:
@@ -173,3 +179,80 @@ def test_report_as_dict_is_json() -> None:
     assert data["flags"][0]["code"] == "little_confirmed"
     assert data["measurements"]["coverage"] == 1.0
     assert data["detector"]["vv_db"] == quality.VV_DB
+
+
+# --- check_pair on disk ---
+
+
+def test_check_pair_with_reference(tmp_path: Path, labels: LabelRaster) -> None:
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    add_reference(tmp_path / "EMSR1/sentinel-1/AOI01_DEL_PRODUCT_pair.json", 0.1)
+    (report,) = quality.check_pairs(tmp_path)
+    assert report.verdict == "not assessable"
+    assert "calibrated at 40 m" in (report.reason or "")
+    assert report.resolution_m == 100
+    assert report.inputs["reference"] == "AOI01_DEL_PRODUCT_pre.tif"
+    written = tmp_path / "EMSR1/sentinel-1/AOI01_DEL_PRODUCT_quality.json"
+    assert json.loads(written.read_text())["verdict"] == "not assessable"
+
+
+def test_check_pair_at_40m_coherent(tmp_path: Path) -> None:
+    grid = Grid("EPSG:32633", 500000.0, 4600000.0, 40.0, 100, 100)
+    arr = np.zeros((100, 100), np.uint8)
+    arr[20:60, 20:60] = 1
+    raster = LabelRaster(arr, grid, {})
+    manifest = write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", raster, gap_hours=5)
+    folder = manifest.parent
+    image = np.full((3, 100, 100), 0.1, np.float32)
+    image[2] = 1
+    pre = image.copy()
+    image[:2, 20:60, 20:60] = 0.01
+    meta = json.loads(manifest.read_text())
+    with rasterio.open(folder / meta["image"]) as src:
+        profile = src.profile
+    with rasterio.open(folder / meta["image"], "w", **profile) as dst:
+        dst.write(image)
+    with rasterio.open(folder / "AOI01_DEL_PRODUCT_pre.tif", "w", **profile) as dst:
+        dst.write(pre)
+    meta["reference"] = {"image": "AOI01_DEL_PRODUCT_pre.tif"}
+    manifest.write_text(json.dumps(meta))
+    (pair,) = find_pairs(tmp_path, None)
+    report = quality.check_pair(pair)
+    assert report.reason is None
+    assert report.verdict == "coherent"
+    assert report.resolution_m == 40.0
+
+
+def test_check_pair_without_reference(tmp_path: Path) -> None:
+    grid = Grid("EPSG:32633", 500000.0, 4600000.0, 40.0, 50, 50)
+    raster = LabelRaster(np.zeros((50, 50), np.uint8), grid, {})
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", raster, gap_hours=5)
+    (pair,) = find_pairs(tmp_path, None)
+    report = quality.check_pair(pair)
+    assert report.verdict == "not assessable"
+    assert (report.reason or "").startswith("no pre-event reference")
+    assert "reference" not in report.inputs
+
+
+def test_reference_on_another_grid(tmp_path: Path, labels: LabelRaster) -> None:
+    manifest = write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    pre = add_reference(manifest, 0.1)
+    with rasterio.open(pre) as src:
+        profile, data = src.profile, src.read()
+    profile.update(height=profile["height"] - 1)
+    with rasterio.open(pre, "w", **profile) as dst:
+        dst.write(data[:, :-1])
+    (pair,) = find_pairs(tmp_path, None)
+    with pytest.raises(EmsError, match=r"_pre\.tif"):
+        quality.check_pair(pair)
+
+
+def test_check_pairs_writes_and_rewrites(tmp_path: Path, labels: LabelRaster) -> None:
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    write_pair(tmp_path, "EMSR2", "AOI02_GRA_PRODUCT", labels)
+    quality.check_pairs(tmp_path)
+    files = sorted(tmp_path.rglob("*_quality.json"))
+    first = [f.read_text() for f in files]
+    quality.check_pairs(tmp_path)
+    assert len(files) == 2
+    assert [f.read_text() for f in files] == first
