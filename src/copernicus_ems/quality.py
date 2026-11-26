@@ -231,7 +231,7 @@ def _flags(m: Measurements) -> tuple[Flag, ...]:
         flags.append(
             Flag(
                 "possibly_partial",
-                f"mapped water spans {m.mapped_extent:.0%} of the area; "
+                f"mapped water spans {m.mapped_extent:.1%} of the area; "
                 f"the radar sees {outside:.1f}× as much darkened water outside it",  # noqa: RUF001
                 {"mapped_extent": m.mapped_extent, "outside_ratio": outside},
             )
@@ -250,7 +250,7 @@ def _flags(m: Measurements) -> tuple[Flag, ...]:
         flags.append(
             Flag(
                 "little_confirmed",
-                f"the radar confirms only {m.confirmed_share:.0%} of the mapped water",
+                f"the radar confirms only {m.confirmed_share:.1%} of the mapped water",
                 {"confirmed_share": m.confirmed_share},
             )
         )

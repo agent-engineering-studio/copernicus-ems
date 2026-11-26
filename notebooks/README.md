@@ -344,7 +344,7 @@ Chosen thresholds, in `copernicus_ems.quality`:
 | `PARTIAL_EXTENT` | 0.1 | 0.1 | 0.013 (the suspect) / 0.137 |
 | `PARTIAL_RATIO` | 2.0 | 2.0 | 0.30 / 4.49 (the suspect) |
 | `UNMAPPED_RATIO` | 3.0 | 3.0 | 0.42 / 4.49 (the suspect) |
-| `LITTLE_CONFIRMED` | **0.01** | 0.1 | 0.007 / 0.020 |
+| `LITTLE_CONFIRMED` | **0.01** | 0.1 | 0.007 / 0.0196 |
 
 Verdicts: **13 coherent, 3 to check, 8 not assessable**. The known suspect,
 EMSR664 AOI01 Pléiades, **is flagged** possibly partial.
@@ -402,6 +402,9 @@ grid, 1 218 stay within the cap and flag the suspect.
   the threshold; at half the median (0.05), five. 0.02 would reach exactly the
   cap, but it lies between 0.0196 and 0.0209, a knife-edge. At 0.01 the next
   map sits at twice the threshold.
+- **"Much unmapped water" fires only on the suspect.** On these 24 maps the
+  next map is at 0.42 against the threshold of 3.0, so that threshold has no
+  other example to be checked against.
 - **Two maps where the radar confirms almost nothing**: EMSR762 AOI07
   (GeoEye-1, 0.8 km²) and EMSR705 AOI06 (Pléiades, 3.2 km², radar 19 h later).
   Water that receded or arrived between the acquisitions, or lay under
