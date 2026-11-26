@@ -1,0 +1,61 @@
+# copernicus-ems on this machine, with nothing to install but Docker.
+#
+#   docker compose up                          the demo, on http://localhost:3000
+#   docker compose run --rm init               download the Italian floods once (~200 MB)
+#   docker compose run --rm cli --help         the command line
+#   docker compose run --rm python             Python, with copernicus_ems to import
+#
+#   COPERNICUS_EMS_PORT     the port of the demo (default 3000)
+#   COPERNICUS_EMS_COUNTRY  the country the demo shows (default Italy)
+#   DATA_ROOT               the data folder shared with Limen and the other libraries:
+#                           the library's own folder is $DATA_ROOT/copernicus-ems
+#                           (default ./data/copernicus-ems). Create it first, so that
+#                           it is yours.
+name: copernicus-ems
+
+x-ems: &ems
+  image: copernicus-ems:local
+  build: .
+  environment:
+    DATA_ROOT: /data
+    COPERNICUS_EMS_COUNTRY: ${COPERNICUS_EMS_COUNTRY:-}
+  volumes:
+    - ${DATA_ROOT:-./data}/copernicus-ems:/data/copernicus-ems
+
+services:
+  # What the page asks: the library, behind a few URLs (demo/api.py).
+  api:
+    <<: *ems
+    container_name: copernicus-ems-api
+    restart: unless-stopped
+
+  # The page: a map of the activations, and a card for the one clicked (demo/web).
+  web:
+    image: copernicus-ems-web:local
+    container_name: copernicus-ems-web
+    build: demo/web
+    environment:
+      COPERNICUS_EMS_API: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "${COPERNICUS_EMS_PORT:-3000}:3000"
+    restart: unless-stopped
+
+  # One shot: the list, the details and the observed-event layers, for offline use.
+  init:
+    <<: *ems
+    profiles: [tools]
+    command: ["sh", "scripts/fetch-data.sh"]
+
+  cli:
+    <<: *ems
+    profiles: [tools]
+    entrypoint: ["copernicus-ems"]
+
+  python:
+    <<: *ems
+    profiles: [tools]
+    command: ["python"]
+    stdin_open: true
+    tty: true

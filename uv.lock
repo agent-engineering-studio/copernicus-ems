@@ -409,6 +409,10 @@ parquet = [
 ]
 
 [package.dev-dependencies]
+demo = [
+    { name = "starlette" },
+    { name = "uvicorn" },
+]
 dev = [
     { name = "mcp" },
     { name = "mypy" },
@@ -420,6 +424,7 @@ dev = [
     { name = "rasterio" },
     { name = "ruff" },
     { name = "shapely" },
+    { name = "starlette" },
     { name = "types-shapely" },
 ]
 docs = [
@@ -450,6 +455,10 @@ requires-dist = [
 provides-extras = ["geo", "ml", "cdse", "parquet", "mcp"]
 
 [package.metadata.requires-dev]
+demo = [
+    { name = "starlette", specifier = ">=0.40" },
+    { name = "uvicorn", specifier = ">=0.30" },
+]
 dev = [
     { name = "mcp", specifier = ">=1.20" },
     { name = "mypy", specifier = ">=1.13" },
@@ -461,6 +470,7 @@ dev = [
     { name = "rasterio", specifier = ">=1.4" },
     { name = "ruff", specifier = ">=0.8" },
     { name = "shapely", specifier = ">=2.0" },
+    { name = "starlette", specifier = ">=0.40" },
     { name = "types-shapely", specifier = ">=2.1.0.20261030" },
 ]
 docs = [
