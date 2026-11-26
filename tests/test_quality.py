@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -13,6 +14,7 @@ import rasterio
 from pairs import add_reference, write_pair
 
 from copernicus_ems import EmsError, quality
+from copernicus_ems.cli import main
 from copernicus_ems.dataset import find_pairs
 from copernicus_ems.ml import Grid, LabelRaster
 
@@ -256,3 +258,74 @@ def test_check_pairs_writes_and_rewrites(tmp_path: Path, labels: LabelRaster) ->
     quality.check_pairs(tmp_path)
     assert len(files) == 2
     assert [f.read_text() for f in files] == first
+
+
+def test_quality_command_text(
+    tmp_path: Path, labels: LabelRaster, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    write_pair(tmp_path, "EMSR1", "AOI02_DEL_PRODUCT", labels)
+    assert main(["--dir", str(tmp_path), "quality", "EMSR1"]) == 0
+    out = capsys.readouterr()
+    lines = out.out.splitlines()
+    assert len(lines) == 2 and lines[0].split("\t")[0] == "AOI01_DEL_PRODUCT"
+    assert " coherent, " in out.err and " not assessable" in out.err
+    assert main(["--dir", str(tmp_path), "quality", "EMSR1", "--aoi", "2"]) == 0
+    assert capsys.readouterr().out.startswith("AOI02_DEL_PRODUCT")
+    assert main(["--dir", str(tmp_path), "quality", "EMSR1", "--product", "AOI01_DEL_PRODUCT"]) == 0
+    assert capsys.readouterr().out.startswith("AOI01_DEL_PRODUCT")
+
+
+def test_quality_command_json(
+    tmp_path: Path, labels: LabelRaster, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    assert main(["--dir", str(tmp_path), "quality", "EMSR1", "--json"]) == 0
+    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert len(rows) == 1 and "verdict" in rows[0]
+
+
+def test_quality_command_no_pairs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["--dir", str(tmp_path), "quality", "EMSR9"]) == 1
+    assert "run copernicus-ems quality EMSR9 --fetch" in capsys.readouterr().err
+
+
+def test_quality_command_twice_same_file(tmp_path: Path, labels: LabelRaster) -> None:
+    manifest = write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    argv = ["--dir", str(tmp_path), "quality", "EMSR1"]
+    assert main(argv) == 0
+    written = manifest.parent / "AOI01_DEL_PRODUCT_quality.json"
+    first = written.read_text()
+    assert main(argv) == 0
+    assert written.read_text() == first
+
+
+def test_quality_command_fetch(
+    tmp_path: Path,
+    labels: LabelRaster,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from copernicus_ems import cli
+
+    seen: list[Any] = []
+
+    async def fake(ems: object, args: object) -> int:
+        seen.append(args)
+        return 0
+
+    monkeypatch.setattr(cli, "_pairs", fake)
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    argv = ["--dir", str(tmp_path), "quality", "EMSR1", "--fetch"]
+    assert main([*argv, "--dry-run"]) == 0
+    assert capsys.readouterr().out == "" and len(seen) == 1
+    ns = seen[0]
+    assert ns.resolution == 40.0 and ns.reference is True and ns.dry_run is True
+    assert main(argv) == 0
+    assert "AOI01_DEL_PRODUCT" in capsys.readouterr().out and len(seen) == 2
+    monkeypatch.setattr(cli, "_pairs", lambda ems, args: _failing())
+    assert main(argv) == 1
+
+
+async def _failing() -> int:
+    return 1
