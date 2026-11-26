@@ -63,8 +63,11 @@ dev = [
     "rasterio>=1.4",
     "ruff>=0.8",
     "shapely>=2.0",
+    "starlette>=0.40",
     "types-shapely>=2.1.0.20261030",
 ]
+# The demo's API (demo/api.py); the page is in demo/web.
+demo = ["starlette>=0.40", "uvicorn>=0.30"]
 docs = [
     "mkdocstrings[python]>=1.0.8",
     "zensical>=0.0.74",
@@ -90,7 +93,8 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "ARG", "PTH", "RUF"]
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["src", "tests"]
+files = ["src", "tests", "demo/api.py"]
+mypy_path = "demo"
 warn_unused_ignores = true
 warn_redundant_casts = true
 
@@ -101,6 +105,8 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# demo/api.py, the demo's API, is tested as the module `api`.
+pythonpath = ["demo"]
 addopts = "--strict-markers"
 markers = [
     "live: contract tests against the live services (COPERNICUS_EMS_LIVE=1, weekly in CI)",

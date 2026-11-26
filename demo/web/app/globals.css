@@ -1,0 +1,474 @@
+/* What Bootstrap Italia does not have: the map, its legend and the card of an activation.
+   Colours, type and controls are the kit's. */
+
+@font-face {
+  font-family: "Titillium Web";
+  font-weight: 400;
+  font-display: swap;
+  src: url("../node_modules/bootstrap-italia/dist/fonts/Titillium_Web/titillium-web-v10-latin-ext_latin-regular.woff2")
+    format("woff2");
+}
+
+@font-face {
+  font-family: "Titillium Web";
+  font-weight: 600;
+  font-display: swap;
+  src: url("../node_modules/bootstrap-italia/dist/fonts/Titillium_Web/titillium-web-v10-latin-ext_latin-600.woff2")
+    format("woff2");
+}
+
+@font-face {
+  font-family: "Titillium Web";
+  font-weight: 700;
+  font-display: swap;
+  src: url("../node_modules/bootstrap-italia/dist/fonts/Titillium_Web/titillium-web-v10-latin-ext_latin-700.woff2")
+    format("woff2");
+}
+
+:root {
+  --ink: #17324d;
+  --soft: #5a6772;
+  --line: #d9dadb;
+  --paper: rgba(255, 255, 255, 0.95);
+  --wash: #f2f5f8;
+  --accent: #0066cc;
+  --water: #0b63ce;
+  --radius: 8px;
+  --shadow: 0 1px 2px rgba(23, 50, 77, 0.08), 0 6px 20px rgba(23, 50, 77, 0.16);
+}
+
+.skip {
+  position: absolute;
+  z-index: 2000;
+  top: 8px;
+  left: 8px;
+  padding: 8px 12px;
+  background: #fff;
+}
+
+.it-brand-wrapper h1.it-brand-title {
+  margin: 0;
+  color: #fff;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.it-brand-wrapper .it-brand-tagline {
+  color: #fff;
+}
+
+.langs {
+  display: flex;
+  gap: 4px;
+}
+
+.langs button {
+  padding: 2px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.langs button[aria-checked="true"] {
+  border-color: #fff;
+}
+
+main {
+  padding-top: 16px;
+  padding-bottom: 32px;
+}
+
+/* The map */
+
+.stage {
+  position: relative;
+  height: max(560px, calc(100vh - 260px));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+  background: #dfe5ec;
+}
+
+.map .leaflet-tile-pane {
+  filter: saturate(0.45) brightness(1.04);
+}
+
+/* Between two whole zooms the tiles are scaled, and a hairline shows where two of them
+   meet: one pixel of overlap covers it. */
+.map .leaflet-tile-container img.leaflet-tile {
+  width: 257px !important;
+  height: 257px !important;
+  mix-blend-mode: normal;
+}
+
+.map .leaflet-interactive {
+  cursor: pointer;
+}
+
+.leaflet-container {
+  font: inherit;
+}
+
+.leaflet-control-attribution {
+  font-size: 11px;
+}
+
+.leaflet-tooltip.tip {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: var(--shadow);
+}
+
+.leaflet-tooltip.tip::before {
+  display: none;
+}
+
+/* The legend, over the map */
+
+.panel {
+  position: absolute;
+  z-index: 1000;
+  left: 12px;
+  bottom: 28px;
+  width: 300px;
+  max-width: calc(100% - 24px);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.panel p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.panel p:last-child {
+  margin-bottom: 0;
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 18px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+.swatch.dashed {
+  border: 2px dashed;
+  background: rgba(90, 103, 114, 0.08);
+}
+
+.swatch.dot {
+  width: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line);
+  opacity: 1;
+}
+
+.muted {
+  color: var(--soft);
+}
+
+/* The column on the right: what it is for, the list, the card */
+
+.sheet {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  font-size: 15px;
+}
+
+.sheet header small {
+  display: block;
+  margin-top: 12px;
+  color: var(--soft);
+  font-size: 13px;
+}
+
+.sheet h2 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.sheet section {
+  margin-top: 18px;
+}
+
+.sheet section:first-child {
+  margin-top: 0;
+}
+
+.sheet h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.sheet h3 small {
+  display: block;
+  color: var(--soft);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.sheet p {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.sheet p.muted {
+  font-size: 13px;
+}
+
+.what {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.steps {
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  position: relative;
+  margin-bottom: 10px;
+  padding-left: 36px;
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  top: 1px;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--water);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 24px;
+  text-align: center;
+}
+
+.steps b {
+  display: block;
+  color: var(--ink);
+}
+
+.steps span {
+  display: block;
+  color: var(--soft);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.list {
+  max-height: 420px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.list button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 10px;
+  width: 100%;
+  padding: 8px 6px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  font-size: 14px;
+  text-align: left;
+}
+
+.list button:hover,
+.list button:focus-visible {
+  background: var(--wash);
+}
+
+.list b {
+  grid-row: span 2;
+  color: var(--accent);
+}
+
+.list small {
+  color: var(--soft);
+}
+
+.big {
+  display: flex;
+  gap: 24px;
+}
+
+.big div {
+  color: var(--soft);
+  font-size: 14px;
+}
+
+.big b {
+  color: var(--ink);
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.big span {
+  display: block;
+}
+
+.bar-share {
+  height: 8px;
+  margin: 10px 0 6px;
+  border-radius: 4px;
+  background: var(--wash);
+  overflow: hidden;
+}
+
+.bar-share i {
+  display: block;
+  height: 100%;
+  background: var(--water);
+}
+
+.sheet table {
+  width: 100%;
+  font-size: 14px;
+}
+
+.sheet thead th {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sheet tbody tr {
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.sheet tbody tr:hover {
+  background: var(--wash);
+}
+
+.sheet tbody tr.active {
+  background: #e6f0fb;
+}
+
+.sheet tbody th,
+.sheet td {
+  padding: 6px;
+  vertical-align: top;
+  font-weight: 400;
+}
+
+.sheet td small,
+.sheet th small {
+  display: block;
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.num,
+.when {
+  white-space: nowrap;
+}
+
+.num {
+  text-align: right;
+}
+
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  text-align: left;
+}
+
+.sheet details {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.sheet summary {
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sheet pre {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.sheet footer {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.waiting {
+  color: var(--soft);
+  animation: waiting 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes waiting {
+  from {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting {
+    animation: none;
+  }
+}
+
+@media (max-width: 991px) {
+  .stage {
+    height: 60vh;
+  }
+}

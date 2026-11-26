@@ -36,7 +36,7 @@ No account, no API key: the dashboard API is public. One dependency: `httpx`.
 
 - [What is Rapid Mapping, in 30 seconds](#what-is-rapid-mapping-in-30-seconds)
 - [What this library does](#what-this-library-does)
-- [Quick start](#quick-start)
+- [Quick start](#quick-start) · [The demo](#the-demo)
 - [Where downloads are saved](#where-downloads-are-saved) · [Docker](#in-docker)
 - [How it works](#how-it-works)
 - [Recipes](#recipes)
@@ -206,6 +206,24 @@ EMSR871 2026-03-31   1015  Flood in Abruzzo, Molise and Basilicata regions, Ital
 ```
 
 Open the result in QGIS or drop it on [geojson.io](https://geojson.io).
+
+---
+
+## The demo
+
+A map that explains, in three steps, what the library is for. It shows every
+emergency in Italy, where the satellites looked and the water they saw, with
+the Python behind each number.
+
+![The demo on EMSR664, Emilia-Romagna, May 2023](https://raw.githubusercontent.com/agent-engineering-studio/copernicus-ems/main/docs/images/demo-emsr664.png)
+
+```bash
+docker compose run --rm init   # once: the floods of Italy (~200 MB) into ./data
+docker compose up              # http://localhost:3000
+```
+
+Or, with uv and Node: `make init` then `make demo`. More in
+[demo/README.md](demo/README.md).
 
 ---
 

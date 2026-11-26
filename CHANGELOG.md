@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- A demo, as in the other agent-engineering-studio libraries: a map of the
+  Copernicus EMS emergencies in Italy that says in three steps what the
+  library is for, where the satellites looked and the water they saw, with
+  the Python of each number. `demo/api.py` (Starlette, the `demo` dependency
+  group) over the library, `demo/web` (Next.js, Leaflet, Bootstrap Italia,
+  in Italian and English). `Dockerfile` and `compose.yaml` (`api`, `web`,
+  and `init`, `cli`, `python` as tools), `scripts/` and `make init`,
+  `make data`, `make demo`, `make docker`, `make down`. CI builds the images
+  and checks that the page answers.
 - `publiccode.yml`, the card for the Developers Italia software catalogue,
   checked in CI by its official parser.
 
