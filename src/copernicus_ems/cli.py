@@ -1,5 +1,6 @@
 """``copernicus-ems``: list activations, fetch their layers, export them as one GeoJSON.
 
+    copernicus-ems init                        # once: list, details, layers, for offline use
     copernicus-ems list --country Italy --since 2024-01-01
     copernicus-ems fetch EMSR762 EMSR664
     copernicus-ems export --country Italy -o italy.geojson --masks italy_masks.geojson
@@ -25,8 +26,9 @@ import httpx
 from copernicus_ems.catalogue import Activation
 from copernicus_ems.client import ProductEvents, RapidMapping
 from copernicus_ems.errors import EmsError
-from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS
+from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS, OBSERVED_EVENT
 from copernicus_ems.export import mask_features, tagged_features, write_features
+from copernicus_ems.offline import INIT_CATEGORIES, init
 from copernicus_ems.scenes import SENTINEL_1_GRD, SENTINEL_2_L2A, ScenePass, passes
 
 #: Many floods are filed as ``Storm``: the features are filtered on ``5-Flood`` anyway.
@@ -54,7 +56,10 @@ def _parser() -> argparse.ArgumentParser:
         description="Copernicus EMS Rapid Mapping: activations and observed event layers.",
     )
     parser.add_argument(
-        "--dir", type=Path, default=None, help="where layers are saved (default: the cache)"
+        "--dir",
+        type=Path,
+        default=None,
+        help="data directory (default: $DATA_ROOT/copernicus-ems, else the user cache)",
     )
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -77,6 +82,35 @@ def _parser() -> argparse.ArgumentParser:
             action="store_true",
             help="every feature, not only floods (landslides, AOI, …)",
         )
+
+    setup = commands.add_parser(
+        "init",
+        help="download the activation list, details and layers once, for offline use",
+    )
+    setup.add_argument(
+        "--country", default="Italy", help="activations of this country (default Italy)"
+    )
+    setup.add_argument("--all-countries", action="store_true", help="every country (several GB)")
+    setup.add_argument(
+        "--category",
+        action="append",
+        dest="categories",
+        default=None,
+        help=f"repeatable (default: {', '.join(INIT_CATEGORIES)})",
+    )
+    setup.add_argument("--since", type=date.fromisoformat, help="YYYY-MM-DD, included")
+    setup.add_argument("--until", type=date.fromisoformat, help="YYYY-MM-DD, included")
+    setup.add_argument(
+        "--layer",
+        action="append",
+        dest="kinds",
+        default=None,
+        help="repeatable layer kind (default: observedEventA)",
+    )
+    setup.add_argument(
+        "--retries", type=int, default=3, help="per request, on network errors (default 3)"
+    )
+    setup.add_argument("--json", action="store_true", help="the report as one JSON object")
 
     listing = commands.add_parser("list", help="public activations, oldest first")
     filters(listing, None)
@@ -182,6 +216,8 @@ def _parser() -> argparse.ArgumentParser:
 
 
 async def _run(args: argparse.Namespace, client: httpx.AsyncClient | None) -> int:
+    if args.command == "init":
+        return await _init(args, client)
     async with RapidMapping(client, directory=args.dir) as ems:
         if args.command == "list":
             for activation in await _activations(ems, args):
@@ -200,6 +236,29 @@ async def _run(args: argparse.Namespace, client: httpx.AsyncClient | None) -> in
         if args.command == "dataset":
             return _dataset(ems, args)
         return await _export(ems, args)
+
+
+async def _init(args: argparse.Namespace, client: httpx.AsyncClient | None) -> int:
+    report = await init(
+        args.dir,
+        country=None if args.all_countries else args.country,
+        categories=args.categories or INIT_CATEGORIES,
+        since=args.since,
+        until=args.until,
+        kinds=args.kinds or (OBSERVED_EVENT,),
+        client=client,
+        retries=args.retries,
+    )
+    if args.json:
+        print(json.dumps(report.as_dict()))
+    else:
+        for name, error in report.failed.items():
+            print(f"failed\t{name}\t{error}", file=sys.stderr)
+        print(
+            f"{len(report.downloaded)} downloaded, {len(report.skipped)} skipped, "
+            f"{len(report.failed)} failed, {report.bytes / 1e6:.1f} MB in {report.directory}"
+        )
+    return 0 if report.ok else 1
 
 
 async def _activations(ems: RapidMapping, args: argparse.Namespace) -> list[Activation]:

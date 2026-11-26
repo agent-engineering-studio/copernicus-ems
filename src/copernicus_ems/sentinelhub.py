@@ -8,7 +8,7 @@ orthorectified, optionally speckle-filtered) cut to **exactly** the
 :class:`~copernicus_ems.ml.Grid` of a label raster, so image and labels line
 up pixel for pixel: no 1 GB GRD archive, no SNAP.
 
-Files are written to the data directory (``COPERNICUS_EMS_DATA_DIR``, a
+Files are written to the data directory (``$DATA_ROOT/copernicus-ems``, a
 Docker volume in a container), next to the layers, and read from there on
 the next call; nothing is stored in a bucket.
 

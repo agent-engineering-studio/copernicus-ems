@@ -68,7 +68,7 @@ is paid once.
 
 ## What is written
 
-In the data directory (`COPERNICUS_EMS_DATA_DIR`), next to the layers:
+In the data directory (`$DATA_ROOT/copernicus-ems`), next to the layers:
 
 ```text
 EMSR664/sentinel-1/
@@ -156,17 +156,15 @@ are a secret, not an environment line in the compose file:
 services:
   app:
     environment:
-      COPERNICUS_EMS_DATA_DIR: /data/copernicus-ems
+      DATA_ROOT: /data
       CDSE_CREDENTIALS_FILE: /run/secrets/cdse
     volumes:
-      - ems-data:/data/copernicus-ems
+      - ${DATA_ROOT:-./data}/copernicus-ems:/data/copernicus-ems
     secrets:
       - cdse
 secrets:
   cdse:
     file: ./secrets/cdse.json   # {"client_id": "…", "client_secret": "…"}; keep it out of git
-volumes:
-  ems-data:
 ```
 
 ## Processing units

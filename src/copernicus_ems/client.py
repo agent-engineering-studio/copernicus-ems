@@ -47,20 +47,33 @@ from copernicus_ems.scenes import Scene, SceneMatch, fetch_scenes, find_scenes
 
 _RETRY_STATUS = frozenset({429, 502, 503, 504})
 
-#: The environment variable :func:`default_directory` reads.
+#: The data root the agent-engineering-studio libraries share; this one uses
+#: ``$DATA_ROOT/copernicus-ems``.
+ENV_DATA_ROOT = "DATA_ROOT"
+#: An override of the data directory for this library alone, kept for compatibility.
 ENV_DATA_DIR = "COPERNICUS_EMS_DATA_DIR"
+#: The folder of ``DATA_ROOT`` (and of the user cache) this library owns.
+DATA_ROOT_FOLDER = "copernicus-ems"
 
 
 def default_directory() -> Path:
-    """Where layers are saved when no directory is given.
+    """Where everything is saved, and read from, when no directory is given.
 
-    ``COPERNICUS_EMS_DATA_DIR`` if set, else ``copernicus-ems`` in the user
-    cache (``$XDG_CACHE_HOME``, or ``~/.cache``).
+    In order (an explicit ``directory=`` argument always wins over all of them):
+
+    * ``COPERNICUS_EMS_DATA_DIR``: this library's own directory (kept for
+      compatibility);
+    * ``DATA_ROOT``: the data root shared by the agent-engineering-studio
+      libraries; this one uses ``$DATA_ROOT/copernicus-ems``;
+    * else ``copernicus-ems`` in the user cache (``$XDG_CACHE_HOME``, or
+      ``~/.cache``).
     """
     if configured := os.environ.get(ENV_DATA_DIR, "").strip():
         return Path(configured).expanduser()
+    if root := os.environ.get(ENV_DATA_ROOT, "").strip():
+        return Path(root).expanduser() / DATA_ROOT_FOLDER
     cache = os.environ.get("XDG_CACHE_HOME", "").strip() or "~/.cache"
-    return Path(cache).expanduser() / "copernicus-ems"
+    return Path(cache).expanduser() / DATA_ROOT_FOLDER
 
 
 def layer_path(product: Product, layer: Layer, directory: Path) -> Path:
