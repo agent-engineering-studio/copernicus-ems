@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `copernicus-ems quality CODE` and `copernicus_ems.quality` (`[ml]` extra): a
+  screening of each flood map against Sentinel-1 radar, inside the observation
+  mask. Verdict `coherent`, `to check` or `not assessable` (with the reason),
+  and flags with their numbers (possibly partial, much unmapped water, little
+  confirmed). Writes a `_quality.json` beside each pair; `--fetch` first runs
+  `pairs` at 40 m; `--json` prints one object per product. Thresholds
+  calibrated on the 24 Italian maps of notebook 08: 13 coherent, 3 to check,
+  8 not assessable. See the "Quality check" page.
 - A demo, as in the other agent-engineering-studio libraries: a map of the
   Copernicus EMS emergencies in Italy that says in three steps what the
   library is for, where the satellites looked and the water they saw, with

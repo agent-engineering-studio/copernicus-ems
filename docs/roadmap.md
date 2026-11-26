@@ -211,6 +211,17 @@ emit image + label pairs.
     features. BYOC only for serving rasters of our own (e.g. Limen's
     forecasts) next to Sentinel-1.
 
+### 4c. Quality check of the maps
+
+!!! success "Done"
+    `copernicus-ems quality` and `copernicus_ems.quality` (`[ml]` extra):
+    each map screened against Sentinel-1 radar, with a verdict (coherent,
+    to check, not assessable) and the numbers behind it, thresholds
+    calibrated on the 24 Italian maps (notebook 08). See
+    [Quality check](quality.md). Next, in Limen: the verdict stored with
+    each product, and backtest scores reported with and without the maps
+    "to check".
+
 ### 5. Fine-tuning notebooks on EO foundation models (0.6)
 
 !!! success "First notebook done"
