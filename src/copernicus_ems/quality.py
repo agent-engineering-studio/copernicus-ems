@@ -14,7 +14,8 @@ where the map observed (label ``!= 255``) and the radar is valid.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable, Mapping
+import math
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any
@@ -174,6 +175,14 @@ class Flag:
 
 @dataclass(frozen=True, slots=True)
 class QualityReport:
+    """The screening of one pair: a verdict, why, what was measured, and with which thresholds.
+
+    The measurements of a "not assessable" report (a map made from Sentinel-1
+    agrees with the radar because it is the radar) must never be quoted as
+    confirmation. ``thresholds`` records the flag thresholds in force, so
+    verdicts from a later recalibration can be told apart.
+    """
+
     activation: str
     product: str
     verdict: str
@@ -185,6 +194,7 @@ class QualityReport:
     resolution_m: float | None
     inputs: dict[str, str] = field(default_factory=dict)
     detector: dict[str, float] = field(default_factory=dict)
+    thresholds: dict[str, float] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         out = asdict(self)
@@ -205,6 +215,10 @@ def _not_assessable(
     has_reference: bool,
 ) -> str | None:
     gap = meta.get("gap_hours")
+    if gap is not None and not math.isfinite(gap):
+        gap = None
+    if resolution_m is not None and not math.isfinite(resolution_m):
+        resolution_m = None
     if same_image(meta):
         return "the map was made from Sentinel-1: agreement would prove nothing"
     if resolution_m is None or abs(resolution_m - RESOLUTION_M) > 0.5:
@@ -218,7 +232,10 @@ def _not_assessable(
     if measurements is None:
         return "no measurements"
     if measurements.coverage < MIN_COVERAGE:
-        return f"radar covers {measurements.coverage:.0%} of the observed area, under 90 %"
+        return (
+            f"radar covers {measurements.coverage:.0%} of the observed area, "
+            f"under {MIN_COVERAGE * 100:.0f} %"
+        )
     if measurements.mapped_km2 < MIN_MAPPED_KM2:
         return f"too little mapped water to compare ({measurements.mapped_km2:.2f} km²)"
     return None
@@ -288,19 +305,35 @@ def assess(
             "cluster_km2": CLUSTER_KM2,
             "near_m": NEAR_M,
         },
+        thresholds={
+            "PARTIAL_EXTENT": PARTIAL_EXTENT,
+            "PARTIAL_RATIO": PARTIAL_RATIO,
+            "UNMAPPED_RATIO": UNMAPPED_RATIO,
+            "LITTLE_CONFIRMED": LITTLE_CONFIRMED,
+            "MAX_GAP_HOURS": MAX_GAP_HOURS,
+            "MIN_COVERAGE": MIN_COVERAGE,
+            "MIN_MAPPED_KM2": MIN_MAPPED_KM2,
+        },
     )
 
 
 def _read(path: Path, shape: tuple[int, ...]) -> tuple[Any, Any, float]:
     """VV, valid mask and pixel size of a radar GeoTIFF (bands VV, VH, dataMask)."""
-    with rasterio.open(path) as src:
-        if (src.height, src.width) != shape:
-            raise EmsError(
-                f"{path.name}: grid {(src.height, src.width)} differs from the labels {shape}"
-            )
-        vv = src.read(1).astype(np.float32)
-        valid = src.read(3) > 0
-        return vv, valid, abs(src.transform.a)
+    try:
+        with rasterio.open(path) as src:
+            if (src.height, src.width) != shape:
+                raise EmsError(
+                    f"{path.name}: grid {(src.height, src.width)} differs from the labels {shape}"
+                )
+            if src.count < 3:
+                raise EmsError(
+                    f"{path.name}: {src.count} bands, expected 3 bands (VV, VH, dataMask)"
+                )
+            vv = src.read(1).astype(np.float32)
+            valid = src.read(3) > 0
+            return vv, valid, abs(src.transform.a)
+    except rasterio.errors.RasterioIOError as exc:
+        raise EmsError(f"{path.name}: cannot read the radar image: {exc}") from exc
 
 
 def check_pair(pair: Pair) -> QualityReport:
@@ -341,11 +374,19 @@ def quality_path(pair: Pair) -> Path:
 
 
 def check_pairs(
-    directory: Path, codes: Iterable[str] | None = None, *, write: bool = True
+    directory: Path,
+    codes: Iterable[str] | None = None,
+    *,
+    write: bool = True,
+    select: Callable[[Pair], bool] | None = None,
 ) -> list[QualityReport]:
-    """Screen every pair under ``directory``; with ``write``, a ``_quality.json`` beside each."""
+    """Screen every pair under ``directory``; with ``write``, a ``_quality.json`` beside each.
+
+    With ``select``, only the pairs it accepts are read and screened."""
     reports = []
     for pair in find_pairs(directory, codes):
+        if select is not None and not select(pair):
+            continue
         report = check_pair(pair)
         if write:
             quality_path(pair).write_text(json.dumps(report.as_dict(), indent=2))

@@ -32,9 +32,9 @@ pip install 'copernicus-ems[ml]'
 Radar and the analysts' map are two independent looks at the water, often
 hours or days apart, at different resolutions. Radar sees only open water: it
 misses flooding under trees and in towns, and shallow or receded water. So on
-independent maps the radar confirms only a small part of the mapped water (a
-probability of detection around 0.3 in notebook 01, a median share of 0.10
-here). That is why the check does **not** ask for a high agreement; it looks for
+independent maps the radar confirms only a small part of the mapped water (the
+radar finds only about a third of the water mapped from other satellites in
+notebooks 04 and 07, a median share of 0.10 here). That is why the check does **not** ask for a high agreement; it looks for
 patterns that a normal map does not show.
 
 Maps drawn on Sentinel-1 itself are the opposite case: they agree with the
@@ -102,7 +102,11 @@ copernicus-ems quality EMSR664 --json              # one JSON object per product
 | `--dry-run` | with `--fetch`: show the plan and its PU, then stop |
 | `--json` | one JSON object per product |
 
-A `_quality.json` is written beside each pair. In Python:
+A `_quality.json` is written beside each pair. It also records the flag
+thresholds in force (`thresholds`), so verdicts from a later recalibration can
+be told apart. The measurements of a *not assessable* report (a map drawn on
+Sentinel-1 can show a confirmed share of 0.885) must never be quoted as
+confirmation. In Python:
 
 ```python
 from pathlib import Path

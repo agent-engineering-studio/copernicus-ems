@@ -460,6 +460,7 @@ async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
 
 async def _quality(ems: RapidMapping, args: argparse.Namespace) -> int:
     try:
+        from copernicus_ems.dataset import Pair, find_pairs
         from copernicus_ems.quality import COHERENT, NOT_ASSESSABLE, TO_CHECK, check_pairs
     except ImportError:  # pragma: no cover - without the ml extra
         print("copernicus-ems: quality needs: pip install 'copernicus-ems[ml]'", file=sys.stderr)
@@ -481,18 +482,30 @@ async def _quality(ems: RapidMapping, args: argparse.Namespace) -> int:
         status = await _pairs(ems, fetch)
         if status or args.dry_run:
             return status
+    flt = [f"--aoi {args.aoi}"] if args.aoi is not None else []
+    flt += [f"--product {args.product}"] if args.product is not None else []
+
+    def wanted(pair: Pair) -> bool:
+        if args.aoi is not None and not pair.product.startswith(f"AOI{args.aoi:02d}_"):
+            return False
+        return args.product is None or pair.product == args.product
+
     by_product: dict[str, list[Any]] = {}
-    for report in check_pairs(ems.directory, [args.code]):
-        if args.aoi is not None and not report.product.startswith(f"AOI{args.aoi:02d}_"):
-            continue
-        if args.product is not None and report.product != args.product:
-            continue
+    for report in check_pairs(ems.directory, [args.code], select=wanted):
         by_product.setdefault(report.product, []).append(report)
     if not by_product:
-        print(
-            f"no pairs for {args.code}: run copernicus-ems quality {args.code} --fetch",
-            file=sys.stderr,
-        )
+        if flt and find_pairs(ems.directory, [args.code]):
+            given = " ".join(flt)
+            print(
+                f"no pairs for {args.code} matching {given}: "
+                f"run copernicus-ems quality {args.code} --fetch --dry-run {given}",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"no pairs for {args.code}: run copernicus-ems quality {args.code} --fetch",
+                file=sys.stderr,
+            )
         return 1
     chosen = [
         next((r for r in group if abs((r.resolution_m or 0.0) - 40.0) <= 0.5), group[0])

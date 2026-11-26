@@ -329,3 +329,112 @@ def test_quality_command_fetch(
 
 async def _failing() -> int:
     return 1
+
+
+# --- filters applied before checking ---
+
+
+def _broken_reference(tmp_path: Path, labels: LabelRaster, product: str) -> Path:
+    manifest = write_pair(tmp_path, "EMSR1", product, labels)
+    pre = add_reference(manifest, 0.1)
+    with rasterio.open(pre) as src:
+        profile, data = src.profile, src.read()
+    profile.update(height=profile["height"] - 1)
+    with rasterio.open(pre, "w", **profile) as dst:
+        dst.write(data[:, :-1])
+    return manifest
+
+
+def test_quality_filter_ignores_an_unrelated_broken_pair(
+    tmp_path: Path, labels: LabelRaster, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    broken = _broken_reference(tmp_path, labels, "AOI02_DEL_PRODUCT")
+    argv = ["--dir", str(tmp_path), "quality", "EMSR1"]
+    assert main([*argv, "--product", "AOI01_DEL_PRODUCT"]) == 0
+    assert capsys.readouterr().out.startswith("AOI01_DEL_PRODUCT")
+    assert main([*argv, "--aoi", "1"]) == 0
+    assert not (broken.parent / "AOI02_DEL_PRODUCT_quality.json").exists()
+    assert main(argv) == 1  # unfiltered, the broken pair still stops the run
+
+
+def test_quality_empty_filter_names_the_filter(
+    tmp_path: Path, labels: LabelRaster, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    assert main(["--dir", str(tmp_path), "quality", "EMSR1", "--aoi", "9"]) == 1
+    err = capsys.readouterr().err
+    assert "no pairs for EMSR1 matching --aoi 9" in err
+    assert "quality EMSR1 --fetch --dry-run --aoi 9" in err
+    assert main(["--dir", str(tmp_path), "quality", "EMSR1", "--product", "X"]) == 1
+    err = capsys.readouterr().err
+    assert "--product X" in err and "--fetch --dry-run --product X" in err
+
+
+def test_quality_prefers_the_40m_pair(
+    tmp_path: Path, labels: LabelRaster, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # the 100 m pair sorts first; the 40 m one must still be the one printed
+    coarse = write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT_b", labels)
+    meta = json.loads(coarse.read_text())
+    meta["product"] = "AOI01_DEL_PRODUCT"
+    coarse.write_text(json.dumps(meta))
+    grid = Grid("EPSG:32633", 500000.0, 4600000.0, 40.0, 50, 50)
+    raster = LabelRaster(np.zeros((50, 50), np.uint8), grid, {})
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", raster, gap_hours=5)
+    assert main(["--dir", str(tmp_path), "quality", "EMSR1", "--json"]) == 0
+    (row,) = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert row["resolution_m"] == 40.0
+
+
+# --- unreadable radar ---
+
+
+def test_reference_with_one_band_is_an_ems_error(tmp_path: Path, labels: LabelRaster) -> None:
+    manifest = write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    pre = add_reference(manifest, 0.1)
+    with rasterio.open(pre) as src:
+        profile, data = src.profile, src.read(1)
+    profile.update(count=1)
+    with rasterio.open(pre, "w", **profile) as dst:
+        dst.write(data, 1)
+    (pair,) = find_pairs(tmp_path, None)
+    with pytest.raises(EmsError, match=r"_pre\.tif.*3 bands"):
+        quality.check_pair(pair)
+
+
+def test_unreadable_radar_is_an_ems_error(tmp_path: Path, labels: LabelRaster) -> None:
+    manifest = write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    pre = add_reference(manifest, 0.1)
+    pre.write_bytes(b"not a tiff")
+    (pair,) = find_pairs(tmp_path, None)
+    with pytest.raises(EmsError, match=r"_pre\.tif"):
+        quality.check_pair(pair)
+
+
+# --- non-finite and thresholds ---
+
+
+@pytest.mark.parametrize("gap", [float("nan"), float("inf")])
+def test_non_finite_gap_is_no_pass_time(gap: float) -> None:
+    report = _assess(meta={"gap_hours": gap})
+    assert report.reason == "no pass time"
+
+
+def test_nan_resolution_is_not_calibrated() -> None:
+    report = _assess(resolution_m=float("nan"))
+    assert (report.reason or "").startswith("thresholds calibrated")
+
+
+def test_report_records_the_thresholds() -> None:
+    data = _assess().as_dict()
+    assert data["thresholds"]["PARTIAL_EXTENT"] == quality.PARTIAL_EXTENT
+    assert set(data["thresholds"]) == {
+        "PARTIAL_EXTENT",
+        "PARTIAL_RATIO",
+        "UNMAPPED_RATIO",
+        "LITTLE_CONFIRMED",
+        "MAX_GAP_HOURS",
+        "MIN_COVERAGE",
+        "MIN_MAPPED_KM2",
+    }
