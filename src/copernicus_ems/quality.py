@@ -13,7 +13,9 @@ where the map observed (label ``!= 255``) and the radar is valid.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass, field, fields
+from typing import Any
 
 try:
     import numpy as np
@@ -30,6 +32,19 @@ MIN_PIXELS = 4
 CLUSTER_KM2 = 1.0
 NEAR_M = 120.0
 RESOLUTION_M = 40.0
+
+MAX_GAP_HOURS = 24.0
+MIN_COVERAGE = 0.9
+MIN_MAPPED_KM2 = 0.1
+# calibrated thresholds, provisional until calibration
+PARTIAL_EXTENT = 0.1
+PARTIAL_RATIO = 2.0
+UNMAPPED_RATIO = 3.0
+LITTLE_CONFIRMED = 0.1
+
+COHERENT = "coherent"
+TO_CHECK = "to check"
+NOT_ASSESSABLE = "not assessable"
 
 _IGNORE = 255
 _FLOODED = 1
@@ -136,4 +151,132 @@ def measure(
         unmapped_clustered_km2=int(clustered.sum()) * px_km2,
         mapped_extent=mapped_extent,
         unmapped_outside_extent_km2=int(outside.sum()) * px_km2,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class Flag:
+    """One thing about the map that deserves a human look."""
+
+    code: str
+    text: str
+    numbers: dict[str, float]
+
+
+@dataclass(frozen=True, slots=True)
+class QualityReport:
+    activation: str
+    product: str
+    verdict: str
+    reason: str | None
+    flags: tuple[Flag, ...]
+    measurements: Measurements | None
+    gap_hours: float | None
+    same_image: bool
+    resolution_m: float | None
+    inputs: dict[str, str] = field(default_factory=dict)
+    detector: dict[str, float] = field(default_factory=dict)
+
+    def as_dict(self) -> dict[str, Any]:
+        out = asdict(self)
+        out["measurements"] = self.measurements.as_dict() if self.measurements else None
+        return out
+
+
+def same_image(meta: Mapping[str, Any]) -> bool:
+    """True when the map itself was made from Sentinel-1."""
+    sources = meta.get("made_from") or []
+    return any("sentinel-1" in str(s.get("sensor", "")).lower() for s in sources)
+
+
+def _not_assessable(
+    meta: Mapping[str, Any],
+    measurements: Measurements | None,
+    resolution_m: float | None,
+    has_reference: bool,
+) -> str | None:
+    gap = meta.get("gap_hours")
+    if same_image(meta):
+        return "the map was made from Sentinel-1: agreement would prove nothing"
+    if resolution_m is None or abs(resolution_m - RESOLUTION_M) > 0.5:
+        return f"thresholds calibrated at {RESOLUTION_M:.0f} m"
+    if gap is None:
+        return "no pass time"
+    if abs(gap) > MAX_GAP_HOURS:
+        return f"radar pass {gap:+.1f} h from the map, over ±{MAX_GAP_HOURS:.0f} h"
+    if not has_reference:
+        return "no pre-event reference (pairs --reference)"
+    if measurements is None:
+        return "no measurements"
+    if measurements.coverage < MIN_COVERAGE:
+        return f"radar covers {measurements.coverage:.0%} of the observed area, under 90 %"
+    if measurements.mapped_km2 < MIN_MAPPED_KM2:
+        return f"too little mapped water to compare ({measurements.mapped_km2:.2f} km²)"
+    return None
+
+
+def _flags(m: Measurements) -> tuple[Flag, ...]:
+    flags: list[Flag] = []
+    outside = m.unmapped_outside_extent_km2 / m.mapped_km2
+    if m.mapped_extent < PARTIAL_EXTENT and outside > PARTIAL_RATIO:
+        flags.append(
+            Flag(
+                "possibly_partial",
+                f"mapped water spans {m.mapped_extent:.0%} of the area; "
+                f"the radar sees {outside:.1f}× as much darkened water outside it",  # noqa: RUF001
+                {"mapped_extent": m.mapped_extent, "outside_ratio": outside},
+            )
+        )
+    clustered = m.unmapped_clustered_km2 / m.mapped_km2
+    if clustered > UNMAPPED_RATIO:
+        flags.append(
+            Flag(
+                "much_unmapped",
+                f"the radar sees {clustered:.1f}× the mapped water as large unmapped "  # noqa: RUF001
+                "darkened patches away from it",
+                {"clustered_ratio": clustered},
+            )
+        )
+    if m.confirmed_share < LITTLE_CONFIRMED:
+        flags.append(
+            Flag(
+                "little_confirmed",
+                f"the radar confirms only {m.confirmed_share:.0%} of the mapped water",
+                {"confirmed_share": m.confirmed_share},
+            )
+        )
+    return tuple(flags)
+
+
+def assess(
+    meta: Mapping[str, Any],
+    measurements: Measurements | None,
+    *,
+    resolution_m: float | None,
+    has_reference: bool,
+) -> QualityReport:
+    """Turn measurements into a screening verdict; the first reason that
+    makes the comparison meaningless wins."""
+    reason = _not_assessable(meta, measurements, resolution_m, has_reference)
+    flags: tuple[Flag, ...] = ()
+    if reason is None and measurements is not None:
+        flags = _flags(measurements)
+    verdict = NOT_ASSESSABLE if reason else (TO_CHECK if flags else COHERENT)
+    return QualityReport(
+        activation=meta.get("activation", ""),
+        product=meta.get("product", ""),
+        verdict=verdict,
+        reason=reason,
+        flags=flags,
+        measurements=measurements,
+        gap_hours=meta.get("gap_hours"),
+        same_image=same_image(meta),
+        resolution_m=resolution_m,
+        detector={
+            "vv_db": VV_DB,
+            "vv_pre_db": VV_PRE_DB,
+            "min_pixels": MIN_PIXELS,
+            "cluster_km2": CLUSTER_KM2,
+            "near_m": NEAR_M,
+        },
     )
