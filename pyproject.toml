@@ -82,6 +82,8 @@ notebooks = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Design notes and plans quote code as sketches, not as code to format.
+extend-exclude = ["docs/superpowers"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "ARG", "PTH", "RUF"]

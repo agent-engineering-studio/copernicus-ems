@@ -83,6 +83,7 @@ licence.
 | 🌊 | **Observed events as GeoJSON** | The flooded polygons of each product, filtered to real floods (no landslides, no AOI). |
 | 💾 | **Disk cache, in a predefined folder** | Layers are saved once; a second run reads them from disk. One environment variable moves the folder to a Docker volume. |
 | 🔁 | **Self-contained** | `RapidMapping()` opens its own HTTP client, retries 502s and network errors, closes it at the end. |
+| ✅ | **Quality check** | Compares a flood map with Sentinel-1 radar and says "coherent", "to check" or "not assessable": a screening that tells you which maps to look at again. |
 | 🧪 | **Pure functions too** | Every parsing step is a plain function, if you have your own HTTP stack. |
 
 ### Why a library, and not the product package

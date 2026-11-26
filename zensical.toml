@@ -18,6 +18,7 @@ nav = [
   { "Geometry & ML" = "ml.md" },
   { "Open imagery" = "scenes.md" },
   { "Sentinel-1 backscatter" = "backscatter.md" },
+  { "Quality check" = "quality.md" },
   { "MCP server" = "mcp.md" },
   { "Demo" = "demo.md" },
   { "Notebooks" = "notebooks.md" },

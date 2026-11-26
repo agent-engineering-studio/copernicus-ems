@@ -19,7 +19,7 @@ import sys
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 import httpx
 
@@ -181,6 +181,26 @@ def _parser() -> argparse.ArgumentParser:
         "--dry-run", action="store_true", help="show the plan and its PU, send nothing"
     )
 
+    quality = commands.add_parser(
+        "quality",
+        help="screen the pairs of an activation: is the label coherent with the image? (ml extra)",
+    )
+    quality.add_argument("code", metavar="CODE", help="e.g. EMSR664")
+    quality.add_argument("--aoi", type=int, help="only this AOI number")
+    quality.add_argument("--product", help="only this product, e.g. AOI01_DEL_MONIT01")
+    quality.add_argument(
+        "--fetch",
+        action="store_true",
+        help="first fetch the pairs (40 m, with a pre-event image) as 'pairs' does",
+    )
+    quality.add_argument(
+        "--budget-pu", type=float, default=500.0, help="with --fetch: stop above this many PU"
+    )
+    quality.add_argument(
+        "--dry-run", action="store_true", help="with --fetch: show the plan and its PU, then stop"
+    )
+    quality.add_argument("--json", action="store_true", help="one JSON object per product")
+
     dataset = commands.add_parser(
         "dataset",
         help="chips + index + train/val/test from the pairs already fetched (ml extra)",
@@ -233,6 +253,8 @@ async def _run(args: argparse.Namespace, client: httpx.AsyncClient | None) -> in
             return await _scenes(ems, args)
         if args.command == "pairs":
             return await _pairs(ems, args)
+        if args.command == "quality":
+            return await _quality(ems, args)
         if args.command == "dataset":
             return _dataset(ems, args)
         return await _export(ems, args)
@@ -433,6 +455,70 @@ async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
             extra = f"\t{ref.backscatter_path}" if ref and ref.backscatter_path else ""
             print(f"{plan.product}\t{image.path}\t{labels}{extra}")
     print(f"{hub.pu_estimated:.1f} PU spent (estimated)", file=sys.stderr)
+    return 0
+
+
+async def _quality(ems: RapidMapping, args: argparse.Namespace) -> int:
+    try:
+        from copernicus_ems.dataset import Pair, find_pairs
+        from copernicus_ems.quality import COHERENT, NOT_ASSESSABLE, TO_CHECK, check_pairs
+    except ImportError:  # pragma: no cover - without the ml extra
+        print("copernicus-ems: quality needs: pip install 'copernicus-ems[ml]'", file=sys.stderr)
+        return 2
+    if args.fetch:
+        fetch = argparse.Namespace(
+            code=args.code,
+            aoi=args.aoi,
+            product=args.product,
+            resolution=40.0,
+            days=2.0,
+            max_gap_hours=24.0,
+            min_coverage=0.9,
+            budget_pu=args.budget_pu,
+            reference=True,
+            reference_days=36.0,
+            dry_run=args.dry_run,
+        )
+        status = await _pairs(ems, fetch)
+        if status or args.dry_run:
+            return status
+    flt = [f"--aoi {args.aoi}"] if args.aoi is not None else []
+    flt += [f"--product {args.product}"] if args.product is not None else []
+
+    def wanted(pair: Pair) -> bool:
+        if args.aoi is not None and not pair.product.startswith(f"AOI{args.aoi:02d}_"):
+            return False
+        return args.product is None or pair.product == args.product
+
+    by_product: dict[str, list[Any]] = {}
+    for report in check_pairs(ems.directory, [args.code], select=wanted):
+        by_product.setdefault(report.product, []).append(report)
+    if not by_product:
+        if flt and find_pairs(ems.directory, [args.code]):
+            given = " ".join(flt)
+            print(
+                f"no pairs for {args.code} matching {given}: "
+                f"run copernicus-ems quality {args.code} --fetch --dry-run {given}",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"no pairs for {args.code}: run copernicus-ems quality {args.code} --fetch",
+                file=sys.stderr,
+            )
+        return 1
+    chosen = [
+        next((r for r in group if abs((r.resolution_m or 0.0) - 40.0) <= 0.5), group[0])
+        for group in by_product.values()
+    ]
+    for report in chosen:
+        if args.json:
+            print(json.dumps(report.as_dict()))
+        else:
+            why = report.reason or "; ".join(f.text for f in report.flags)
+            print(f"{report.product}\t{report.verdict}\t{why}")
+    count = [sum(r.verdict == v for r in chosen) for v in (COHERENT, TO_CHECK, NOT_ASSESSABLE)]
+    print(f"{count[0]} coherent, {count[1]} to check, {count[2]} not assessable", file=sys.stderr)
     return 0
 
 

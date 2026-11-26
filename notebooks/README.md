@@ -9,6 +9,7 @@
 | [`05_terrain_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/05_terrain_s1.ipynb) | Whether slope and height above the local low (Copernicus DEM GLO-30) remove the false alarms left by 04: they do not | the pairs and references of 02, the public DEM | 0 PU (about 11 minutes of DEM reads the first time) |
 | [`06_optical_check_s2.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/06_optical_check_s2.ipynb) | Whether the false alarms left on EMSR664 are water: a Sentinel-2 pass about 29 h after the radar, every EMS map of an area at once, and ESA WorldCover | the pairs and references of 02, 5 Sentinel-2 images at 40 m | ~20 PU once |
 | [`07_conflicting_maps_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/07_conflicting_maps_s1.ipynb) | The cross-validation of 04 under three label rules, since one radar image has two EMS maps that barely overlap: each map apart, any map of the image, without the smaller map | the pairs and references of 02 | 0 PU (reads the data directory) |
+| [`08_quality_check_s1.ipynb`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/notebooks/08_quality_check_s1.ipynb) | The thresholds of the quality check (`copernicus-ems quality`) calibrated on the 24 maps: every map's measurements and verdict, a sweep of the four thresholds, at most a fifth of the assessable maps "to check" | the pairs and references of 02 | 0 PU (reads the data directory) |
 
 ## Run them
 
@@ -330,6 +331,87 @@ The VV threshold moves the same way: 0.125, 0.178, 0.183.
   that; these scores cannot tell which.
 - **Whole images differ a little from chips.** Every map apart gives 0.166 here
   and 0.159 in notebook 04, which also leaves out chips with little observed area.
+
+## Results of notebook 08
+
+Same pairs and references, 0 PU. 24 maps: 8 drawn on Sentinel-1 (not
+assessable), 16 assessable, so at most ⌈16 / 5⌉ = 4 "to check".
+
+Chosen thresholds, in `copernicus_ems.quality`:
+
+| Constant | Value | Was | Nearest maps on either side |
+|---|---:|---:|---|
+| `PARTIAL_EXTENT` | 0.1 | 0.1 | 0.013 (the suspect) / 0.137 |
+| `PARTIAL_RATIO` | 2.0 | 2.0 | 0.30 / 4.49 (the suspect) |
+| `UNMAPPED_RATIO` | 3.0 | 3.0 | 0.42 / 4.49 (the suspect) |
+| `LITTLE_CONFIRMED` | **0.01** | 0.1 | 0.007 / 0.0196 |
+
+Verdicts: **13 coherent, 3 to check, 8 not assessable**. The known suspect,
+EMSR664 AOI01 Pléiades, **is flagged** possibly partial.
+
+*conf*: share of the mapped water the radar confirms. *clustered*: unmapped
+detected water in patches of at least 1 km², more than 120 m from the mapped
+water. *extent*: the mapped water's bounding box as a share of the area's.
+*outside*: clustered water outside that box. Coverage is 1.00 for every map.
+
+| Activation | Product | Made from | S-1 | Gap h | Mapped km² | Conf | Clustered km² | Extent | Outside km² | Verdict | Flags |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---|---|
+| EMSR659 | AOI04_FEP_PRODUCT | Sentinel-1 | yes | −0.0 | 11.13 | 0.115 | 0.00 | 0.360 | 0.00 | not assessable | |
+| EMSR664 | AOI01_DEL_MONIT03 | COSMO-SkyMed | no | +12.5 | 44.88 | 0.601 | 18.94 | 0.246 | 13.57 | coherent | |
+| EMSR664 | AOI01_GRA_PRODUCT | Pléiades | no | −5.1 | 7.70 | 0.024 | 34.63 | 0.013 | 34.63 | **to check** | possibly partial, much unmapped |
+| EMSR664 | AOI03_GRA_PRODUCT | Pléiades | no | −5.1 | 5.81 | 0.020 | 0.00 | 0.798 | 0.00 | coherent | |
+| EMSR664 | AOI04_GRA_PRODUCT | WorldView-2 | no | +19.2 | 1.91 | 0.021 | 0.00 | 0.588 | 0.00 | coherent | |
+| EMSR664 | AOI05_GRA_PRODUCT | Pléiades Neo | no | −5.0 | 0.16 | 0.150 | 0.00 | 0.181 | 0.00 | coherent | |
+| EMSR664 | AOI06_GRA_PRODUCT | SPOT-6/7 | no | +19.2 | 3.03 | 0.441 | 0.00 | 0.450 | 0.00 | coherent | |
+| EMSR664 | AOI07_GRA_PRODUCT | SPOT-6/7 | no | +19.2 | 63.84 | 0.145 | 0.00 | 0.987 | 0.00 | coherent | |
+| EMSR705 | AOI01_DEL_PRODUCT | COSMO-SkyMed | no | +0.3 | 3.95 | 0.312 | 0.00 | 0.329 | 0.00 | coherent | |
+| EMSR705 | AOI02_DEL_MONIT01 | Sentinel-1 | yes | +0.0 | 2.63 | 0.572 | 0.00 | 0.291 | 0.00 | not assessable | |
+| EMSR705 | AOI03_DEL_MONIT02 | Sentinel-1 | yes | +0.0 | 12.76 | 0.103 | 0.00 | 0.320 | 0.00 | not assessable | |
+| EMSR705 | AOI04_GRA_PRODUCT | Pléiades | no | −5.2 | 0.83 | 0.088 | 0.00 | 0.551 | 0.00 | coherent | |
+| EMSR705 | AOI06_GRA_PRODUCT | Pléiades | no | +19.4 | 3.16 | 0.007 | 0.00 | 0.772 | 0.00 | **to check** | little confirmed |
+| EMSR705 | AOI08_DEL_MONIT01 | Sentinel-1 | yes | +0.0 | 4.39 | 0.709 | 0.00 | 0.589 | 0.00 | not assessable | |
+| EMSR762 | AOI04_GRA_MONIT01 | Drone, GeoEye-1 | no | −1.7 | 11.04 | 0.309 | 0.00 | 0.594 | 0.00 | coherent | |
+| EMSR762 | AOI07_GRA_PRODUCT | GeoEye-1 | no | −4.7 | 0.83 | 0.000 | 0.00 | 0.137 | 0.00 | **to check** | little confirmed |
+| EMSR795 | AOI02_DEL_PRODUCT | Sentinel-1 | yes | −0.0 | 2.31 | 0.531 | 0.00 | 0.634 | 0.00 | not assessable | |
+| EMSR795 | AOI02_GRA_PRODUCT | Pléiades | no | −16.7 | 1.22 | 0.158 | 0.00 | 0.768 | 0.00 | coherent | |
+| EMSR795 | AOI06_DEL_PRODUCT | Sentinel-1 | yes | +0.0 | 15.49 | 0.885 | 0.00 | 0.429 | 0.00 | not assessable | |
+| EMSR800 | AOI01_GRA_PRODUCT | Pléiades | no | −5.1 | 0.29 | 0.055 | 0.00 | 0.488 | 0.00 | coherent | |
+| EMSR843 | AOI01_DEL_MONIT01 | SPOT-6/7 | no | −4.6 | 0.47 | 0.109 | 0.00 | 0.422 | 0.00 | coherent | |
+| EMSR843 | AOI01_DEL_PRODUCT | WorldView-2 | no | −4.4 | 0.26 | 0.085 | 0.00 | 0.167 | 0.00 | coherent | |
+| EMSR855 | AOI01_DEL_MONIT01 | Sentinel-1 | yes | −0.0 | 0.59 | 0.260 | 0.00 | 0.351 | 0.00 | not assessable | |
+| EMSR855 | AOI01_DEL_PRODUCT | Sentinel-1 | yes | −0.0 | 1.82 | 0.401 | 0.00 | 0.491 | 0.00 | not assessable | |
+
+Sweep, one threshold at a time with the others as chosen: `PARTIAL_EXTENT`
+anywhere from 0.02 to 0.3, `PARTIAL_RATIO` up to 4 and `UNMAPPED_RATIO` from
+0.5 up give the same 3 maps. `LITTLE_CONFIRMED` decides the count: 0.005 → 2,
+0.01–0.015 → 3, 0.02 → 4, 0.025–0.05 → 5, 0.1 → 8. Of 2 352 settings in the
+grid, 1 218 stay within the cap and flag the suspect.
+
+![Confirmed share per map, coloured by verdict](https://raw.githubusercontent.com/agent-engineering-studio/copernicus-ems/main/docs/images/notebook-quality-s1.png)
+
+**How to read them.**
+
+- **The suspect is flagged, with a wide margin.** Its mapped water spans 1.3 %
+  of the area and the radar sees 4.5 times as much in large patches outside
+  it. No other assessable map has such patches outside its extent, except the
+  COSMO-SkyMed map of the same radar image (0.3 times). That fits a map that
+  looked at only part of the area; the check does not prove it.
+- **Low agreement is normal; "little confirmed" had to be tightened.** The
+  radar confirms a small share of most maps drawn on other sensors and dates
+  (median 0.10, see notebook 01). At 0.1, half the assessable maps fell under
+  the threshold; at half the median (0.05), five. 0.02 would reach exactly the
+  cap, but it lies between 0.0196 and 0.0209, a knife-edge. At 0.01 the next
+  map sits at twice the threshold.
+- **"Much unmapped water" fires only on the suspect.** On these 24 maps the
+  next map is at 0.42 against the threshold of 3.0, so that threshold has no
+  other example to be checked against.
+- **Two maps where the radar confirms almost nothing**: EMSR762 AOI07
+  (GeoEye-1, 0.8 km²) and EMSR705 AOI06 (Pléiades, 3.2 km², radar 19 h later).
+  Water that receded or arrived between the acquisitions, or lay under
+  vegetation or in towns, fits as well as a map to look at again.
+- **A screening, not a classifier.** One known suspect, 16 assessable maps, one
+  country, 40 m and this detector. "Coherent" means the radar does not
+  contradict the map, not that the map is complete.
 
 The notebooks are stored without outputs. Each one saves its figure in
 `docs/images/`.
