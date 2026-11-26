@@ -1,0 +1,94 @@
+# The card of copernicus-ems for the software catalogue of Developers Italia.
+# Check it with: docker run --rm -v "$PWD":/w -w /w italia/publiccode-parser-go -no-network publiccode.yml
+publiccodeYmlVersion: "0"
+name: copernicus-ems
+url: "https://github.com/agent-engineering-studio/copernicus-ems.git"
+landingURL: "https://agentengineering.it/copernicus-ems/"
+releaseDate: "2026-11-26"
+softwareVersion: "0.8.0"
+platforms: [linux, mac, windows]
+categories: [geographic-information-systems, data-analytics, data-collection]
+developmentStatus: beta
+softwareType: library
+intendedAudience:
+  scope: [environment, emergency-services, local-authorities, science-and-technology]
+  countries: [IT]
+description:
+  it:
+    shortDescription: Dove è arrivata davvero l'acqua dopo un'alluvione (Copernicus EMS), in Python
+    longDescription: >
+      copernicus-ems legge Copernicus EMS Rapid Mapping, il servizio europeo che entro poche ore
+      da un disastro mappa da satellite alluvioni, incendi, frane e terremoti. Per ogni
+      attivazione (EMSR762, EMSR664…) e per ogni area di interesse pubblica prodotti: una prima
+      mappa, poi gli aggiornamenti di monitoraggio, ciascuno con i suoi livelli vettoriali. È una
+      libreria Python asincrona e tipizzata, con riga di comando. Legge le attivazioni, i loro
+      prodotti e i livelli dell'evento osservato (aree allagate, bruciate, frane) in GeoJSON,
+      insieme alle maschere di osservazione che dicono dove il satellite ha guardato: è ciò che
+      li rende usabili come verità a terra, perché dentro la maschera l'assenza di acqua è un
+      «asciutto» osservato e fuori non è informazione. Non serve un account né una chiave: l'API
+      è pubblica. Scarica una volta ciò che serve per lavorare senza rete, esporta un paese intero
+      in un solo GeoJSON o GeoParquet, trova le immagini Sentinel aperte più vicine a ogni mappa e,
+      con un account gratuito del Copernicus Data Space, prepara coppie di backscatter Sentinel-1
+      ed etichette per addestrare e valutare modelli di allagamento. Ha un server MCP perché un
+      assistente AI risponda con i fatti dei dati. Non usa dati personali. Una mappa satellitare
+      è un limite inferiore, non un'allerta: per il pericolo valgono le comunicazioni ufficiali
+      della Protezione Civile.
+    features:
+      - Attivazioni, prodotti e livelli vettoriali di Copernicus EMS Rapid Mapping, senza chiave
+      - Aree allagate osservate in GeoJSON, con le maschere di osservazione
+      - Download una tantum per lavorare senza rete
+      - Un paese intero in un solo GeoJSON o GeoParquet
+      - Le immagini Sentinel-1 e Sentinel-2 aperte più vicine a ogni mappa
+      - Coppie backscatter Sentinel-1 ed etichette per modelli di allagamento
+      - Riga di comando e server MCP per gli assistenti AI
+    screenshots:
+      - docs/images/notebook-flood-s1.png
+      - docs/images/notebook-all-maps-s1.png
+      - docs/images/notebook-optical-s2.png
+  en:
+    shortDescription: Where the water actually was after a flood (Copernicus EMS), in Python
+    longDescription: >
+      copernicus-ems reads Copernicus EMS Rapid Mapping, the European service that maps floods,
+      fires, landslides and earthquakes from satellite images within hours of a disaster. For
+      each activation (EMSR762, EMSR664…) and each area of interest it publishes products: a
+      first map, then monitoring updates, each with its own vector layers. It is a typed, async
+      Python library with a command line. It reads the activations, their products and the
+      observed event layers (flooded areas, burnt areas, landslides) as GeoJSON, together with
+      the observation masks that say where the satellite looked: this is what makes them usable
+      as ground truth, since inside the mask no water is an observed "dry", and outside it is no
+      information. No account and no API key: the API is public. It downloads once what working
+      offline needs, exports a whole country as one GeoJSON or GeoParquet, finds the open
+      Sentinel images nearest to each map and, with a free Copernicus Data Space account,
+      prepares Sentinel-1 backscatter and label pairs to train and score flood models. It has an
+      MCP server so that an AI assistant answers with the facts of the data. It uses no personal
+      data. A satellite map is a lower bound, not an alert: for danger, the official word is the
+      Civil Protection's.
+    features:
+      - Activations, products and vector layers of Copernicus EMS Rapid Mapping, with no key
+      - Observed flooded areas as GeoJSON, with the observation masks
+      - A one-off download to work offline
+      - A whole country as one GeoJSON or GeoParquet
+      - The open Sentinel-1 and Sentinel-2 images nearest to each map
+      - Sentinel-1 backscatter and label pairs for flood models
+      - Command line and an MCP server for AI assistants
+    screenshots:
+      - docs/images/notebook-flood-s1.png
+      - docs/images/notebook-all-maps-s1.png
+      - docs/images/notebook-optical-s2.png
+organisation:
+  name: Agent Engineering Studio
+  uri: "https://github.com/agent-engineering-studio"
+legal:
+  license: Apache-2.0
+  mainCopyrightOwner: Agent Engineering Studio
+maintenance:
+  type: community
+  contacts:
+    - name: Giuseppe Zileni
+localisation:
+  localisationReady: false
+  availableLanguages: [en]
+IT:
+  countryExtensionVersion: "1.0"
+  riuso:
+    codiceIPA: ""   # empty until the software belongs to a public administration

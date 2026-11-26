@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `publiccode.yml`, the card for the Developers Italia software catalogue,
+  checked in CI by its official parser.
+
 ## [0.8.0] - 2026-11-26
 
 ### Added

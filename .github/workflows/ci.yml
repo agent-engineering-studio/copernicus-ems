@@ -28,3 +28,13 @@ jobs:
       - run: uv run mypy
       - run: uv run pytest --cov --cov-report=term-missing
       - run: uv build
+
+  # The card for the Developers Italia catalogue, checked by its official parser.
+  publiccode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: italia/publiccode-parser-action@v1
+        with:
+          publiccode: publiccode.yml
+          no-network: true
