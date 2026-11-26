@@ -54,3 +54,11 @@ export type Shape = {
 };
 
 export type MapData = GeoJSON.FeatureCollection<GeoJSON.Geometry, Shape>;
+
+/** The MCP server of the library, as the page server found it when the page was asked for. */
+export type Agents = {
+  /** Where an agent on this machine connects: http://127.0.0.1:8770/mcp. */
+  url: string;
+  /** True when its /health answered: `make up` (profile mcp) started it. */
+  on: boolean;
+};

@@ -1,4 +1,4 @@
-.PHONY: check lint format typecheck test build init data demo docker down
+.PHONY: check lint format typecheck test build init data demo docker up logs down
 
 check: lint typecheck test
 
@@ -31,11 +31,23 @@ data:
 demo:
 	sh scripts/demo.sh
 
-# The same with Docker alone: build the images, run the demo.
+# The same with Docker alone: build the images, run the demo in the background.
 docker:
 	mkdir -p "$${DATA_ROOT:-data}/copernicus-ems"
-	docker compose up --build
+	docker compose up -d --build api web
+	@echo "demo: http://localhost:$${COPERNICUS_EMS_PORT:-3000}"
 
-# Stop the demo and remove its containers (the data downloaded stays).
+# The demo and the MCP server for AI agents, in the background.
+up:
+	mkdir -p "$${DATA_ROOT:-data}/copernicus-ems"
+	docker compose --profile mcp up -d --build
+	@echo "demo: http://localhost:$${COPERNICUS_EMS_PORT:-3000}"
+	@echo "MCP:  http://127.0.0.1:$${COPERNICUS_EMS_MCP_DOCKER_PORT:-8770}/mcp"
+
+# Follow the logs of the containers.
+logs:
+	docker compose --profile mcp logs -f --tail=50
+
+# Stop the demo and the MCP server, remove their containers (the data downloaded stays).
 down:
-	docker compose --profile tools down --remove-orphans
+	docker compose --profile mcp --profile tools down --remove-orphans

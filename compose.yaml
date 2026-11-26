@@ -1,11 +1,14 @@
 # copernicus-ems on this machine, with nothing to install but Docker.
 #
-#   docker compose up                          the demo, on http://localhost:3000
+#   docker compose up -d                       the demo, on http://localhost:3000
+#   docker compose --profile mcp up -d         + the MCP server for AI agents:
+#                                              http://127.0.0.1:8770/mcp
 #   docker compose run --rm init               download the Italian floods once (~200 MB)
 #   docker compose run --rm cli --help         the command line
 #   docker compose run --rm python             Python, with copernicus_ems to import
 #
 #   COPERNICUS_EMS_PORT     the port of the demo (default 3000)
+#   COPERNICUS_EMS_MCP_DOCKER_PORT  the port of the MCP server in Docker (default 8770: 8768 is egms-client's)
 #   COPERNICUS_EMS_COUNTRY  the country the demo shows (default Italy)
 #   DATA_ROOT               the data folder shared with Limen and the other libraries:
 #                           the library's own folder is $DATA_ROOT/copernicus-ems
@@ -36,10 +39,39 @@ services:
     build: demo/web
     environment:
       COPERNICUS_EMS_API: http://api:8000
+      # The page says whether the MCP server is on, and how to connect an agent to it.
+      COPERNICUS_EMS_MCP: http://mcp:8768
+      COPERNICUS_EMS_MCP_URL: http://127.0.0.1:${COPERNICUS_EMS_MCP_DOCKER_PORT:-8770}/mcp
     depends_on:
       - api
     ports:
       - "${COPERNICUS_EMS_PORT:-3000}:3000"
+    restart: unless-stopped
+
+  # The library as tools for AI agents (Claude and any MCP client), over
+  # streamable HTTP: http://127.0.0.1:8770/mcp. It reads the same folder as the
+  # demo, so what `init` saved answers offline.
+  mcp:
+    <<: *ems
+    container_name: copernicus-ems-mcp
+    profiles: [mcp]
+    # Only these Host headers are served: a guard against DNS rebinding on a 0.0.0.0 bind.
+    command:
+      - copernicus-ems-mcp
+      - --transport=streamable-http
+      - --host=0.0.0.0
+      - --port=8768
+      - --allowed-host=localhost:*
+      - --allowed-host=127.0.0.1:*
+      - --allowed-host=mcp:*
+      - --allowed-host=copernicus-ems-mcp:*
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8768/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+    ports:
+      - "127.0.0.1:${COPERNICUS_EMS_MCP_DOCKER_PORT:-8770}:8768"
     restart: unless-stopped
 
   # One shot: the list, the details and the observed-event layers, for offline use.

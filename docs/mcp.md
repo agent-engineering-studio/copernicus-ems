@@ -72,6 +72,26 @@ copernicus-ems-mcp --transport streamable-http --port 8768   # HTTP, at /mcp
     server has no authentication of its own: keep it on an internal
     network. `copernicus-ems mcp` takes the same options.
 
+## In this repository, with Docker
+
+```bash
+make up     # the demo on http://localhost:3000 and the MCP server on http://127.0.0.1:8770/mcp
+claude mcp add --transport http copernicus-ems http://127.0.0.1:8770/mcp
+```
+
+The `mcp` service of `compose.yaml` (profile `mcp`) reads the same folder as
+the demo, so what `copernicus-ems init` saved answers offline. Its port is
+`COPERNICUS_EMS_MCP_DOCKER_PORT` (default 8770: 8768 is egms-client's). The
+demo page says whether it is on.
+
+## The agent skill
+
+[`skills/copernicus-ems/SKILL.md`](https://github.com/agent-engineering-studio/copernicus-ems/blob/main/skills/copernicus-ems/SKILL.md)
+teaches an agent the library: setup, recipes, the rules that fail quietly
+(the AOI is not the event, outside the mask is unknown, `Storm` holds
+floods too, monitoring products are not added up) and how to report
+numbers. For Claude Code, copy the folder into `~/.claude/skills/`.
+
 ## Tools
 
 | Tool | Returns |
