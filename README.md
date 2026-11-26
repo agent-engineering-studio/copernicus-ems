@@ -211,53 +211,77 @@ Open the result in QGIS or drop it on [geojson.io](https://geojson.io).
 
 ## Where downloads are saved
 
-The GeoJSON layers are saved in a directory, which is also the cache. If
-you don't pass one (`RapidMapping(directory=...)`, or `directory=` on the
-functions):
+Everything the library downloads is saved in one directory, which is also
+the cache. If you don't pass one (`RapidMapping(directory=...)`,
+`directory=` on the functions, `--dir` on the command line), it is, in
+this order:
 
-1. `COPERNICUS_EMS_DATA_DIR`, if set;
+1. `$DATA_ROOT/copernicus-ems`: `DATA_ROOT` is the data root shared by the
+   agent-engineering-studio libraries and Limen, each in a folder of its own;
 2. otherwise `~/.cache/copernicus-ems` (or `$XDG_CACHE_HOME/copernicus-ems`).
 
+`COPERNICUS_EMS_DATA_DIR`, if set, still wins over both, for compatibility;
+new setups use `DATA_ROOT` (see `.env.example`).
+
 ```text
-$COPERNICUS_EMS_DATA_DIR/
+$DATA_ROOT/copernicus-ems/
+├── activations.json                     # copernicus-ems init: every activation
 ├── EMSR664/
+│   ├── detail.json                      # copernicus-ems init: products and AOIs
 │   ├── EMSR664_AOI01_DEL_PRODUCT_observedEventA_v1.geojson
 │   ├── EMSR664_AOI01_DEL_MONIT01_observedEventA_v1.geojson
+│   ├── sentinel-1/                      # copernicus-ems pairs (cdse extra)
 │   └── …
-└── EMSR762/
-    └── EMSR762_AOI01_DEL_PRODUCT_observedEventA_v1.geojson
+├── EMSR762/
+│   └── …
+└── exports/                             # the MCP server's export_* tools
 ```
 
 Every flood mapped in Italy since 2023 takes about **200 MB** (14
-activations, November 2026). Each file is a plain GeoJSON
+activations, November 2026). Each layer is a plain GeoJSON
 FeatureCollection, exactly as Rapid Mapping publishes it: you can open the
 folder in QGIS directly.
 
+### Download once, work offline: `init`
+
+```bash
+copernicus-ems init                       # Italy, Flood + Storm, observedEventA layers
+copernicus-ems init --all-countries --since 2025-01-01 --json
+```
+
+```python
+from copernicus_ems import init, read_activations, read_products
+
+report = await init(country="Italy", client=my_client, retries=0)
+print(report.downloaded, report.skipped, report.failed, report.bytes)
+read_activations(country="Italy")  # from disk, no network
+read_products("EMSR762")
+```
+
+`init(directory=None, *, country="Italy", categories=("Flood", "Storm"),
+since=None, until=None, kinds=("observedEventA",), client=None, retries=3,
+concurrency=4)` saves the activation list, the detail of each selected
+activation and its layers. Run it again whenever you like: layers already
+there and valid are skipped (their URL carries their version), the list and
+the details are asked again and rewritten only if they changed, and every
+file is written as `.part` and renamed. A file that fails is listed in
+`report.failed` and the rest goes on; a disk that cannot be written raises.
+Pass your own `httpx.AsyncClient`, and `retries=0` if you retry the whole
+call yourself. Afterwards `RapidMapping.layer()` and `fetch_layer()` read
+the layers from disk.
+
 ### In Docker
 
-In a container, point the variable at a **persistent volume**, or the cache
+In a container, mount a **persistent folder** under `DATA_ROOT`, or the cache
 is lost with the container and every start downloads everything again:
 
 ```yaml
 services:
   app:
     environment:
-      COPERNICUS_EMS_DATA_DIR: /data/copernicus-ems
+      DATA_ROOT: /data
     volumes:
-      - ems-data:/data/copernicus-ems   # named volume
-      # or a host folder:  - ./data/copernicus-ems:/data/copernicus-ems
-volumes:
-  ems-data:
-```
-
-With [Limen](https://github.com/agent-engineering-studio/limen), next to its
-other datasets under `LIMEN_DATA_ROOT`:
-
-```yaml
-    environment:
-      COPERNICUS_EMS_DATA_DIR: /var/lib/limen/copernicus-ems
-    volumes:
-      - ${LIMEN_DATA_ROOT:-../../data}/copernicus-ems:/var/lib/limen/copernicus-ems
+      - ${DATA_ROOT:-./data}/copernicus-ems:/data/copernicus-ems
 ```
 
 The folder is created if missing; the container user must be able to write
@@ -577,9 +601,11 @@ but the parts that matter are undocumented, and each one fails **quietly**:
 | `.layer(product, kind)` | One layer as GeoJSON (cached), or `None`. |
 | `.observed_events(code, event_types=, notations=, concurrency=4)` | Selected features of each product, layers downloaded in parallel. |
 | `Product.aoi_extent` | The observation mask as a GeoJSON geometry (`aoi_extent_wkt` as WKT). |
-| `copernicus-ems list / fetch / export` | The command line. |
-| `default_directory()` | Where layers go when no directory is given. |
-| `ENV_DATA_DIR` | `"COPERNICUS_EMS_DATA_DIR"`. |
+| `copernicus-ems init / list / fetch / export` | The command line. |
+| `init(directory=None, *, country=, categories=, kinds=, client=None, retries=3)` | Download the list, details and layers once, for offline use; returns an `InitReport`. |
+| `read_activations(...)` · `read_products(code)` | The list and the details `init` saved, without the network. |
+| `default_directory()` | Where everything goes when no directory is given: `$DATA_ROOT/copernicus-ems`. |
+| `ENV_DATA_ROOT` · `ENV_DATA_DIR` | `"DATA_ROOT"`; `"COPERNICUS_EMS_DATA_DIR"` (compatibility). |
 | `fetch_activations` · `fetch_products` · `fetch_layer` · `fetch_observed_events` | The same, as functions over your client. |
 | `RetryTransport` | The retrying `httpx` transport `RapidMapping` uses. |
 | `EmsError` | The service answered with something that is not what was asked. |

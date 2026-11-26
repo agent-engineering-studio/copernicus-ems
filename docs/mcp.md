@@ -45,15 +45,15 @@ copernicus-ems-mcp --transport streamable-http --port 8768   # HTTP, at /mcp
     ```yaml
     copernicus-ems-mcp:
       image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
-      command: uvx --from 'copernicus-ems[mcp]~=0.7.0' copernicus-ems-mcp
+      command: uvx --from 'copernicus-ems[mcp]~=0.8.0' copernicus-ems-mcp
       environment:
         COPERNICUS_EMS_MCP_TRANSPORT: streamable-http
         COPERNICUS_EMS_MCP_HOST: 0.0.0.0            # listen inside the container
         COPERNICUS_EMS_MCP_PORT: "8768"
         COPERNICUS_EMS_MCP_ALLOWED_HOSTS: copernicus-ems-mcp:*,localhost:*
-        COPERNICUS_EMS_DATA_DIR: /data              # layers and exports persist here
+        DATA_ROOT: /data                            # layers and exports in /data/copernicus-ems
       volumes:
-        - ems-data:/data
+        - ${DATA_ROOT:-./data}/copernicus-ems:/data/copernicus-ems
       healthcheck:
         test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8768/health')"]
     ```
@@ -64,7 +64,7 @@ copernicus-ems-mcp --transport streamable-http --port 8768   # HTTP, at /mcp
     | `COPERNICUS_EMS_MCP_HOST` | `--host` | `127.0.0.1` |
     | `COPERNICUS_EMS_MCP_PORT` | `--port` | `8768` |
     | `COPERNICUS_EMS_MCP_ALLOWED_HOSTS` | `--allowed-host` (repeatable) | none |
-    | `COPERNICUS_EMS_DATA_DIR` | `--dir` | the user cache |
+    | `DATA_ROOT` | `--dir` (the folder itself) | `$DATA_ROOT/copernicus-ems`, else the user cache |
 
     Flags win over the environment. On a `0.0.0.0` bind, set
     `COPERNICUS_EMS_MCP_ALLOWED_HOSTS` to the names clients use: only those

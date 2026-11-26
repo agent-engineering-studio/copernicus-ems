@@ -9,8 +9,8 @@ Needs the ``mcp`` extra (``pip install 'copernicus-ems[mcp]'``), then:
 Over HTTP the MCP endpoint is ``/mcp`` and ``GET /health`` answers
 ``{"status": "ok"}`` for container healthchecks. Every option also reads an
 environment variable (``COPERNICUS_EMS_MCP_TRANSPORT``, ``_HOST``, ``_PORT``,
-``_ALLOWED_HOSTS``; the data directory from ``COPERNICUS_EMS_DATA_DIR``), so
-a compose file needs no command line.
+``_ALLOWED_HOSTS``; the data directory from ``DATA_ROOT``, as in
+``default_directory``), so a compose file needs no command line.
 
 The tools answer with **facts and file paths**, never raw geometry: an
 activation can hold thousands of polygons, which help no model reason.
@@ -596,7 +596,7 @@ def options(
         prog="copernicus-ems-mcp", description="Copernicus EMS Rapid Mapping as an MCP server."
     )
     parser.add_argument(
-        "--dir", type=Path, help="data directory (default: $COPERNICUS_EMS_DATA_DIR or the cache)"
+        "--dir", type=Path, help="data directory (default: $DATA_ROOT/copernicus-ems or the cache)"
     )
     add_options(parser, environ)
     args = parser.parse_args(argv)

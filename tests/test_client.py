@@ -11,6 +11,7 @@ import pytest
 
 from copernicus_ems import (
     ENV_DATA_DIR,
+    ENV_DATA_ROOT,
     RapidMapping,
     RetryTransport,
     default_directory,
@@ -125,11 +126,20 @@ def test_missing_layer_kind_is_none() -> None:
 
 
 def test_default_directory(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # the old variable wins, for compatibility
     monkeypatch.setenv(ENV_DATA_DIR, " /data/ems ")
+    monkeypatch.setenv(ENV_DATA_ROOT, "/srv/data")
     assert default_directory() == Path("/data/ems")
+    # then the shared root, in a folder of its own
     monkeypatch.delenv(ENV_DATA_DIR)
+    assert default_directory() == Path("/srv/data/copernicus-ems")
+    monkeypatch.setenv(ENV_DATA_ROOT, "~/data")
+    assert default_directory() == Path("~/data/copernicus-ems").expanduser()
+    # then the user cache
+    monkeypatch.setenv(ENV_DATA_ROOT, " ")
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
     assert default_directory() == tmp_path / "copernicus-ems"
+    monkeypatch.delenv(ENV_DATA_ROOT)
     monkeypatch.delenv("XDG_CACHE_HOME")
     assert default_directory() == Path("~/.cache/copernicus-ems").expanduser()
 

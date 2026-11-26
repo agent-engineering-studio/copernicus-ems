@@ -15,11 +15,19 @@ Generated from the docstrings of the package.
         - SendTransport
         - default_directory
         - layer_path
+        - ENV_DATA_ROOT
         - ENV_DATA_DIR
+        - DATA_ROOT_FOLDER
         - fetch_activations
         - fetch_products
         - fetch_layer
         - fetch_observed_events
+
+## Offline: init
+
+::: copernicus_ems.offline
+    options:
+      show_root_heading: false
 
 ## Catalogue
 

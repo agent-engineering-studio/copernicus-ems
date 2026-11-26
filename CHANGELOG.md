@@ -8,6 +8,20 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `init(directory=None, *, country="Italy", categories=("Flood", "Storm"),
+  since=None, until=None, kinds=("observedEventA",), client=None, retries=3,
+  concurrency=4)` -> `InitReport`, and `copernicus-ems init`: downloads once
+  what working offline needs into the data directory: the activation list
+  (`activations.json`), the detail of each selected activation
+  (`EMSR762/detail.json`) and its layers, where `fetch_layer` and
+  `RapidMapping.layer` already look. Idempotent: valid layers are skipped,
+  the list and details are rewritten only when they change, every file goes
+  through `.part`. A failed file is recorded in the report (`downloaded`,
+  `skipped`, `failed`, `bytes`) and the rest goes on; a disk that cannot be
+  written raises. Takes the caller's `httpx.AsyncClient`, and `retries=0`
+  leaves retrying to the caller. `read_activations()` and `read_products()`
+  read the saved list and details without the network.
+- `.env.example`, with the data directory section.
 - `notebooks/03_cross_validation_s1.ipynb`: the four detectors of notebook
   02 scored by leave-one-activation-out cross-validation, at 0 PU. On 130 km²
   of independent labels the VV threshold reaches CSI 0.12; change detection
@@ -27,6 +41,16 @@ All notable changes to this project are documented here. The format follows
 - `notebooks/07_conflicting_maps_s1.ipynb`: the cross-validation under three label
   rules (0 PU). Only one radar image has two maps; combining them lifts the
   independent CSI over all floods from 0.17 to 0.23 and halves the false area.
+
+### Changed
+
+- The data directory follows the rule shared with Limen and the other
+  agent-engineering-studio libraries: `$DATA_ROOT/copernicus-ems`
+  (`ENV_DATA_ROOT`, `DATA_ROOT_FOLDER`), else `~/.cache/copernicus-ems` as
+  before. `COPERNICUS_EMS_DATA_DIR` still wins over `DATA_ROOT`, for
+  compatibility only: it is no longer documented in `.env.example`, and new
+  setups should set `DATA_ROOT`. Compose files mount
+  `${DATA_ROOT:-./data}/copernicus-ems`.
 
 ## [0.7.1] - 2026-11-04
 

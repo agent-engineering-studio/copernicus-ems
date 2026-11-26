@@ -19,7 +19,9 @@ from copernicus_ems.catalogue import (
     wkt_to_geojson,
 )
 from copernicus_ems.client import (
+    DATA_ROOT_FOLDER,
     ENV_DATA_DIR,
+    ENV_DATA_ROOT,
     ProductEvents,
     RapidMapping,
     RetryTransport,
@@ -41,6 +43,16 @@ from copernicus_ems.events import (
     parse_layer,
     select_features,
 )
+from copernicus_ems.offline import (
+    ACTIVATIONS_FILE,
+    DETAIL_FILE,
+    InitReport,
+    activations_path,
+    detail_path,
+    init,
+    read_activations,
+    read_products,
+)
 from copernicus_ems.scenes import (
     SENTINEL_1_GRD,
     SENTINEL_2_L2A,
@@ -58,9 +70,13 @@ from copernicus_ems.scenes import (
 __version__ = version("copernicus-ems")
 
 __all__ = [
+    "ACTIVATIONS_FILE",
     "ACTIVATIONS_URL",
+    "DATA_ROOT_FOLDER",
+    "DETAIL_FILE",
     "DETAIL_URL",
     "ENV_DATA_DIR",
+    "ENV_DATA_ROOT",
     "FLOOD_EVENT_TYPE",
     "FLOOD_NOTATIONS",
     "MASS_MOVEMENT_EVENT_TYPE",
@@ -72,6 +88,7 @@ __all__ = [
     "ActivationsPage",
     "EmsError",
     "Image",
+    "InitReport",
     "Layer",
     "Product",
     "ProductEvents",
@@ -83,8 +100,10 @@ __all__ = [
     "Send",
     "SendTransport",
     "__version__",
+    "activations_path",
     "activations_url",
     "default_directory",
+    "detail_path",
     "detail_url",
     "fetch_activations",
     "fetch_layer",
@@ -92,6 +111,7 @@ __all__ = [
     "fetch_products",
     "fetch_scenes",
     "find_scenes",
+    "init",
     "layer_path",
     "parse_activations",
     "parse_detail",
@@ -99,6 +119,8 @@ __all__ = [
     "parse_scenes",
     "parse_time",
     "passes",
+    "read_activations",
+    "read_products",
     "scene_search_body",
     "select_activations",
     "select_features",
