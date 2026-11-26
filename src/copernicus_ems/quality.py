@@ -45,7 +45,8 @@ def _sieve(mask: npt.NDArray[np.bool_], size: int) -> npt.NDArray[np.bool_]:
         whole = size == mask.size and bool(mask.all())
         return mask.copy() if whole else np.zeros_like(mask)
     kept = sieve(mask.astype(np.uint8), size=max(size, 1), connectivity=8)
-    return np.asarray(kept, dtype=np.bool_)
+    # sieve also fills small holes; only ever remove pixels
+    return np.asarray(kept, dtype=np.bool_) & mask
 
 
 def detect(vv: npt.NDArray[np.float32], vv_pre: npt.NDArray[np.float32]) -> npt.NDArray[np.bool_]:

@@ -51,3 +51,18 @@ def test_nothing_observed_or_no_valid_radar() -> None:
     labels[:] = 1
     m = quality.measure(np.zeros((10, 10), bool), labels, np.zeros((10, 10), bool), 40.0)
     assert m.coverage == 0.0
+
+
+def test_sieve_never_fills_holes() -> None:
+    vv = np.full((10, 10), 10 ** (-2.0), dtype=np.float32)  # all wet now
+    pre = np.full((10, 10), 10 ** (-1.0), dtype=np.float32)
+    vv[5, 5] = 10 ** (-1.0)  # dry speckle inside the flood
+    assert not quality.detect(vv, pre)[5, 5]
+
+    labels = np.zeros((100, 100), np.uint8)
+    labels[0:2, 0:2] = 1
+    detected = np.zeros((100, 100), bool)
+    detected[50:90, 50:90] = True  # 1600 px
+    detected[70, 70] = False  # hole
+    m = quality.measure(detected, labels, np.ones_like(detected), 40.0)
+    assert m.unmapped_clustered_km2 == pytest.approx(1599 * 0.0016)
