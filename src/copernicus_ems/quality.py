@@ -44,11 +44,12 @@ RESOLUTION_M = 40.0
 MAX_GAP_HOURS = 24.0
 MIN_COVERAGE = 0.9
 MIN_MAPPED_KM2 = 0.1
-# calibrated thresholds, provisional until calibration
+# Calibrated on the 24 Italian maps by notebooks/08_quality_check_s1.ipynb: at most a
+# fifth of the assessable maps "to check", EMSR664 AOI01 Pléiades possibly partial.
 PARTIAL_EXTENT = 0.1
 PARTIAL_RATIO = 2.0
 UNMAPPED_RATIO = 3.0
-LITTLE_CONFIRMED = 0.1
+LITTLE_CONFIRMED = 0.01
 
 COHERENT = "coherent"
 TO_CHECK = "to check"

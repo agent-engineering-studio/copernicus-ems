@@ -131,7 +131,7 @@ def test_much_unmapped() -> None:
 
 
 def test_little_confirmed() -> None:
-    report = _assess(m=replace(GOOD, confirmed_share=0.05))
+    report = _assess(m=replace(GOOD, confirmed_share=0.005))
     assert report.verdict == quality.TO_CHECK
     assert [f.code for f in report.flags] == ["little_confirmed"]
 
@@ -174,7 +174,7 @@ def test_missing_made_from_is_not_same_image() -> None:
 
 
 def test_report_as_dict_is_json() -> None:
-    report = _assess(m=replace(GOOD, confirmed_share=0.05))
+    report = _assess(m=replace(GOOD, confirmed_share=0.005))
     data = json.loads(json.dumps(report.as_dict()))
     assert data["verdict"] == "to check"
     assert data["reason"] is None
