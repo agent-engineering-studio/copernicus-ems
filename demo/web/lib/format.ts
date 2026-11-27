@@ -9,6 +9,9 @@ export const CANDIDATE = "#c25700";
 export const failed = (value: unknown): value is Failed =>
   typeof value === "object" && value !== null && "error" in value;
 
+/** The answer when there is one: null while it is read, or if it could not be. */
+export const good = <T,>(value: T | Failed | null): T | null => (value === null || failed(value) ? null : value);
+
 export async function ask<T>(path: string, signal?: AbortSignal): Promise<T> {
   const answer = await fetch(path, { signal, cache: "no-store" });
   const body = await answer.json().catch(() => ({ error: `HTTP ${answer.status}` }));

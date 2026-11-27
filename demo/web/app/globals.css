@@ -623,3 +623,74 @@ button.link {
   background: none;
   padding: 0;
 }
+
+/* The technical page: one wide sheet, tables read rather than tapped. */
+.tech-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sheet.tech header small {
+  margin-top: 0;
+}
+
+.sheet.tech section {
+  margin-top: 24px;
+}
+
+.sheet.tech h4 {
+  margin: 14px 0 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.sheet.tech tbody tr {
+  cursor: auto;
+}
+
+.sheet.tech :not(pre) > code {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.radar-table th.group {
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+}
+
+.radar-table td.flags div + div {
+  margin-top: 6px;
+}
+
+.list .mark {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #e6f0fb;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.files {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.files li {
+  padding: 4px 0;
+  border-top: 1px solid var(--line);
+}
+
+.files code {
+  display: block;
+}
