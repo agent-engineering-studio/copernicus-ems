@@ -4,8 +4,8 @@ publiccodeYmlVersion: "0"
 name: copernicus-ems
 url: "https://github.com/agent-engineering-studio/copernicus-ems.git"
 landingURL: "https://agentengineering.it/copernicus-ems/"
-releaseDate: "2026-11-26"
-softwareVersion: "0.8.0"
+releaseDate: "2026-11-27"
+softwareVersion: "0.9.0"
 platforms: [linux, mac, windows]
 categories: [geographic-information-systems, data-analytics, data-collection]
 developmentStatus: beta
