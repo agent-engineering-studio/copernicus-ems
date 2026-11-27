@@ -33,6 +33,7 @@
   --wash: #f2f5f8;
   --accent: #0066cc;
   --water: #0b63ce;
+  --candidate: #c25700;
   --radius: 8px;
   --shadow: 0 1px 2px rgba(23, 50, 77, 0.08), 0 6px 20px rgba(23, 50, 77, 0.16);
 }
@@ -446,8 +447,86 @@ button.link {
 }
 
 .sheet footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
   margin-top: 16px;
   font-size: 14px;
+}
+
+/* The radar column: one short phrase per map, and why */
+
+.sheet td.radar {
+  min-width: 7.5em;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.verdict {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.verdict::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.verdict.agrees::before {
+  background: var(--water);
+}
+
+.verdict.look {
+  color: #8a3d00;
+  font-weight: 600;
+}
+
+.verdict.look::before {
+  background: var(--candidate);
+}
+
+.verdict.cannot,
+.verdict.unchecked {
+  color: var(--soft);
+}
+
+.verdict.unchecked::before {
+  border: 1px solid var(--soft);
+  background: none;
+}
+
+.sheet td.radar small + small {
+  margin-top: 2px;
+}
+
+.trust p {
+  font-size: 14px;
+}
+
+/* The legend's swatches of the radar classes; the candidate is hatched, never a fill like the water. */
+
+.swatch.light {
+  opacity: 0.3;
+}
+
+.swatch.hatch {
+  border: 1.5px dashed var(--candidate);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--candidate) 0 2px,
+    rgba(194, 87, 0, 0.12) 2px 5px
+  );
+  opacity: 1;
+}
+
+.leaflet-pane path.radar-candidate {
+  fill: url(#radar-hatch);
 }
 
 .waiting {

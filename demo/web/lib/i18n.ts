@@ -1,6 +1,7 @@
 // The words of the page, in Italian and in English.
 
 import { createContext, useContext } from "react";
+import type { Reason } from "./radar";
 
 export const LANGS = ["it", "en"] as const;
 export type Lang = (typeof LANGS)[number];
@@ -74,7 +75,7 @@ const it = {
     "Una mappa satellitare è un limite inferiore: allagamenti brevi, urbani o sotto la vegetazione possono non comparire. Non è un servizio di allerta: per il pericolo valgono le comunicazioni della Protezione Civile.",
   howTitle: "Com'è fatta",
   howText:
-    "Una pagina Next.js e Leaflet sopra una piccola API Python (Starlette) che chiama la libreria. Ogni scheda mostra le righe di Python che danno i suoi numeri.",
+    "Una pagina Next.js e Leaflet sopra una piccola API Python (Starlette) che chiama la libreria. La pagina per chi sviluppa mostra le righe di Python che danno i numeri di ogni scheda.",
   docs: "Documentazione",
   code: "Codice su GitHub",
   agentsTitle: "Per gli agenti AI",
@@ -92,6 +93,37 @@ const it = {
   connectHttp: "Collega Claude Code a questo server",
   startMcp: "Accendi il server MCP",
   connectStdio: "Oppure senza Docker, sul tuo computer",
+  radar: {
+    title: "Radar",
+    agrees: "il radar conferma",
+    look: "da guardare",
+    cannot: "non valutabile",
+    unchecked: "non ancora controllata",
+    flags: {
+      possibly_partial: "forse la mappa copre solo una parte dell'acqua",
+      much_unmapped: "il radar vede altre ampie zone di acqua possibile, non mappate",
+      little_confirmed: "il radar ritrova poca dell'acqua mappata",
+    } as Record<string, string>,
+    reasons: {
+      sameImage: "mappa fatta con la stessa immagine radar: non si può usare per confermarla",
+      resolution: "il confronto è tarato su immagini da 40 m",
+      gap: "il radar è passato troppo lontano dal momento della mappa",
+      coverage: "il radar copre troppo poco dell'area guardata",
+      noPassTime: "non si sa quando è passato il radar",
+      noReference: "manca un'immagine radar di prima dell'evento",
+      tooLittle: "troppa poca acqua mappata per un confronto",
+    } as Record<Reason, string>,
+    checked: (n: number, of: number) => `${n} mappe su ${of} controllate col radar.`,
+    legendConfirmed: "Acqua mappata, vista anche dal radar",
+    legendMapOnly: "Acqua mappata, non vista dal radar",
+    legendCandidate: "Acqua possibile, non mappata",
+    legendNotIndependent: "Non indipendente: il radar non può confermarla",
+    readingRadar: "Leggo il controllo radar…",
+    trustTitle: "Quanto fidarsi di una mappa",
+    trustText:
+      "Dove è stato fatto, il controllo confronta l'acqua disegnata con un'immagine radar Sentinel-1 presa vicino al momento della mappa. Il radar vede solo una parte dell'acqua: non sotto gli alberi, non tra le case, non dopo che si è ritirata. Per questo «da guardare» vuol dire che conviene che una persona guardi la mappa, non è un giudizio sulla mappa; e l'acqua possibile in arancione è un indizio, non una certezza.",
+    developers: "Per chi sviluppa →",
+  },
   agentsTry: "Prova a chiedere: «Quali alluvioni sono state mappate in Italia nel 2023, e quanta acqua ha visto EMSR664 in Emilia-Romagna?»",
 };
 
@@ -165,7 +197,7 @@ const en: Text = {
     "A satellite map is a lower bound: short, urban or under-canopy floods may not show. This is not an alert service: for danger, the official word is the Civil Protection's.",
   howTitle: "How it is made",
   howText:
-    "A Next.js and Leaflet page over a small Python API (Starlette) that calls the library. Every card shows the lines of Python that give its numbers.",
+    "A Next.js and Leaflet page over a small Python API (Starlette) that calls the library. The page for developers shows the lines of Python that give the numbers of every card.",
   docs: "Documentation",
   code: "Code on GitHub",
   agentsTitle: "For AI agents",
@@ -183,6 +215,37 @@ const en: Text = {
   connectHttp: "Connect Claude Code to this server",
   startMcp: "Start the MCP server",
   connectStdio: "Or without Docker, on your computer",
+  radar: {
+    title: "Radar",
+    agrees: "the radar agrees",
+    look: "worth a look",
+    cannot: "cannot be judged",
+    unchecked: "not checked yet",
+    flags: {
+      possibly_partial: "the map may cover only part of the water",
+      much_unmapped: "the radar sees other wide patches of possible water, not mapped",
+      little_confirmed: "the radar finds little of the mapped water",
+    },
+    reasons: {
+      sameImage: "map made from the same radar image: it cannot be used to confirm it",
+      resolution: "the comparison is tuned for 40 m images",
+      gap: "the radar passed too long before or after the map",
+      coverage: "the radar covers too little of the area looked at",
+      noPassTime: "the time of the radar pass is unknown",
+      noReference: "no radar image from before the event",
+      tooLittle: "too little mapped water to compare",
+    },
+    checked: (n, of) => `${n} of ${of} maps checked with the radar.`,
+    legendConfirmed: "Mapped water, seen by the radar too",
+    legendMapOnly: "Mapped water the radar does not see",
+    legendCandidate: "Possible water, not mapped",
+    legendNotIndependent: "Not independent: the radar cannot confirm it",
+    readingRadar: "Reading the radar check…",
+    trustTitle: "How far to trust a map",
+    trustText:
+      "Where it has been run, the check compares the water drawn with a Sentinel-1 radar image taken close to the time of the map. The radar sees only part of the water: not under trees, not among buildings, not after it recedes. So “worth a look” means a person should look at the map, not a judgment on the map; and the possible water in orange is a hint, not a certainty.",
+    developers: "For developers →",
+  },
   agentsTry: "Try asking: “Which floods were mapped in Italy in 2023, and how much water did EMSR664 see in Emilia-Romagna?”",
 };
 

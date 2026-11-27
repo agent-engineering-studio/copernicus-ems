@@ -2,9 +2,10 @@
 
 import L from "leaflet";
 import { useEffect, useRef } from "react";
-import { LOOKED, WATER, km2 } from "@/lib/format";
+import { CANDIDATE, LOOKED, WATER, km2 } from "@/lib/format";
 import type { Text } from "@/lib/i18n";
-import type { MapData, Row } from "@/lib/types";
+import { radarOf } from "@/lib/radar";
+import type { MapData, RadarMap, RadarShape, Row } from "@/lib/types";
 
 type Props = {
   rows: Row[];
@@ -13,9 +14,20 @@ type Props = {
   shapes: MapData | null;
   /** One product alone, or every product. */
   product: string | null;
+  /** The radar classes of the selected product, once read: null when there are none. */
+  radar: RadarMap | null;
   text: Text;
   onSelect: (code: string) => void;
 };
+
+/** How each class looks. A map made from the same image gets no "confirmed" look: its water is all alike. */
+function radarStyle(shape: RadarShape): L.PathOptions {
+  if (shape.class === "candidate")
+    return { color: CANDIDATE, weight: 1, dashArray: "3 3", fillColor: CANDIDATE, fillOpacity: 1, className: "radar-candidate" };
+  if (shape.independent === false) return { stroke: false, fillColor: WATER, fillOpacity: 0.6 };
+  if (shape.class === "confirmed") return { stroke: false, fillColor: WATER, fillOpacity: 0.85 };
+  return { stroke: false, fillColor: WATER, fillOpacity: 0.22 };
+}
 
 // Italy, with its seas: where the map opens and goes back to.
 const ITALY: L.LatLngBoundsExpression = [
@@ -49,9 +61,10 @@ export default function MapView(props: Props) {
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · ' +
         '<a href="https://rapidmapping.emergency.copernicus.eu/">Copernicus EMS</a> © European Union',
     }).addTo(m);
-    // The masks under the water, the dots over everything.
+    // The masks under the radar, the radar under the outline of the water, the dots over everything.
     for (const [name, z] of [
       ["masks", 400],
+      ["radar", 405],
       ["water", 410],
       ["dots", 450],
     ] as const) {
@@ -99,7 +112,9 @@ export default function MapView(props: Props) {
   }, [selected]);
 
   // The activation: dashed boxes where the satellite looked, blue where it saw water.
-  const { shapes, product } = props;
+  const { shapes, product, radar } = props;
+  // With the radar on the map, the water is only outlined: the radar classes fill it.
+  const radarOn = radarOf(radar, product).length > 0;
   useEffect(() => {
     const m = map.current;
     if (!m || !shapes) return;
@@ -121,7 +136,7 @@ export default function MapView(props: Props) {
       { type: "FeatureCollection", features: chosen.filter((f) => f.properties.kind === "flood") } as GeoJSON.FeatureCollection,
       {
         pane: "water",
-        style: { color: WATER, weight: 0.6, fillColor: WATER, fillOpacity: 0.6 },
+        style: { color: WATER, weight: radarOn ? 1 : 0.6, fillColor: WATER, fillOpacity: radarOn ? 0 : 0.6 },
         onEachFeature: (f, shape) =>
           shape.bindTooltip(
             `<b>${f.properties.aoi}</b> · ${f.properties.product}<br>${t.tipFlood(km2(f.properties.km2 ?? 0, t.lang))}`,
@@ -134,7 +149,48 @@ export default function MapView(props: Props) {
       masks.remove();
       water.remove();
     };
-  }, [shapes, product, t]);
+  }, [shapes, product, t, radarOn]);
 
-  return <div ref={box} className="map" aria-label={t.mapLabel} />;
+  // How far the radar backs the selected map: confirmed, map only, candidate.
+  useEffect(() => {
+    const m = map.current;
+    const chosen = radarOf(radar, product);
+    if (!m || !chosen.length) return;
+    const r = t.radar;
+    const label = (shape: RadarShape) =>
+      shape.class === "candidate"
+        ? r.legendCandidate
+        : shape.independent === false
+          ? `${t.legendWater} · ${r.legendNotIndependent}`
+          : shape.class === "confirmed"
+            ? r.legendConfirmed
+            : r.legendMapOnly;
+    const layer = L.geoJSON({ type: "FeatureCollection", features: chosen } as GeoJSON.FeatureCollection, {
+      pane: "radar",
+      style: (f) => radarStyle(f!.properties as RadarShape),
+      onEachFeature: (f, shape) => {
+        const p = f.properties as RadarShape;
+        const area = p.km2 == null ? "" : ` · ${km2(p.km2, t.lang)} km²`;
+        shape.bindTooltip(`<b>${p.product}</b><br>${label(p)}${area}`, { sticky: true, className: "tip" });
+      },
+    }).addTo(m);
+    return () => {
+      layer.remove();
+    };
+  }, [radar, product, t]);
+
+  return (
+    <>
+      {/* The hatch of the radar candidates: orange stripes, never the blue of mapped water. */}
+      <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden focusable="false">
+        <defs>
+          <pattern id="radar-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="6" height="6" fill={CANDIDATE} fillOpacity="0.12" />
+            <line x1="0" y1="0" x2="0" y2="6" stroke={CANDIDATE} strokeWidth="2.5" />
+          </pattern>
+        </defs>
+      </svg>
+      <div ref={box} className="map" aria-label={t.mapLabel} />
+    </>
+  );
 }

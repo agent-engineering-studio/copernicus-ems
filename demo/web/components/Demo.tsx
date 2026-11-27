@@ -2,11 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import Agents from "@/components/Agents";
 import Card from "@/components/Card";
 import { LOOKED, WATER, ask, day, failed } from "@/lib/format";
 import { LANGS, LangContext, TEXT, type Lang } from "@/lib/i18n";
-import type { Agents as AgentsData, CardData, Failed, Listing, MapData } from "@/lib/types";
+import { radarOf } from "@/lib/radar";
+import type { CardData, Failed, Listing, MapData, RadarData, RadarMap } from "@/lib/types";
 
 // Leaflet needs a window: the map is drawn in the browser only.
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -58,7 +58,7 @@ function useAnswer<T>(path: string | null): T | Failed | null {
   return found?.path === path ? found.value : null;
 }
 
-export default function Demo({ first, agents }: { first: string | null; agents: AgentsData }) {
+export default function Demo({ first }: { first: string | null }) {
   const [lang, setLang] = useLang();
   const t = TEXT[lang];
   const [code, setCode] = useState<string | null>(first);
@@ -67,6 +67,16 @@ export default function Demo({ first, agents }: { first: string | null; agents: 
   const listing = useAnswer<Listing>("/api/activations");
   const card = useAnswer<CardData>(code && `/api/activation/${code}`);
   const shapes = useAnswer<MapData>(code && `/api/activation/${code}/map`);
+  const radar = useAnswer<RadarData>(code && `/api/activation/${code}/radar`);
+  // The radar layer of one product only, when one is selected: a large activation never loads them all.
+  const radarShapes = useAnswer<RadarMap>(
+    code && product && `/api/activation/${code}/radar/map?product=${encodeURIComponent(product)}`,
+  );
+  // An agreement that could not be computed has no layer to show.
+  const computed = product !== null && good(radar)?.results[product]?.computed !== false;
+  const drawn = computed ? radarOf(good(radarShapes), product) : [];
+  const sameImage = drawn.some((f) => f.properties.independent === false);
+  const candidates = drawn.some((f) => f.properties.class === "candidate");
   const rows = good(listing)?.activations ?? [];
 
   // The address says what is open: a link to it opens the same activation.
@@ -135,13 +145,31 @@ export default function Demo({ first, agents }: { first: string | null; agents: 
                 selected={code}
                 shapes={code ? good(shapes) : null}
                 product={product}
+                radar={computed ? good(radarShapes) : null}
                 text={t}
                 onSelect={open}
               />
               <div className="panel legend">
-                <p>
-                  <i className="swatch" style={{ background: WATER }} /> {t.legendWater}
-                </p>
+                {drawn.length > 0 && !sameImage ? (
+                  <>
+                    <p>
+                      <i className="swatch" style={{ background: WATER }} /> {t.radar.legendConfirmed}
+                    </p>
+                    <p>
+                      <i className="swatch light" style={{ background: WATER }} /> {t.radar.legendMapOnly}
+                    </p>
+                  </>
+                ) : (
+                  <p>
+                    <i className="swatch" style={{ background: WATER }} /> {t.legendWater}
+                  </p>
+                )}
+                {sameImage && <p className="muted">{t.radar.legendNotIndependent}</p>}
+                {candidates && (
+                  <p>
+                    <i className="swatch hatch" /> {t.radar.legendCandidate}
+                  </p>
+                )}
                 <p>
                   <i className="swatch dashed" style={{ borderColor: LOOKED }} /> {t.legendLooked}
                 </p>
@@ -152,13 +180,14 @@ export default function Demo({ first, agents }: { first: string | null; agents: 
                   </p>
                 )}
                 {code && shapes === null && <p className="waiting">{t.readingMap}</p>}
+                {code && product && radarShapes === null && <p className="waiting">{t.radar.readingRadar}</p>}
               </div>
             </div>
           </div>
 
           <div className="col-lg-4">
             {code ? (
-              <Card card={card} product={product} onProduct={setProduct} onClose={() => open(null)} />
+              <Card card={card} radar={radar} product={product} onProduct={setProduct} onClose={() => open(null)} />
             ) : (
               <div className="sheet">
                 <section className="what">
@@ -203,7 +232,6 @@ export default function Demo({ first, agents }: { first: string | null; agents: 
                     </>
                   )}
                 </section>
-                <Agents agents={agents} />
               </div>
             )}
           </div>

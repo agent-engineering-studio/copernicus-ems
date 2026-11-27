@@ -3,6 +3,8 @@ import type { Failed } from "./types";
 /** The colours of the map: the water seen, and the place looked at. */
 export const WATER = "#0b63ce";
 export const LOOKED = "#5a6772";
+/** Water the radar may see and the map does not have: never the blue of mapped water. */
+export const CANDIDATE = "#c25700";
 
 export const failed = (value: unknown): value is Failed =>
   typeof value === "object" && value !== null && "error" in value;
