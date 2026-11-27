@@ -230,6 +230,14 @@ emit image + label pairs.
     scattered), as a raster, polygons and a report next to each pair.
     See [Radar agreement](radar.md).
 
+### 4e. The demo in two pages
+
+!!! success "Done"
+    The plain page shows, per product, whether the radar backs the map, and
+    the agreement on the map; `/tecnica` has the numbers, the Python and the
+    commands. Results are read from disk, made with `make radar CODE=...`.
+    See [The demo](demo.md).
+
 ### 5. Fine-tuning notebooks on EO foundation models (0.6)
 
 !!! success "First notebook done"

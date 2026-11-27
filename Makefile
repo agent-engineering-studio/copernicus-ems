@@ -1,4 +1,4 @@
-.PHONY: check lint format typecheck test build init data demo docker up logs down
+.PHONY: check lint format typecheck test build init data demo radar docker up logs down
 
 check: lint typecheck test
 
@@ -30,6 +30,14 @@ data:
 # The demo, on http://localhost:3000 (needs uv and Node).
 demo:
 	sh scripts/demo.sh
+
+# Radar check of the maps of one activation (needs CODE, CDSE credentials and PU):
+# fetches the 40 m Sentinel-1 pairs, then writes the quality and agreement files the demo reads.
+#   make radar CODE=EMSR664
+radar:
+	@test -n "$(CODE)" || { echo "usage: make radar CODE=EMSR664 (needs CDSE credentials and PU)"; exit 2; }
+	uv run copernicus-ems --dir "$${DATA_ROOT:-data}/copernicus-ems" quality $(CODE) --fetch
+	uv run copernicus-ems --dir "$${DATA_ROOT:-data}/copernicus-ems" radar $(CODE)
 
 # The same with Docker alone: build the images, run the demo in the background.
 docker:

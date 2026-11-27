@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The demo in two pages: the plain page (`/`) gains a Radar column in the card
+  and the radar layers on the map; `/tecnica` has the numbers, scores, Python,
+  commands and MCP tools. The API reads the quality and agreement files from
+  disk (`/api/activation/{code}/radar` and `/radar/map`), never fetching.
+- `make radar CODE=...`: `quality --fetch` then `radar`, into the demo's data
+  directory (needs CDSE credentials and PU).
+
 ## [0.9.0] - 2026-11-27
 
 ### Added
