@@ -1,6 +1,8 @@
 """Client for Copernicus EMS Rapid Mapping."""
 
+from importlib import import_module
 from importlib.metadata import version
+from typing import Any
 
 from copernicus_ems.catalogue import (
     ACTIVATIONS_URL,
@@ -68,6 +70,29 @@ from copernicus_ems.scenes import (
 )
 
 __version__ = version("copernicus-ems")
+
+# Names of the descriptions (the geo extra; Claude needs the ai extra), imported on first use
+# so that ``import copernicus_ems`` needs neither. ``describe`` itself is not among them: the
+# name is the module's (``from copernicus_ems.describe import describe``).
+_DESCRIBE = frozenset(
+    {
+        "PROMPT_VERSION",
+        "ClaudeProvider",
+        "Description",
+        "LocalProvider",
+        "Provider",
+        "description_path",
+        "provider_from_env",
+        "read_description",
+    }
+)
+
+
+def __getattr__(name: str) -> Any:
+    if name in _DESCRIBE:
+        return getattr(import_module("copernicus_ems.describe"), name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     "ACTIVATIONS_FILE",
