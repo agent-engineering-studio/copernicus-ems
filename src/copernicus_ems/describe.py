@@ -54,7 +54,7 @@ NO_TEXT = "no official text"
 HINT = (
     f"set ANTHROPIC_API_KEY for Claude, or start a local model with "
     f"`docker compose --profile ai up -d llm` and set {ENV_LLM_URL} "
-    f"(e.g. http://127.0.0.1:8080/v1); {ENV_LLM}=claude|local chooses explicitly"
+    f"(e.g. http://127.0.0.1:8780/v1); {ENV_LLM}=claude|local chooses explicitly"
 )
 
 SYSTEM = """\

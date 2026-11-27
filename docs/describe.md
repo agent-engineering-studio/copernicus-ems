@@ -20,9 +20,10 @@ copernicus-ems describe --all            # every activation saved by init
 copernicus-ems describe EMSR664 --force  # ask the model again
 ```
 
-It prints the provider, the model and what was dropped. `--json` prints the
-file. With `--all` a failure of one activation does not stop the others, and
-the exit code is 1 if any call failed. A description that is `null` is a
+It prints the provider, the model and what was dropped (how many, and which
+fields). `--json` prints one JSON object per activation, one per line: the
+content of its file. With `--all` a failure of one activation does not stop
+the others, and the exit code is 1 if any activation failed. A description that is `null` is a
 normal outcome, not a failure.
 
 ## The checks
@@ -30,14 +31,17 @@ normal outcome, not a failure.
 The model writes, then the code checks the answer. The model is never trusted.
 
 - **Quotes.** Every place, river, event and casualty count needs a `quote`,
-  and the quote must be in the official text (spaces and case do not
-  matter). If it is not, the field is dropped and listed in `dropped`.
+  and the quote must be in the official text (spaces, case, typographic
+  quotes and dashes do not matter). If it is not, the field is dropped and listed in `dropped`.
 - **Numbers and dates.** Every number in the description (digits, numbers
-  written out up to twenty, dates as day and month) must be one of the
-  numbers the library gave the model, or be in the official text.
+  written out up to twenty (Italian "venti" and "sei" excluded: they are also
+  ordinary words), dates as day and month) must be one of the numbers the
+  library gave the model, or be in the official text. The digits of an
+  allowed name (`EMSR664`, `SPOT-6-7`) are not numbers.
 - **Names.** A capitalised word in the description must be in the official
-  text, in the facts (area names, sensors) or be a generic word (Italia,
-  Copernicus, Sentinel-1, month names). Translated place names are rejected
+  text, in the facts (area names, sensors, the activation's name and code,
+  each also word by word: `Spino d'Adda` allows `Adda`) or be a generic word
+  (Italia, Copernicus, Sentinel-1, month names). Translated place names are rejected
   by design.
 - **Words.** The description never judges a map as wrong or in error, and
   never calls radar water "missed". A radar candidate is only a candidate.
@@ -51,11 +55,11 @@ The result is cached like any other: a rerun does not call the model again.
 
 | Variable | What it does | Default |
 |---|---|---|
-| `COPERNICUS_EMS_LLM` | `claude` or `local`; unset picks Claude if credentials exist, else the local server if its URL is set | unset |
-| `ANTHROPIC_API_KEY` | credentials for Claude (the official `anthropic` SDK) | none |
+| `COPERNICUS_EMS_LLM` | `claude` or `local`; unset picks Claude if `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` is set, else the local server if its URL is set | unset |
+| `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` | credentials for Claude (the official `anthropic` SDK). An `ant auth login` profile also works, but is not detected: set `COPERNICUS_EMS_LLM=claude` to use it | none |
 | `COPERNICUS_EMS_CLAUDE_MODEL` | the Claude model | `claude-opus-5-5` |
-| `COPERNICUS_EMS_LLM_URL` | an OpenAI-compatible server, ending in `/v1` | none |
-| `COPERNICUS_EMS_LLM_MODEL` | the model name sent to that server | the server's |
+| `COPERNICUS_EMS_LLM_URL` | an OpenAI-compatible server, ending in `/v1` | none (`make describe`: `http://127.0.0.1:8780/v1`; the `cli` service: `http://llm:8080/v1`) |
+| `COPERNICUS_EMS_LLM_MODEL` | the model name sent to that server (llama.cpp ignores it) | `default` (the `cli` service: `Qwen/Qwen2.5-3B-Instruct-GGUF`) |
 
 Claude answers with structured output (a JSON schema) and the server-side
 refusal fallback is on; if the fallback model answers, `model` says so.
@@ -76,8 +80,14 @@ make describe CODE=EMSR664    # or all activations, without CODE
 
 It listens on `127.0.0.1:8780` (`COPERNICUS_EMS_LLM_PORT`) and the model can
 be changed with `COPERNICUS_EMS_LLM_HF`. On a CPU, one activation takes tens
-of seconds. The `cli` service already has `COPERNICUS_EMS_LLM_URL` pointing at
-it.
+of seconds. `make describe` points `COPERNICUS_EMS_LLM_URL` at it when the
+variable is unset (Claude is still used when a key is set), and the `cli`
+service already has it. Without `make`:
+
+```bash
+export COPERNICUS_EMS_LLM_URL=http://127.0.0.1:8780/v1
+copernicus-ems describe EMSR664
+```
 
 ## Privacy
 
@@ -93,7 +103,7 @@ This is a format contract: Limen reads it. A change of shape is a new version.
 | Key | Content |
 |---|---|
 | `activation` | the code |
-| `generated_at` | when it was written (UTC) |
+| `generated_at` | when it was written (UTC, ISO 8601 with `+00:00`) |
 | `provider` | `claude` or `local` |
 | `model` | the model that answered |
 | `prompt_version`, `inputs_hash` | what the cache compares |
@@ -104,7 +114,7 @@ This is a format contract: Limen reads it. A change of shape is a new version.
 | `places`, `rivers` | `[{name, quote}]` |
 | `related_events` | `[{date, what, quote}]` |
 | `casualties` | `{deaths, quote}`, or `null` |
-| `dropped` | `[{field, value, why}]` |
+| `dropped` | `[{field, value, why}]`: `value` is the item the model gave, as it gave it |
 
 An example, written by hand (not the output of a model; the numbers and the
 text are made up):
@@ -112,7 +122,7 @@ text are made up):
 ```json
 {
   "activation": "EMSR000",
-  "generated_at": "2026-11-27T10:00:00Z",
+  "generated_at": "2026-11-27T10:00:00+00:00",
   "provider": "local",
   "model": "example-model",
   "prompt_version": 1,
@@ -124,7 +134,24 @@ text are made up):
     "bulletins": [],
     "related": []
   },
-  "facts": {"example": "the numbers given to the model"},
+  "facts": {
+    "code": "EMSR000",
+    "name": "Flood in Example",
+    "category": "Flood",
+    "event_time": "2023-05-02T00:00:00+00:00",
+    "countries": ["Italy"],
+    "aois": {
+      "Example": {
+        "water_km2": 4.2,
+        "observed_km2": 120,
+        "first_map": "2023-05-03",
+        "last_map": "2023-05-03",
+        "sensors": ["COSMO-SkyMed"],
+        "maps": 1,
+        "radar": {"confirms": 0, "to_check": 0, "not_assessable": 0}
+      }
+    }
+  },
   "description": {
     "it": "Dopo forti piogge il fiume Example è esondato il 2 maggio 2023.",
     "en": "After heavy rain the Example river flooded on 2 May 2023."
@@ -134,7 +161,13 @@ text are made up):
   "rivers": [{"name": "Example", "quote": "the Example river to flood on 2 May 2023"}],
   "related_events": [],
   "casualties": null,
-  "dropped": [{"field": "places", "value": "Esempio", "why": "quote not in the official text"}]
+  "dropped": [
+    {
+      "field": "places",
+      "value": {"name": "Esempio", "quote": "in the town of Esempio"},
+      "why": "quote not found in the official text"
+    }
+  ]
 }
 ```
 
@@ -143,8 +176,8 @@ text are made up):
 - A description is written by a model from the official text. It is not the
   official word of Copernicus or of the Civil Protection, and the demo says so
   under it.
-- A 3B model fails the checks more often than Claude: expect more `null`
-  descriptions. The fields are kept.
+- A 3B model may fail the checks more often than Claude: `null`
+  descriptions may be more frequent. The fields are kept.
 - Place names must appear as the official text writes them. A translated name
   is dropped on purpose.
 - It does not geocode places and does not name municipalities: that is

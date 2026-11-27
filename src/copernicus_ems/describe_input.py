@@ -41,6 +41,7 @@ _VERDICTS = {"coherent": "confirms", "to check": "to_check", "not assessable": "
 _NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
 _CAPITALISED = re.compile(r"\b[A-ZÀ-Ý][\w'\u2019-]*")
 _WORD = re.compile(r"[\w'\u2019-]+")
+_PARTS = re.compile(r"[\s'\u2019-]+")
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,7 +238,11 @@ def allowed_numbers(facts: dict[str, Any], source: Source) -> set[str]:
 
 
 def allowed_names(facts: dict[str, Any], source: Source) -> set[str]:
-    """Every name a description may use: AOIs, sensors, the activation's words, the text's."""
+    """Every name a description may use: AOIs, sensors, the activation's words, the text's.
+
+    Each name is kept whole and split into its words (on spaces, apostrophes and
+    hyphens): ``"Spino d'Adda"`` also allows ``"Spino"`` and ``"Adda"``.
+    """
     out: set[str] = set(facts.get("aois", {}))
     for row in facts.get("aois", {}).values():
         out |= set(row["sensors"])
@@ -249,6 +254,7 @@ def allowed_names(facts: dict[str, Any], source: Source) -> set[str]:
     for text in texts:
         out |= set(_CAPITALISED.findall(text))
     out |= set(source.related)
+    out.add(source.code)
     for name in list(out):
-        out |= {part for part in name.split("-") if part}
+        out |= set(_PARTS.split(name))
     return {n for n in out if n}

@@ -190,6 +190,8 @@ function Description({ code, asked }: { code: string; asked: DescriptionData | F
                 {d.by(d.provider(file.provider))} {d.notOfficial}
               </p>
             </>
+          ) : file.reason === "no official text" ? (
+            <p>{d.noText}</p>
           ) : (
             <>
               <p>{d.rejected}</p>
@@ -207,11 +209,11 @@ function Description({ code, asked }: { code: string; asked: DescriptionData | F
 
           <h4>{d.official}</h4>
           <p className="official-text">{file.source.reason || d.nothing}</p>
-          {file.source.bulletins.length > 0 && (
+          {(file.source.bulletins ?? []).length > 0 && (
             <>
               <h4>{d.bulletins}</h4>
               <ul className="fields">
-                {file.source.bulletins.map((b) => (
+                {(file.source.bulletins ?? []).map((b) => (
                   <li key={b.url}>
                     <a href={b.url} target="_blank" rel="noreferrer">
                       {b.title || b.url} ↗
@@ -223,18 +225,18 @@ function Description({ code, asked }: { code: string; asked: DescriptionData | F
           )}
           {(file.source.related ?? []).length > 0 && (
             <p className="muted">
-              {d.related}: {file.source.related.join(", ")}
+              {d.related}: {(file.source.related ?? []).join(", ")}
             </p>
           )}
 
-          <Names title={d.places} items={file.places} />
-          <Names title={d.rivers} items={file.rivers} />
+          <Names title={d.places} items={file.places ?? []} />
+          <Names title={d.rivers} items={file.rivers ?? []} />
           <h4>{d.events}</h4>
-          {file.related_events.length === 0 ? (
+          {(file.related_events ?? []).length === 0 ? (
             <p className="muted">{d.nothing}</p>
           ) : (
             <ul className="fields">
-              {file.related_events.map((e, k) => (
+              {(file.related_events ?? []).map((e, k) => (
                 <li key={`${e.date}-${k}`}>
                   {e.date && <b>{e.date} </b>}
                   {e.what}
@@ -244,7 +246,7 @@ function Description({ code, asked }: { code: string; asked: DescriptionData | F
             </ul>
           )}
           <h4>{d.casualties}</h4>
-          {file.casualties === null ? (
+          {file.casualties == null ? (
             <p className="muted">{d.nothing}</p>
           ) : (
             <p>
@@ -254,7 +256,7 @@ function Description({ code, asked }: { code: string; asked: DescriptionData | F
           )}
 
           <h4>{d.dropped}</h4>
-          {file.dropped.length === 0 ? (
+          {(file.dropped ?? []).length === 0 ? (
             <p className="muted">{d.nothing}</p>
           ) : (
             <div className="table-scroll">
@@ -267,7 +269,7 @@ function Description({ code, asked }: { code: string; asked: DescriptionData | F
                   </tr>
                 </thead>
                 <tbody>
-                  {file.dropped.map((item, k) => (
+                  {(file.dropped ?? []).map((item, k) => (
                     <tr key={k}>
                       <th>
                         <code>{item.field}</code>

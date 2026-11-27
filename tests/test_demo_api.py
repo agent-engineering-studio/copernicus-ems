@@ -420,7 +420,17 @@ def test_description_missing_is_unavailable(client: TestClient) -> None:
     assert client.get("/api/activation/EMSR762/description").json() == {"available": False}
 
 
-@pytest.mark.parametrize("text", ["{not json", "[1, 2]", '"text"'])
+@pytest.mark.parametrize(
+    "text",
+    [
+        "{not json",
+        "[1, 2]",
+        '"text"',
+        '{"description": null}',
+        json.dumps(DESCRIPTION | {"source": None}),
+        json.dumps(DESCRIPTION | {"extra": 1}),
+    ],
+)
 def test_description_malformed_is_unavailable(
     client: TestClient, saved: Path, text: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -454,6 +464,12 @@ def test_description_read_every_call(client: TestClient, saved: Path) -> None:
     assert client.get("/api/activation/EMSR762/description").json() == {"available": False}
     path.write_text(json.dumps(DESCRIPTION))
     assert client.get("/api/activation/EMSR762/description").json()["activation"] == "EMSR762"
+
+
+def test_description_keys_match_the_library() -> None:
+    from copernicus_ems.describe import Description
+
+    assert set(Description.__dataclass_fields__) == api.DESCRIPTION_KEYS
 
 
 def test_demo_api_does_not_import_describe() -> None:

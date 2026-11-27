@@ -582,7 +582,7 @@ def test_reason_never_repeats_a_judging_word(text: Path) -> None:
 
 
 def cli(monkeypatch: pytest.MonkeyPatch, fake: Fake) -> None:
-    monkeypatch.setattr("copernicus_ems.cli.provider_from_env", lambda: fake)
+    monkeypatch.setattr("copernicus_ems.describe.provider_from_env", lambda: fake)
 
 
 def test_cli_one_activation(
@@ -640,6 +640,48 @@ def test_cli_all_counts_a_malformed_detail_as_a_failure(
     assert "EMSR762\tfailed:" in capsys.readouterr().err
 
 
+def test_cli_all_survives_any_exception(
+    text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class Odd(Fake):
+        def ask(self, system: str, user: str, schema: dict[str, Any]) -> dict[str, Any]:
+            raise KeyError("odd")
+
+    cli(monkeypatch, Odd())
+    assert main(["describe", "--all"]) == 1
+    err = capsys.readouterr().err
+    assert "EMSR762\tfailed: KeyError:" in err
+    assert "1 of 1 failed" in err
+
+
+def test_cli_lists_the_dropped_fields(
+    text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cli(monkeypatch, Fake(invented(), VALID | {"rivers": [{"name": "Po", "quote": "nowhere"}]}))
+    assert main(["describe", "EMSR762"]) == 0
+    out = capsys.readouterr().out
+    assert "\t1 dropped\tdropped: rivers\u00d71\n" in out
+
+
+def test_cli_imports_without_the_geo_extra() -> None:
+    import subprocess
+    import sys
+
+    code = (
+        "import sys\n"
+        "class Block:\n"
+        "    def find_spec(self, name, path=None, target=None):\n"
+        "        if name.split('.')[0] in ('shapely', 'pyproj'):\n"
+        "            raise ImportError(name)\n"
+        "sys.meta_path.insert(0, Block())\n"
+        "import copernicus_ems.cli as cli\n"
+        "assert cli.main(['describe', 'EMSR762']) == 2\n"
+    )
+    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert "copernicus-ems[geo]" in done.stderr
+
+
 def test_cli_one_without_detail_fails(
     text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -667,7 +709,12 @@ def test_cli_no_provider_fails_once(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    for name in ("COPERNICUS_EMS_LLM", "COPERNICUS_EMS_LLM_URL", "ANTHROPIC_API_KEY"):
+    for name in (
+        "COPERNICUS_EMS_LLM",
+        "COPERNICUS_EMS_LLM_URL",
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+    ):
         monkeypatch.delenv(name, raising=False)
     assert main(["describe", "--all"]) == 1
     err = capsys.readouterr().err

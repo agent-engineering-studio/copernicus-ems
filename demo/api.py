@@ -432,17 +432,43 @@ def radar_shapes(directory: Path, code: str, product: str | None) -> dict[str, A
     return {"type": "FeatureCollection", "features": features}
 
 
+DESCRIPTION_KEYS = frozenset(
+    {
+        "activation",
+        "generated_at",
+        "provider",
+        "model",
+        "prompt_version",
+        "inputs_hash",
+        "source",
+        "facts",
+        "description",
+        "reason",
+        "places",
+        "rivers",
+        "related_events",
+        "casualties",
+        "dropped",
+    }
+)
+"""The keys of ``description.json``: those of :class:`copernicus_ems.describe.Description`."""
+
+
 def read_description(directory: Path, code: str) -> dict[str, Any]:
     """``<directory>/<CODE>/description.json`` as it is, or ``{"available": false}``.
 
     Read here, not with :mod:`copernicus_ems.describe`, which needs the ``[ai]``
-    extra. A file that cannot be read is logged and treated as absent.
+    extra. A file that cannot be read, or that is not a whole description (every
+    key of :data:`DESCRIPTION_KEYS`, ``source`` an object: a partial or foreign
+    file), is logged and treated as absent.
     """
     path = directory / code / "description.json"
     try:
         body = json.loads(path.read_bytes())
         if not isinstance(body, dict):
             raise ValueError("not an object")
+        if set(body) != DESCRIPTION_KEYS or not isinstance(body["source"], dict):
+            raise ValueError("not a description")
     except FileNotFoundError:
         return {"available": False}
     except (OSError, ValueError):

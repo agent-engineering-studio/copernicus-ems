@@ -19,18 +19,20 @@ import sys
 from collections.abc import Callable, Iterable, Sequence
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TYPE_CHECKING, Any, TextIO
 
 import httpx
 
 from copernicus_ems.catalogue import Activation
 from copernicus_ems.client import ProductEvents, RapidMapping
-from copernicus_ems.describe import Description, describe, provider_from_env
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS, OBSERVED_EVENT
 from copernicus_ems.export import mask_features, tagged_features, write_features
 from copernicus_ems.offline import INIT_CATEGORIES, detail_path, init, read_activations
 from copernicus_ems.scenes import SENTINEL_1_GRD, SENTINEL_2_L2A, ScenePass, passes
+
+if TYPE_CHECKING:
+    from copernicus_ems.describe import Description
 
 #: Many floods are filed as ``Storm``: the features are filtered on ``5-Flood`` anyway.
 EXPORT_CATEGORIES = ("Flood", "Storm")
@@ -602,6 +604,11 @@ def _describe(args: argparse.Namespace) -> int:
     if bool(args.code) == bool(args.all):
         print("copernicus-ems: describe needs a CODE or --all", file=sys.stderr)
         return 2
+    try:
+        from copernicus_ems.describe import describe, provider_from_env
+    except ImportError:  # pragma: no cover - without the geo extra
+        print("copernicus-ems: describe needs: pip install 'copernicus-ems[geo]'", file=sys.stderr)
+        return 2
     provider = provider_from_env()  # fails once, with the hint, before any activation
     if args.all:
         try:
@@ -617,11 +624,16 @@ def _describe(args: argparse.Namespace) -> int:
     for code in codes:
         try:
             result = describe(code, args.dir, provider=provider, force=args.force)
-        except (EmsError, OSError, ValueError) as exc:
+        except Exception as exc:
             if not args.all:
-                raise exc if isinstance(exc, EmsError) else EmsError(f"{code}: {exc}") from exc
+                if isinstance(exc, EmsError):
+                    raise
+                if isinstance(exc, OSError | ValueError):
+                    raise EmsError(f"{code}: {exc}") from exc
+                raise
             failed += 1
-            print(f"{code}\tfailed: {exc}", file=sys.stderr)
+            why = str(exc) if isinstance(exc, EmsError) else f"{type(exc).__name__}: {exc}"
+            print(f"{code}\tfailed: {why}", file=sys.stderr)
             continue
         print(json.dumps(result.as_dict()) if args.json else _described(result))
     if failed:
@@ -631,10 +643,17 @@ def _describe(args: argparse.Namespace) -> int:
 
 def _described(result: Description) -> str:
     state = "ok" if result.description else f"none ({result.reason})"
-    return (
+    line = (
         f"{result.activation}\t{result.provider}/{result.model}"
         f"\tdescription: {state}\t{len(result.dropped)} dropped"
     )
+    counts: dict[str, int] = {}
+    for item in result.dropped:
+        name = str(item.get("field", "?")) if isinstance(item, dict) else "?"
+        counts[name] = counts.get(name, 0) + 1
+    if counts:
+        line += "\tdropped: " + ", ".join(f"{k}\u00d7{n}" for k, n in counts.items())
+    return line
 
 
 def _dataset(ems: RapidMapping, args: argparse.Namespace) -> int:

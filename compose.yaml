@@ -112,7 +112,8 @@ services:
     <<: *ems
     profiles: [tools]
     entrypoint: ["copernicus-ems"]
-    # Only `describe` asks a model: Claude when ANTHROPIC_API_KEY is set, else the llm service.
+    # Only `describe` asks a model: Claude when ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN is
+    # set, else the llm service.
     environment:
       DATA_ROOT: /data
       COPERNICUS_EMS_COUNTRY: ${COPERNICUS_EMS_COUNTRY:-}
@@ -121,6 +122,7 @@ services:
       COPERNICUS_EMS_LLM_MODEL: ${COPERNICUS_EMS_LLM_MODEL:-Qwen/Qwen2.5-3B-Instruct-GGUF}
       COPERNICUS_EMS_CLAUDE_MODEL: ${COPERNICUS_EMS_CLAUDE_MODEL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
 
   python:
     <<: *ems

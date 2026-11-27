@@ -46,10 +46,12 @@ llm:
 	@echo "llm: http://127.0.0.1:$${COPERNICUS_EMS_LLM_PORT:-8780}/v1 (set COPERNICUS_EMS_LLM_URL to it)"
 
 # Describe one activation (CODE=EMSR762) or, without CODE, all of them: with Claude
-# (ANTHROPIC_API_KEY) or the local model (COPERNICUS_EMS_LLM_URL, see `make llm`).
+# (ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN set), else the local model of `make llm`
+# (COPERNICUS_EMS_LLM_URL, default http://127.0.0.1:$COPERNICUS_EMS_LLM_PORT/v1, port 8780).
 # Writes <data>/<CODE>/description.json, in the same folder as `make radar`.
 #   make describe CODE=EMSR762
 describe:
+	COPERNICUS_EMS_LLM_URL="$${COPERNICUS_EMS_LLM_URL:-http://127.0.0.1:$${COPERNICUS_EMS_LLM_PORT:-8780}/v1}" \
 	uv run copernicus-ems --dir "$${COPERNICUS_EMS_DATA_DIR:-$${DATA_ROOT:-data}/copernicus-ems}" describe $(if $(CODE),$(CODE),--all)
 
 # The same with Docker alone: build the images, run the demo in the background.

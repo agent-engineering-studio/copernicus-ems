@@ -314,3 +314,35 @@ def test_venti_and_sei_are_words() -> None:
     assert "20" not in allowed_numbers(facts, SOURCE)
     text = "Forti venti su Faenza: se sei a Faenza, segui le mappe."
     assert check(with_text(text), SOURCE, facts).problems == []
+
+
+def test_multi_word_names_sensors_and_codes_allowed() -> None:
+    source = Source(
+        code="EMSR664",
+        name="Flood in Lombardia",
+        reason="Heavy rain hit the province of Lodi.",
+        bulletins=[],
+        related=[],
+    )
+    facts = FACTS | {
+        "code": "EMSR664",
+        "name": "Flood in Lombardia",
+        "aois": {
+            "Castel Bolognese": FACTS["aois"]["Faenza"] | {"sensors": ["Pleiades Neo", "SPOT-6-7"]},
+            "Spino d'Adda": FACTS["aois"]["Faenza"] | {"sensors": ["COSMO-SkyMed"]},
+        },
+    }
+    it = (
+        "L'attivazione EMSR664 riguarda Castel Bolognese e Spino d\u2019Adda. "
+        "Le mappe vengono da Pleiades Neo, SPOT-6-7 e COSMO-SkyMed."
+    )
+    en = (
+        "Activation EMSR664 covers Castel Bolognese and Spino d'Adda, mapped from "
+        "Pleiades Neo, SPOT-6-7 and COSMO-SkyMed images."
+    )
+    assert check(with_text(it, en), source, facts).problems == []
+    # an invented number next to an allowed name is still caught
+    late = check(with_text("SPOT-6-7 mostra 42 km².", en), source, facts)
+    assert any('"42"' in p for p in late.problems)
+    # a name that is not allowed still carries its digits as numbers
+    assert check(with_text("Le mappe vengono da SPOT-6-8.", en), source, facts).problems

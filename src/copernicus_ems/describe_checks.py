@@ -397,6 +397,12 @@ def _text_problems(language: str, text: str, allowed: _Allowed) -> list[str]:
         if m[0] not in allowed.strings and not allowed.day(int(m[3]), int(m[2]), int(m[1])):
             out.append(f'{language}: the date "{m[0]}" is not among the library\'s dates')
         plain = _blank(plain, m.start(), m.end())
+    for m in _NAME.finditer(plain):
+        # the digits of an allowed name ("SPOT-6-7", "EMSR664") are not numbers
+        word = m[0].strip("-")
+        has_both = any(c.isdigit() for c in word) and any(c.isalpha() for c in word)
+        if has_both and word.casefold() in allowed.names:
+            plain = _blank(plain, m.start(), m.end())
     for m in _NUM.finditer(plain):
         token = m[0]
         parts = re.split(f"[{_SPACES}]", token)
