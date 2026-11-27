@@ -3,14 +3,18 @@
 #   docker compose up -d                       the demo, on http://localhost:3000
 #   docker compose --profile mcp up -d         + the MCP server for AI agents:
 #                                              http://127.0.0.1:8770/mcp
-#   docker compose run --rm init               download the Italian floods once (~200 MB)
+#   docker compose --profile ai up -d llm      a local language model (llama.cpp) for `describe`:
+#                                              http://127.0.0.1:8780/v1 (~2 GB, downloaded once)
+#   docker compose run --rm init              download the Italian floods once (~200 MB)
 #   docker compose run --rm cli --help         the command line
 #   docker compose run --rm python             Python, with copernicus_ems to import
 #
 #   COPERNICUS_EMS_PORT     the port of the demo (default 3000)
 #   COPERNICUS_EMS_MCP_DOCKER_PORT  the port of the MCP server in Docker (default 8770: 8768 is egms-client's)
 #   COPERNICUS_EMS_COUNTRY  the country the demo shows (default Italy)
-#   DATA_ROOT               the data folder shared with Limen and the other libraries:
+#   COPERNICUS_EMS_LLM_PORT the port of the local model (default 8780)
+#   COPERNICUS_EMS_LLM_HF   its Hugging Face repo:quant (default Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M)
+#   DATA_ROOT             the data folder shared with Limen and the other libraries:
 #                           the library's own folder is $DATA_ROOT/copernicus-ems
 #                           (default ./data/copernicus-ems). Create it first, so that
 #                           it is yours.
@@ -22,6 +26,12 @@ x-ems: &ems
   environment:
     DATA_ROOT: /data
     COPERNICUS_EMS_COUNTRY: ${COPERNICUS_EMS_COUNTRY:-}
+    # `describe` asks Claude when ANTHROPIC_API_KEY is set, else this model (.env.example).
+    COPERNICUS_EMS_LLM: ${COPERNICUS_EMS_LLM:-}
+    COPERNICUS_EMS_LLM_URL: ${COPERNICUS_EMS_LLM_URL:-http://llm:8080/v1}
+    COPERNICUS_EMS_LLM_MODEL: ${COPERNICUS_EMS_LLM_MODEL:-Qwen/Qwen2.5-3B-Instruct-GGUF}
+    COPERNICUS_EMS_CLAUDE_MODEL: ${COPERNICUS_EMS_CLAUDE_MODEL:-}
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   volumes:
     - ${DATA_ROOT:-./data}/copernicus-ems:/data/copernicus-ems
 
@@ -74,6 +84,30 @@ services:
       - "127.0.0.1:${COPERNICUS_EMS_MCP_DOCKER_PORT:-8770}:8768"
     restart: unless-stopped
 
+  # A local language model for `describe`, OpenAI-compatible: http://127.0.0.1:8780/v1.
+  # llama.cpp downloads the model from Hugging Face on the first start (~2 GB) into
+  # the llm-cache volume: a ~3B instruct model under the Apache 2.0 licence.
+  llm:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: copernicus-ems-llm
+    profiles: [ai]
+    command:
+      - -hf
+      - ${COPERNICUS_EMS_LLM_HF:-Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - -c
+      - "8192"
+    environment:
+      LLAMA_CACHE: /models
+    volumes:
+      - llm-cache:/models
+    ports:
+      - "127.0.0.1:${COPERNICUS_EMS_LLM_PORT:-8780}:8080"
+    restart: unless-stopped
+
   # One shot: the list, the details and the observed-event layers, for offline use.
   init:
     <<: *ems
@@ -91,3 +125,6 @@ services:
     command: ["python"]
     stdin_open: true
     tty: true
+
+volumes:
+  llm-cache:

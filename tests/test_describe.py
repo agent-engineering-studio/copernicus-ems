@@ -20,6 +20,7 @@ from test_describe_input import add_text, saved  # noqa: F401 - the fixture
 
 import copernicus_ems
 from copernicus_ems import EmsError
+from copernicus_ems.cli import main
 from copernicus_ems.describe import (
     BETA,
     PROMPT_VERSION,
@@ -575,3 +576,96 @@ def test_reason_never_repeats_a_judging_word(text: Path) -> None:
     assert "en: uses a word that judges the maps" in result.reason
     raw = description_path("EMSR762").read_text(encoding="utf-8").lower()
     assert '"wrong' not in raw and 'wrong"' not in raw
+
+
+# --- the command line ---
+
+
+def cli(monkeypatch: pytest.MonkeyPatch, fake: Fake) -> None:
+    monkeypatch.setattr("copernicus_ems.cli.provider_from_env", lambda: fake)
+
+
+def test_cli_one_activation(
+    text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    fake = Fake(VALID)
+    cli(monkeypatch, fake)
+    assert main(["describe", "EMSR762"]) == 0
+    assert capsys.readouterr().out == "EMSR762\tclaude/fake-model\tdescription: ok\t0 dropped\n"
+    assert main(["describe", "EMSR762"]) == 0  # cached
+    assert len(fake.calls) == 1
+    fake.answers.append(VALID)
+    assert main(["describe", "EMSR762", "--force"]) == 0
+    assert len(fake.calls) == 2
+
+
+def test_cli_json(
+    text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cli(monkeypatch, Fake(VALID))
+    assert main(["describe", "EMSR762", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["activation"] == "EMSR762"
+
+
+def test_cli_all_continues_and_exits_1(
+    text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class Failing(Fake):
+        def ask(self, system: str, user: str, schema: dict[str, Any]) -> dict[str, Any]:
+            raise EmsError("model down")
+
+    cli(monkeypatch, Failing())
+    assert main(["describe", "--all"]) == 1
+    captured = capsys.readouterr()
+    assert "EMSR762\tfailed: model down" in captured.err
+    assert "EMSR935\tfailed:" in captured.err  # the others are still tried
+    assert "2 of 2 failed" in captured.err
+
+
+def test_cli_all_keeps_going_after_a_failure(
+    text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cli(monkeypatch, Fake(VALID))
+    assert main(["describe", "--all"]) == 1  # EMSR935 has no detail saved
+    captured = capsys.readouterr()
+    assert "EMSR762\tclaude/fake-model\tdescription: ok" in captured.out
+    assert "1 of 2 failed" in captured.err
+
+
+def test_cli_none_line(
+    saved: Path,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = saved / "EMSR762" / "detail.json"
+    body = json.loads(path.read_bytes())
+    body["results"][0]["reason"] = ""
+    path.write_text(json.dumps(body))
+    cli(monkeypatch, Fake())
+    assert main(["describe", "EMSR762"]) == 0
+    assert "description: none (no official text)" in capsys.readouterr().out
+
+
+def test_cli_no_provider_fails_once(
+    saved: Path,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    for name in ("COPERNICUS_EMS_LLM", "COPERNICUS_EMS_LLM_URL", "ANTHROPIC_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    assert main(["describe", "--all"]) == 1
+    err = capsys.readouterr().err
+    assert err.count("copernicus-ems:") == 1
+
+
+def test_cli_needs_a_code_or_all(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["describe"]) == 2
+    assert main(["describe", "EMSR762", "--all"]) == 2
+
+
+def test_cli_all_without_init(
+    data_dir: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cli(monkeypatch, Fake())
+    assert main(["describe", "--all"]) == 1
+    assert "init" in capsys.readouterr().err

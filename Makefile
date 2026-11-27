@@ -1,4 +1,4 @@
-.PHONY: check lint format typecheck test build init data demo radar docker up logs down
+.PHONY: check lint format typecheck test build init data demo radar llm describe docker up logs down
 
 check: lint typecheck test
 
@@ -39,6 +39,18 @@ radar:
 	@test -n "$(CODE)" || { echo "usage: make radar CODE=EMSR664 (needs CDSE credentials and PU)"; exit 2; }
 	uv run copernicus-ems --dir "$${COPERNICUS_EMS_DATA_DIR:-$${DATA_ROOT:-data}/copernicus-ems}" quality $(CODE) --fetch
 	uv run copernicus-ems --dir "$${COPERNICUS_EMS_DATA_DIR:-$${DATA_ROOT:-data}/copernicus-ems}" radar $(CODE)
+
+# A local language model for `describe` (llama.cpp in Docker; the first start downloads ~2 GB).
+llm:
+	docker compose --profile ai up -d llm
+	@echo "llm: http://127.0.0.1:$${COPERNICUS_EMS_LLM_PORT:-8780}/v1 (set COPERNICUS_EMS_LLM_URL to it)"
+
+# Describe one activation (CODE=EMSR762) or, without CODE, all of them: with Claude
+# (ANTHROPIC_API_KEY) or the local model (COPERNICUS_EMS_LLM_URL, see `make llm`).
+# Writes <data>/<CODE>/description.json, in the same folder as `make radar`.
+#   make describe CODE=EMSR762
+describe:
+	uv run copernicus-ems --dir "$${COPERNICUS_EMS_DATA_DIR:-$${DATA_ROOT:-data}/copernicus-ems}" describe $(if $(CODE),$(CODE),--all)
 
 # The same with Docker alone: build the images, run the demo in the background.
 docker:
