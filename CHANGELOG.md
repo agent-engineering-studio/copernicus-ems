@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-27
+
 ### Added
 
 - `copernicus-ems describe CODE | --all` and `copernicus_ems.describe` (`[ai]`
