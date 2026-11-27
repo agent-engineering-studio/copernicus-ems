@@ -32,8 +32,6 @@ export function reasonOf(entry: Pick<RadarEntry, "reason" | "independent">): Rea
   const text = entry.reason ?? "";
   const found = REASONS.find(([words]) => text.includes(words));
   if (found) return found[1];
-  // An agreement alone carries no reason: not independent means made from the same image.
-  if (!text && entry.independent === false) return "sameImage";
   return null;
 }
 
@@ -50,16 +48,15 @@ export type Phrase = {
 /** What the plain page says of one map, from its radar results (undefined: none on disk). */
 export function phrase(entry: RadarEntry | undefined, t: Text): Phrase {
   const r = t.radar;
-  if (!entry || !entry.verdict) return { tone: "unchecked", head: r.unchecked, why: [] };
-  if (entry.verdict === "coherent") {
-    // A map made from the same image cannot be confirmed by it, whatever the verdict says.
-    if (entry.independent === false) return { tone: "cannot", head: r.cannot, why: [r.reasons.sameImage] };
-    return { tone: "agrees", head: r.agrees, why: [] };
-  }
+  if (!entry) return { tone: "unchecked", head: r.unchecked, why: [] };
+  // A map made from the same radar image cannot be confirmed by it, whatever the verdict says.
+  if (entry.independent === false) return { tone: "cannot", head: r.cannot, why: [r.reasons.sameImage] };
+  if (entry.verdict === "coherent") return { tone: "agrees", head: r.agrees, why: [] };
   if (entry.verdict === "to check") {
-    const why = entry.flags.map((flag) => r.flags[flag.code]).filter((line): line is string => !!line);
+    const why = [...new Set(entry.flags.map((flag) => r.flags[flag.code] ?? r.flagOther))];
     return { tone: "look", head: r.look, why };
   }
+  // "not assessable", or files with no verdict: the check exists but says nothing of the map.
   const reason = reasonOf(entry);
   return { tone: "cannot", head: r.cannot, why: reason ? [r.reasons[reason]] : [] };
 }

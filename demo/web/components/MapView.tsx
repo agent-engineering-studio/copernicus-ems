@@ -38,6 +38,7 @@ const ITALY: L.LatLngBoundsExpression = [
 export default function MapView(props: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
+  const waterLayer = useRef<L.GeoJSON | null>(null);
   const onSelect = useRef(props.onSelect);
   useEffect(() => {
     onSelect.current = props.onSelect;
@@ -136,7 +137,7 @@ export default function MapView(props: Props) {
       { type: "FeatureCollection", features: chosen.filter((f) => f.properties.kind === "flood") } as GeoJSON.FeatureCollection,
       {
         pane: "water",
-        style: { color: WATER, weight: radarOn ? 1 : 0.6, fillColor: WATER, fillOpacity: radarOn ? 0 : 0.6 },
+        style: { color: WATER, weight: 0.6, fillColor: WATER, fillOpacity: 0.6 },
         onEachFeature: (f, shape) =>
           shape.bindTooltip(
             `<b>${f.properties.aoi}</b> · ${f.properties.product}<br>${t.tipFlood(km2(f.properties.km2 ?? 0, t.lang))}`,
@@ -145,11 +146,19 @@ export default function MapView(props: Props) {
       },
     ).addTo(m);
     m.fitBounds(masks.getBounds(), { padding: [24, 24], animate: false });
+    waterLayer.current = water;
     return () => {
       masks.remove();
       water.remove();
+      waterLayer.current = null;
     };
-  }, [shapes, product, t, radarOn]);
+  }, [shapes, product, t]);
+
+  // With the radar on, the water keeps only its outline: no fill to hide the radar or catch its pointer.
+  // Restyled, not rebuilt, so the map does not move when the radar arrives.
+  useEffect(() => {
+    waterLayer.current?.setStyle(radarOn ? { fill: false, weight: 1 } : { fill: true, weight: 0.6 });
+  }, [radarOn, shapes, product, t]);
 
   // How far the radar backs the selected map: confirmed, map only, candidate.
   useEffect(() => {

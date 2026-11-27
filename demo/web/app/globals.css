@@ -457,6 +457,12 @@ button.link {
 
 /* The radar column: one short phrase per map, and why */
 
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .sheet td.radar {
   min-width: 7.5em;
   font-size: 13px;

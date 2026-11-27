@@ -89,51 +89,53 @@ export default function Card({ card, radar, product, onProduct, onClose }: Props
         <h3>
           {t.productsTitle} <small>{t.productsHint}</small>
         </h3>
-        <table>
-          <thead>
-            <tr>
-              <th>{t.product}</th>
-              <th>{t.seen}</th>
-              <th className="num">{t.water}</th>
-              <th>{t.radar.title}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className={product === null ? "active" : ""} onClick={() => onProduct(null)}>
-              <th colSpan={4}>
-                <button type="button" className="link" aria-pressed={product === null}>
-                  {t.all}
-                </button>
-              </th>
-            </tr>
-            {card.products.map((row) => (
-              <tr
-                key={row.product}
-                className={product === row.product ? "active" : ""}
-                onClick={() => onProduct(product === row.product ? null : row.product)}
-              >
-                <th>
-                  <button type="button" className="link" aria-pressed={product === row.product}>
-                    {row.aoi}
-                  </button>
-                  <small>
-                    {row.product} · {t.kinds[row.type] ?? row.type}
-                    {row.sensors.length ? ` · ${row.sensors.join(", ")}` : ""}
-                  </small>
-                </th>
-                <td className="when">
-                  {day(row.observed_time, L)}
-                  <small>{after(card.event_time, row.observed_time)}</small>
-                </td>
-                <td className="num">
-                  {km2(row.flooded_km2, L)} km²
-                  <small>{share(row.flooded_km2, row.observed_km2, L)}</small>
-                </td>
-                <td className="radar">{radarCell(row.product)}</td>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{t.product}</th>
+                <th>{t.seen}</th>
+                <th className="num">{t.water}</th>
+                <th>{t.radar.title}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              <tr className={product === null ? "active" : ""} onClick={() => onProduct(null)}>
+                <th colSpan={4}>
+                  <button type="button" className="link" aria-pressed={product === null}>
+                    {t.all}
+                  </button>
+                </th>
+              </tr>
+              {card.products.map((row) => (
+                <tr
+                  key={row.product}
+                  className={product === row.product ? "active" : ""}
+                  onClick={() => onProduct(product === row.product ? null : row.product)}
+                >
+                  <th>
+                    <button type="button" className="link" aria-pressed={product === row.product}>
+                      {row.aoi}
+                    </button>
+                    <small>
+                      {row.product} · {t.kinds[row.type] ?? row.type}
+                      {row.sensors.length ? ` · ${row.sensors.join(", ")}` : ""}
+                    </small>
+                  </th>
+                  <td className="when">
+                    {day(row.observed_time, L)}
+                    <small>{after(card.event_time, row.observed_time)}</small>
+                  </td>
+                  <td className="num">
+                    {km2(row.flooded_km2, L)} km²
+                    <small>{share(row.flooded_km2, row.observed_km2, L)}</small>
+                  </td>
+                  <td className="radar">{radarCell(row.product)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {card.without_layer > 0 && <p className="muted">{t.withoutLayer(card.without_layer)}</p>}
         {checked && <p className="muted">{t.radar.checked(checked.checked, checked.products)}</p>}
       </section>

@@ -104,6 +104,7 @@ const it = {
       much_unmapped: "il radar vede altre ampie zone di acqua possibile, non mappate",
       little_confirmed: "il radar ritrova poca dell'acqua mappata",
     } as Record<string, string>,
+    flagOther: "il radar segnala altro da guardare",
     reasons: {
       sameImage: "mappa fatta con la stessa immagine radar: non si può usare per confermarla",
       resolution: "il confronto è tarato su immagini da 40 m",
@@ -111,9 +112,10 @@ const it = {
       coverage: "il radar copre troppo poco dell'area guardata",
       noPassTime: "non si sa quando è passato il radar",
       noReference: "manca un'immagine radar di prima dell'evento",
-      tooLittle: "troppa poca acqua mappata per un confronto",
+      tooLittle: "troppo poca acqua mappata per un confronto",
     } as Record<Reason, string>,
-    checked: (n: number, of: number) => `${n} mappe su ${of} controllate col radar.`,
+    checked: (n: number, of: number) =>
+      n === 1 ? `1 mappa su ${of} controllata col radar.` : `${n} mappe su ${of} controllate col radar.`,
     legendConfirmed: "Acqua mappata, vista anche dal radar",
     legendMapOnly: "Acqua mappata, non vista dal radar",
     legendCandidate: "Acqua possibile, non mappata",
@@ -226,6 +228,7 @@ const en: Text = {
       much_unmapped: "the radar sees other wide patches of possible water, not mapped",
       little_confirmed: "the radar finds little of the mapped water",
     },
+    flagOther: "the radar points to something else to look at",
     reasons: {
       sameImage: "map made from the same radar image: it cannot be used to confirm it",
       resolution: "the comparison is tuned for 40 m images",
@@ -235,7 +238,8 @@ const en: Text = {
       noReference: "no radar image from before the event",
       tooLittle: "too little mapped water to compare",
     },
-    checked: (n, of) => `${n} of ${of} maps checked with the radar.`,
+    checked: (n, of) =>
+      of === 1 ? `${n} of 1 map checked with the radar.` : `${n} of ${of} maps checked with the radar.`,
     legendConfirmed: "Mapped water, seen by the radar too",
     legendMapOnly: "Mapped water the radar does not see",
     legendCandidate: "Possible water, not mapped",

@@ -76,7 +76,11 @@ export default function Demo({ first }: { first: string | null }) {
   const computed = product !== null && good(radar)?.results[product]?.computed !== false;
   const drawn = computed ? radarOf(good(radarShapes), product) : [];
   const sameImage = drawn.some((f) => f.properties.independent === false);
-  const candidates = drawn.some((f) => f.properties.class === "candidate");
+  const has = (klass: string) => drawn.some((f) => f.properties.class === klass);
+  const candidates = has("candidate");
+  // Only the classes on the map get a legend line; a same-image map has no "confirmed" look.
+  const confirmedOn = !sameImage && has("confirmed");
+  const mapOnlyOn = !sameImage && has("map_only");
   const rows = good(listing)?.activations ?? [];
 
   // The address says what is open: a link to it opens the same activation.
@@ -150,16 +154,17 @@ export default function Demo({ first }: { first: string | null }) {
                 onSelect={open}
               />
               <div className="panel legend">
-                {drawn.length > 0 && !sameImage ? (
-                  <>
-                    <p>
-                      <i className="swatch" style={{ background: WATER }} /> {t.radar.legendConfirmed}
-                    </p>
-                    <p>
-                      <i className="swatch light" style={{ background: WATER }} /> {t.radar.legendMapOnly}
-                    </p>
-                  </>
-                ) : (
+                {confirmedOn && (
+                  <p>
+                    <i className="swatch" style={{ background: WATER }} /> {t.radar.legendConfirmed}
+                  </p>
+                )}
+                {mapOnlyOn && (
+                  <p>
+                    <i className="swatch light" style={{ background: WATER }} /> {t.radar.legendMapOnly}
+                  </p>
+                )}
+                {!confirmedOn && !mapOnlyOn && (
                   <p>
                     <i className="swatch" style={{ background: WATER }} /> {t.legendWater}
                   </p>

@@ -283,6 +283,19 @@ def test_radar_agreement_without_quality(client: TestClient, saved: Path) -> Non
     assert entry["reason"] is None
 
 
+def test_radar_agreement_not_computed_gives_its_reason(client: TestClient, saved: Path) -> None:
+    reason = "no pre-event reference (pairs --reference)"
+    _write(
+        saved,
+        "a",
+        agreement={"computed": False, "reason": reason, "quality_verdict": "not assessable"},
+    )
+    entry = client.get("/api/activation/EMSR762/radar").json()["results"][PRODUCT]
+    assert entry["computed"] is False
+    assert entry["verdict"] == "not assessable"
+    assert entry["reason"] == reason
+
+
 def test_radar_malformed_file_is_skipped(client: TestClient, saved: Path) -> None:
     _write(saved, "good", quality={})
     folder = saved / "EMSR762" / "sentinel-1"

@@ -351,7 +351,9 @@ def radar_results(directory: Path, code: str) -> dict[str, dict[str, Any]]:
             verdict, reason = quality.get("verdict"), quality.get("reason")
             flags = quality.get("flags") or []
         else:
-            verdict, reason, flags = (agreement or {}).get("quality_verdict"), None, []
+            # No quality report: the agreement says why it could not be computed, if so.
+            only = agreement or {}
+            verdict, reason, flags = only.get("quality_verdict"), only.get("reason"), []
         independent = (agreement or {}).get("independent")
         if independent is None and quality is not None and "same_image" in quality:
             independent = not quality["same_image"]
