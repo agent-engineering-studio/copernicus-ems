@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-27
+
 ### Added
 
 - `copernicus-ems quality CODE` and `copernicus_ems.quality` (`[ml]` extra): a
