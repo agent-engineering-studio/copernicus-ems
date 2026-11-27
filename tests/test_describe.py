@@ -306,8 +306,12 @@ def claude(response: Any = None, error: Exception | None = None) -> tuple[Claude
     return ClaudeProvider(client=client), messages
 
 
-def reply(*blocks: Any, stop: str = "end_turn") -> Any:
-    return SimpleNamespace(content=list(blocks), stop_reason=stop, stop_details=None)
+def reply(
+    *blocks: Any, stop: str = "end_turn", details: Any = None, model: str | None = None
+) -> Any:
+    return SimpleNamespace(
+        content=list(blocks), stop_reason=stop, stop_details=details, model=model
+    )
 
 
 def text_block(value: str) -> Any:
@@ -391,6 +395,25 @@ REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
             ),
             "500",
         ),
+        (
+            anthropic.PermissionDeniedError(
+                "no", response=httpx2.Response(403, request=REQUEST), body=None
+            ),
+            "may not use",
+        ),
+        (
+            anthropic.NotFoundError(
+                "gone", response=httpx2.Response(404, request=REQUEST), body=None
+            ),
+            "unknown model",
+        ),
+        (
+            anthropic.BadRequestError(
+                "bad", response=httpx2.Response(400, request=REQUEST), body=None
+            ),
+            "request was refused",
+        ),
+        (anthropic.CredentialsError("no profile"), "no profile"),
         (anthropic.APITimeoutError(request=REQUEST), "timed out"),
         (anthropic.APIConnectionError(request=REQUEST), "reach"),
     ],
@@ -489,3 +512,66 @@ def test_describe_uses_env_provider(text: Path, env: pytest.MonkeyPatch) -> None
     result = describe("EMSR762")
     assert result.provider == "local"
     assert isinstance(result, Description)
+
+
+def test_claude_without_credentials() -> None:
+    error = TypeError(
+        "Could not resolve authentication method. Expected one of api_key, auth_token, "
+        "or credentials to be set."
+    )
+    provider, _ = claude(error=error)
+    with pytest.raises(EmsError, match=r"no credentials.*ANTHROPIC_API_KEY"):
+        provider.ask("S", "U", ANSWER_SCHEMA)
+
+
+def test_claude_other_type_error_is_not_hidden() -> None:
+    provider, _ = claude(error=TypeError("unexpected keyword"))
+    with pytest.raises(TypeError, match="unexpected keyword"):
+        provider.ask("S", "U", ANSWER_SCHEMA)
+
+
+def test_claude_refusal_category() -> None:
+    provider, _ = claude(reply(stop="refusal", details=SimpleNamespace(category="cyber")))
+    with pytest.raises(EmsError, match=r"declined.*category: cyber"):
+        provider.ask("S", "U", ANSWER_SCHEMA)
+
+
+def test_served_model_is_written_and_cache_stays(
+    text: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("COPERNICUS_EMS_CLAUDE_MODEL", raising=False)
+    response = reply(text_block(json.dumps(VALID)), model="claude-opus-4-8")
+    provider, messages = claude(response)
+    first = describe("EMSR762", provider=provider)
+    assert messages.kwargs["model"] == "claude-opus-5-5"
+    assert provider.last_model == "claude-opus-4-8"
+    assert first.model == "claude-opus-4-8"
+    body = json.loads(description_path("EMSR762").read_text(encoding="utf-8"))
+    assert body["model"] == "claude-opus-4-8"
+
+    again, messages = claude()
+    assert describe("EMSR762", provider=again) == first  # hashed on the model asked for
+    assert messages.kwargs == {}
+
+
+def test_no_text_records_the_model_asked_for(saved: Path) -> None:  # noqa: F811
+    path = saved / "EMSR762" / "detail.json"
+    body = json.loads(path.read_bytes())
+    body["results"][0]["reason"] = ""
+    path.write_text(json.dumps(body))
+    fake = Fake()
+    fake.last_model = "stale-from-another-activation"  # type: ignore[attr-defined]
+    assert describe("EMSR762", provider=fake).model == "fake-model"
+
+
+def test_reason_never_repeats_a_judging_word(text: Path) -> None:
+    judging = copy.deepcopy(VALID)
+    judging["description"]["en"] += " The map is wrong."
+    fake = Fake(judging, judging)
+    result = describe("EMSR762", provider=fake)
+    assert '"wrong"' in fake.calls[1][1]  # the model is told which word
+    assert result.description is None and result.reason
+    assert "wrong" not in result.reason.lower()
+    assert "en: uses a word that judges the maps" in result.reason
+    raw = description_path("EMSR762").read_text(encoding="utf-8").lower()
+    assert '"wrong' not in raw and 'wrong"' not in raw

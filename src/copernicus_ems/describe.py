@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -29,7 +30,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 import httpx
 
 from copernicus_ems.client import default_directory
-from copernicus_ems.describe_checks import ANSWER_SCHEMA, Checked, check
+from copernicus_ems.describe_checks import ANSWER_SCHEMA, FORBIDDEN, Checked, check
 from copernicus_ems.describe_input import Source, facts, read_source
 from copernicus_ems.errors import EmsError
 
@@ -97,6 +98,9 @@ class Provider(Protocol):
     name: str
     """``"claude"`` or ``"local"``: written in the file."""
     model: str
+    """The model asked for (part of the inputs hash). A provider may also set
+    ``last_model``, the model that actually answered the last ``ask`` (another
+    one after a server-side fallback): the file records that one."""
 
     def ask(self, system: str, user: str, schema: dict[str, Any]) -> dict[str, Any]:
         """The model's answer, parsed; :class:`~copernicus_ems.EmsError` when there is none."""
@@ -128,6 +132,8 @@ class ClaudeProvider:
                 ) from exc
             client = anthropic.Anthropic()
         self._client = client
+        self.last_model: str | None = None
+        """The model that answered the last request: ``response.model``."""
 
     def ask(self, system: str, user: str, schema: dict[str, Any]) -> dict[str, Any]:
         """One request; refusals, truncation and SDK errors become ``EmsError``."""
@@ -165,6 +171,14 @@ class ClaudeProvider:
             raise EmsError(f"{who}: could not reach the API ({exc})") from exc
         except anthropic.AnthropicError as exc:
             raise EmsError(f"{who}: {exc}") from exc
+        except TypeError as exc:
+            # The SDK raises a TypeError, not an AnthropicError, when it finds no
+            # API key, auth token or profile to sign the request with.
+            if "authentication" not in str(exc):
+                raise
+            raise EmsError(f"{who}: no credentials; {HINT}") from exc
+
+        self.last_model = getattr(response, "model", None) or self.model
 
         if response.stop_reason == "refusal":
             details = getattr(response, "stop_details", None)
@@ -332,8 +346,9 @@ def read_description(code: str, directory: Path | None = None) -> Description | 
 def inputs_hash(source: Source, facts: dict[str, Any], provider: Provider) -> str:
     """SHA-256 of the official text, the numbers, :data:`PROMPT_VERSION`, provider and model.
 
-    The provider's name and model are part of it: another model writes the
-    description again.
+    The provider's name and model (the model asked for, not the one that
+    answered after a fallback) are part of it: another model writes the
+    description again, a fallback does not change the hash.
     """
     inputs = {
         "source": source.as_dict(),
@@ -358,6 +373,17 @@ def _retry(user: str, answer: dict[str, Any], problems: list[str]) -> str:
         f"\n\nIts description was rejected for these problems:\n{listed}\n\n"
         "Write the whole answer again, fixing every problem and following every rule."
     )
+
+
+_JUDGING = [re.compile(rf"\b(?:{p})\b", re.IGNORECASE) for ps in FORBIDDEN.values() for p in ps]
+
+
+def _said(problem: str) -> str:
+    """A problem as the file says it: a forbidden word is never repeated there."""
+    if any(p.search(problem) for p in _JUDGING):
+        language = problem.split(":", 1)[0]
+        return f"{language}: uses a word that judges the maps"
+    return problem
 
 
 def _write(path: Path, description: Description) -> None:
@@ -396,6 +422,7 @@ def describe(
             return saved
 
     reason: str | None = NO_TEXT
+    served = model.model
     if not source.reason.strip():
         checked = Checked(description=None)
     else:
@@ -405,8 +432,9 @@ def describe(
         if checked.problems:
             answer = model.ask(SYSTEM, _retry(user, answer, checked.problems), ANSWER_SCHEMA)
             checked = check(answer, source, numbers)
+        served = getattr(model, "last_model", None) or model.model
         reason = (
-            "the description was rejected twice: " + "; ".join(checked.problems)
+            "the description was rejected twice: " + "; ".join(map(_said, checked.problems))
             if checked.problems
             else None
         )
@@ -415,7 +443,7 @@ def describe(
         activation=code,
         generated_at=datetime.now(UTC).isoformat(timespec="seconds"),
         provider=model.name,
-        model=model.model,
+        model=served,
         prompt_version=PROMPT_VERSION,
         inputs_hash=digest,
         source=source.as_dict(),
