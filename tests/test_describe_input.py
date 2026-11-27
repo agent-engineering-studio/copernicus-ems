@@ -179,3 +179,58 @@ def test_allowed_numbers_and_names(saved: Path) -> None:
     names = allowed_names(found, source)
     assert {"Brisighella", "Idice", "PAZ", "Flood", "Emilia-Romagna", "A", "Italy"} <= names
     assert isinstance(source, Source)
+
+
+def test_thousands_forms_total_and_hyphen_parts(saved: Path) -> None:
+    add_text(saved)
+    found = facts("EMSR762")
+    source = read_source("EMSR762")
+    numbers = allowed_numbers(found, source)
+    assert {
+        "1.846",
+        "1,846",
+        "1 846",
+        "1" + chr(0xA0) + "846",
+        "1" + chr(0x2009) + "846",
+        "664",
+    } <= numbers
+    total = round(sum(r["water_km2"] for r in found["aois"].values()), 2)
+    assert f"{total:.2f}".replace(".", ",") in numbers
+    names = allowed_names(found, source)
+    assert {"Emilia-Romagna", "Emilia", "Romagna", "EMSR664"} <= names
+
+
+def test_bulletin_title_words_are_names(saved: Path) -> None:
+    add_text(saved)
+    path = saved / "EMSR762" / "detail.json"
+    body = json.loads(path.read_bytes())
+    body["results"][0]["infobulletins"] = [{"title": "Report on Santerno", "url": "u"}]
+    path.write_text(json.dumps(body))
+    assert "Santerno" in allowed_names(facts("EMSR762"), read_source("EMSR762"))
+
+
+def test_newest_wins_at_equal_resolution(saved: Path) -> None:
+    import os
+
+    quality(saved, "old", "AOI01_DEL_PRODUCT", "coherent")
+    quality(saved, "new", "AOI01_DEL_PRODUCT", "to check")
+    folder = saved / "EMSR762" / "sentinel-1"
+    os.utime(folder / "old_quality.json", (1, 1))
+    radar = facts("EMSR762")["aois"]["Brisighella"]["radar"]
+    assert radar["to_check"] == 1 and radar["confirms"] == 0
+
+
+def test_malformed_quality_file_is_skipped(saved: Path) -> None:
+    quality(saved, "ok", "AOI01_DEL_PRODUCT", "coherent")
+    folder = saved / "EMSR762" / "sentinel-1"
+    (folder / "bad_quality.json").write_text("{not json")
+    (folder / "list_quality.json").write_text("[1]")
+    assert facts("EMSR762")["aois"]["Brisighella"]["radar"]["confirms"] == 1
+
+
+def test_detail_without_results_is_an_ems_error(saved: Path) -> None:
+    from copernicus_ems import EmsError
+
+    (saved / "EMSR762" / "detail.json").write_text(json.dumps({"results": []}))
+    with pytest.raises(EmsError):
+        read_source("EMSR762")

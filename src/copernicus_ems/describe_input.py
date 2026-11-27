@@ -60,7 +60,8 @@ class Source:
 
 def _detail(code: str, directory: Path | None) -> dict[str, Any]:
     body = json.loads(detail_path(code, directory).read_bytes())
-    first = body["results"][0]
+    results = body.get("results") if isinstance(body, dict) else None
+    first = results[0] if isinstance(results, list) and results else None
     if not isinstance(first, dict):
         raise EmsError(f"{code}: the saved detail has no activation")
     return first
@@ -186,6 +187,15 @@ def _decimal(value: float, places: int) -> set[str]:
     return shown | {s.replace(".", ",") for s in shown}
 
 
+def _thousands(value: int) -> set[str]:
+    """``1846`` as written with a thousands separator: ``1.846``, ``1,846``, ``1 846``."""
+    plain = str(value)
+    if value < 1000:
+        return {plain}
+    head, tail = plain[:-3], plain[-3:]
+    return {plain} | {head + sep + tail for sep in (".", ",", " ", "\u2009", "\u00a0", "\u202f")}
+
+
 def _dates(value: str) -> set[str]:
     """``2024-09-20`` and its parts as written: ISO, the day number, the year."""
     head = value[:10]
@@ -206,7 +216,7 @@ def allowed_numbers(facts: dict[str, Any], source: Source) -> set[str]:
             out |= _dates(value)
     for row in aois.values():
         out |= _decimal(row["water_km2"], 2)
-        out |= {str(int(row["observed_km2"])), str(row["maps"])}
+        out |= _thousands(int(row["observed_km2"])) | {str(row["maps"])}
         for day in (row.get("first_map"), row.get("last_map")):
             if day:
                 out |= _dates(day)
@@ -217,9 +227,9 @@ def allowed_numbers(facts: dict[str, Any], source: Source) -> set[str]:
     }
     out |= {str(n) for n in totals.values()}
     out |= {str(sum(row["maps"] for row in aois.values()))}
-    out |= {f"{sum(r['water_km2'] for r in aois.values()):.2f}"}
+    out |= _decimal(round(sum(r["water_km2"] for r in aois.values()), 2), 2)
     texts = [source.reason, source.name, facts.get("name", ""), source.code]
-    texts += [b["title"] for b in source.bulletins]
+    texts += [b["title"] for b in source.bulletins] + list(source.related)
     for text in texts:
         out |= set(_NUMBER.findall(text))
         out |= {n.replace(",", ".") for n in _NUMBER.findall(text)}
@@ -235,5 +245,10 @@ def allowed_names(facts: dict[str, Any], source: Source) -> set[str]:
     out |= set(facts.get("countries", []))
     if facts.get("category"):
         out.add(facts["category"])
-    out |= set(_CAPITALISED.findall(source.reason))
+    texts = [source.reason, *(b["title"] for b in source.bulletins)]
+    for text in texts:
+        out |= set(_CAPITALISED.findall(text))
+    out |= set(source.related)
+    for name in list(out):
+        out |= {part for part in name.split("-") if part}
     return {n for n in out if n}
