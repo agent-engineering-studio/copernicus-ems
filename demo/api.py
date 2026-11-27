@@ -12,8 +12,10 @@ there yet; a layer read live is saved, so the next visit finds it on disk.
     GET /api/activation/{code}/map        its observation masks and observed water, as GeoJSON
     GET /api/activation/{code}/radar      what the radar checks saved beside its pairs say
     GET /api/activation/{code}/radar/map  their agreement polygons (?product=P for one)
+    GET /api/activation/{code}/description  the file ``copernicus-ems describe`` wrote
 
-The radar files (``copernicus-ems quality`` and ``radar``) are only read, never written.
+The radar files (``copernicus-ems quality`` and ``radar``) and the description are
+only read, never written: the demo never calls a language model.
 
 The numbers of an activation are those of :func:`copernicus_ems.geo.summarize`,
 which joins the polygons of each product: on the largest activations (EMSR664,
@@ -430,6 +432,25 @@ def radar_shapes(directory: Path, code: str, product: str | None) -> dict[str, A
     return {"type": "FeatureCollection", "features": features}
 
 
+def read_description(directory: Path, code: str) -> dict[str, Any]:
+    """``<directory>/<CODE>/description.json`` as it is, or ``{"available": false}``.
+
+    Read here, not with :mod:`copernicus_ems.describe`, which needs the ``[ai]``
+    extra. A file that cannot be read is logged and treated as absent.
+    """
+    path = directory / code / "description.json"
+    try:
+        body = json.loads(path.read_bytes())
+        if not isinstance(body, dict):
+            raise ValueError("not an object")
+    except FileNotFoundError:
+        return {"available": False}
+    except (OSError, ValueError):
+        log.warning("unreadable description %s", path, exc_info=True)
+        return {"available": False}
+    return body
+
+
 store = Store()
 
 Handler = Callable[[Request], Awaitable[JSONResponse]]
@@ -498,6 +519,12 @@ async def radar_map(request: Request) -> dict[str, Any]:
     return radar_shapes(store.directory, code, request.query_params.get("product"))
 
 
+async def description(request: Request) -> dict[str, Any]:
+    code = _code(request)
+    await store.labels(code)  # an unknown activation is a 404; cheap, no card built
+    return read_description(store.directory, code)
+
+
 @asynccontextmanager
 async def lifespan(_: Starlette) -> AsyncIterator[None]:
     warming = asyncio.create_task(store.warm())
@@ -518,5 +545,6 @@ app = Starlette(
         Route("/api/activation/{code}/map", guarded(activation_map)),
         Route("/api/activation/{code}/radar", guarded(radar)),
         Route("/api/activation/{code}/radar/map", guarded(radar_map)),
+        Route("/api/activation/{code}/description", guarded(description)),
     ],
 )

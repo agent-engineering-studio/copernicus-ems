@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import asyncio
 import json
 import os
@@ -385,3 +386,90 @@ def test_radar_map_skips_a_shape_without_geometry(client: TestClient, saved: Pat
         "candidate",
     }
     assert len(answer.json()["features"]) == 2
+
+
+# --- description: the file `describe` wrote, read as it is ----------------------
+
+DESCRIPTION = {
+    "activation": "EMSR762",
+    "generated_at": "2026-11-27T10:00:00+00:00",
+    "provider": "local",
+    "model": "some-model",
+    "prompt_version": 1,
+    "inputs_hash": "abc",
+    "source": {"code": "EMSR762", "name": "Flood", "reason": "Heavy rain.", "bulletins": []},
+    "facts": {},
+    "description": {"it": "Testo.", "en": "Text."},
+    "reason": None,
+    "places": [{"name": "Faenza", "quote": "Faenza"}],
+    "rivers": [],
+    "related_events": [],
+    "casualties": None,
+    "dropped": [],
+}
+
+
+def test_description_read_as_is(client: TestClient, saved: Path) -> None:
+    (saved / "EMSR762" / "description.json").write_text(json.dumps(DESCRIPTION))
+    answer = client.get("/api/activation/emsr762/description")
+    assert answer.status_code == 200
+    assert answer.json() == DESCRIPTION
+
+
+def test_description_missing_is_unavailable(client: TestClient) -> None:
+    assert client.get("/api/activation/EMSR762/description").json() == {"available": False}
+
+
+@pytest.mark.parametrize("text", ["{not json", "[1, 2]", '"text"'])
+def test_description_malformed_is_unavailable(
+    client: TestClient, saved: Path, text: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    (saved / "EMSR762" / "description.json").write_text(text)
+    answer = client.get("/api/activation/EMSR762/description")
+    assert answer.status_code == 200
+    assert answer.json() == {"available": False}
+    assert "description" in caplog.text
+
+
+def test_description_is_cheap_and_unknown_is_404(
+    client: TestClient, saved: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (saved / "EMSR762" / "description.json").write_text(json.dumps(DESCRIPTION))
+
+    def slow(*_: Any) -> None:
+        raise AssertionError("the description built the card")
+
+    monkeypatch.setattr(api, "build", slow)
+    fresh = api.Store(saved)
+    fresh._ems = api.store._ems
+    monkeypatch.setattr(api, "store", fresh)
+    assert client.get("/api/activation/EMSR762/description").json()["provider"] == "local"
+    assert not fresh._built
+    assert client.get("/api/activation/EMSR935/description").status_code == 404
+    assert client.get("/api/activation/nope/description").status_code == 404
+
+
+def test_description_read_every_call(client: TestClient, saved: Path) -> None:
+    path = saved / "EMSR762" / "description.json"
+    assert client.get("/api/activation/EMSR762/description").json() == {"available": False}
+    path.write_text(json.dumps(DESCRIPTION))
+    assert client.get("/api/activation/EMSR762/description").json()["activation"] == "EMSR762"
+
+
+def test_demo_api_does_not_import_describe() -> None:
+    tree = ast.parse(Path(api.__file__).read_text())
+    imported = {
+        name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import | ast.ImportFrom)
+        for name in (
+            [a.name for a in node.names] if isinstance(node, ast.Import) else [node.module or ""]
+        )
+    }
+    imported |= {
+        f"{node.module}.{a.name}"
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        for a in node.names
+    }
+    assert not any("describe" in name or "anthropic" in name for name in imported)
