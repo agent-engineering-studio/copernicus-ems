@@ -169,6 +169,30 @@ def test_same_image_not_independent(tmp_path: Path) -> None:
     report, classes = agree_pair(pair)
     assert report.computed and classes is not None
     assert report.independent is False
+    out = write_agreement(pair, report, classes)
+    paths = agreement_paths(pair)
+    with rasterio.open(paths["tif"]) as src:
+        assert src.tags()["independent"] == "false"
+    features = json.loads(paths["geojson"].read_text())["features"]
+    assert features and all(f["properties"]["independent"] is False for f in features)
+    assert out.independent is False
+
+
+def test_skip_removes_stale_layers(tmp_path: Path) -> None:
+    pair = _pair40(tmp_path)
+    report, classes = agree_pair(pair)
+    write_agreement(pair, report, classes)
+    paths = agreement_paths(pair)
+    assert paths["tif"].exists() and paths["geojson"].exists()
+    meta = json.loads(pair.manifest.read_text())
+    del meta["reference"]
+    pair.manifest.write_text(json.dumps(meta))
+    pair = next(p for p in find_pairs(tmp_path, None) if p.product == pair.product)
+    report, classes = agree_pair(pair)
+    assert classes is None
+    write_agreement(pair, report, classes)
+    assert not paths["tif"].exists() and not paths["geojson"].exists()
+    assert json.loads(paths["json"].read_text())["computed"] is False
 
 
 def test_skip_without_reference(tmp_path: Path) -> None:

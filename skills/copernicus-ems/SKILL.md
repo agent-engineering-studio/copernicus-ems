@@ -112,7 +112,7 @@ Data go to `$DATA_ROOT/copernicus-ems` (else `~/.cache/copernicus-ems`);
 8. **Some products have no `observedEventA`** (ortho-images only, or not
    delivered). Say so; do not report them as zero water.
 9. **A quality verdict is a screening, not a judgment.** "to check" means a human should look; never call a map wrong.
-10. **Radar-only water is a candidate, never ground truth.** A `candidate` patch may be unmapped water or ploughed, wet soil; never score it as a missed flood. `map_only` is not a map error: radar cannot see water under trees, in towns, or after it receded.
+10. **Radar-only water is a candidate, never ground truth.** A `candidate` patch may be unmapped water or ploughed, wet soil; never score it as a missed flood. `map_only` is not a map error: radar cannot see water under trees, in towns, or after it receded. A report with `independent: false` (the map was drawn on Sentinel-1) proves nothing: never quote its `confirmed` area or its scores as confirmation.
 
 ## Without writing code
 

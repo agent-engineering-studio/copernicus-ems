@@ -51,7 +51,7 @@ Beside each pair, with the same prefix as its `_pair.json`:
 | File | Content |
 |---|---|
 | `…_agreement.tif` | The classes on the pair's grid: uint8, one band, 255 is nodata, deflate. |
-| `…_agreement.geojson` | `confirmed`, `map_only` and `candidate` as one polygon feature each, in EPSG:4326, with `class` and `km2`. |
+| `…_agreement.geojson` | `confirmed`, `map_only` and `candidate` as one polygon feature each, in EPSG:4326, with `class`, `km2` and `independent`. The GeoTIFF carries the same `independent` tag (`true` or `false`). |
 | `…_agreement.json` | The report: km² per class, scores (CSI, POD, FAR), the quality verdict, `independent`, the inputs, the detector thresholds and the files. |
 
 A pair that cannot be compared (not at 40 m, or no pre-event image)
@@ -70,8 +70,9 @@ copernicus-ems radar EMSR664 --json       # one JSON object per product
 | `--aoi`, `--product` | only this AOI number, or this product |
 | `--json` | one JSON object per product |
 
-Fetch the pairs first with `copernicus-ems pairs` (or `quality --fetch`). In
-Python:
+Fetch the pairs first with `copernicus-ems quality CODE --fetch` (or
+`copernicus-ems pairs CODE --resolution 40 --reference`): `pairs` alone defaults
+to 20 m and no pre-event image, so radar skips those pairs. In Python:
 
 ```python
 from pathlib import Path
@@ -120,8 +121,8 @@ map was made from Sentinel-1.
   km²), the map the quality check flags as possibly partial, and
   `DEL_MONIT03` (18.9 km²). Everywhere else there are none.
 - `map_only` dominates on most independent maps: the radar misses water under
-  vegetation, in towns and after it receded. POD is typically 0.1 to 0.4.
-- Maps made from the same image score higher (CSI up to about 0.69). That
+  vegetation, in towns and after it receded. POD is mostly below 0.2, and 0.6 at best.
+- Maps made from the same image can score much higher (CSI up to about 0.69), though not always: EMSR659 AOI04 and EMSR705 AOI03 score about 0.1. That
   proves nothing: the map and the radar are the same data.
 - Candidates are not ground truth. They say where to look again.
 

@@ -226,18 +226,25 @@ def _write_tif(
     partial = path.with_name(path.name + ".part")
     with rasterio.open(partial, "w", **profile) as dst:
         dst.write(classes, 1)
-        dst.update_tags(activation=report.activation, product=report.product)
+        dst.update_tags(
+            activation=report.activation,
+            product=report.product,
+            independent=str(report.independent).lower(),
+        )
         dst.set_band_description(1, _BAND_DESCRIPTION)
     partial.replace(path)
 
 
-def _geojson(raster: LabelRaster, classes: npt.NDArray[np.uint8]) -> dict[str, Any]:
+def _geojson(
+    raster: LabelRaster, classes: npt.NDArray[np.uint8], report: AgreementReport
+) -> dict[str, Any]:
     transform = Affine(*raster.grid.transform)
     transformer = Transformer.from_crs(raster.grid.crs, "EPSG:4326", always_xy=True)
     mask = np.isin(classes, _POLYGONIZED)
     by_class: dict[int, list[Any]] = {value: [] for value in _POLYGONIZED}
     for geom, value in shapes(classes, mask=mask, transform=transform, connectivity=8):
         by_class[int(value)].append(shape(geom))
+    km2 = class_km2(classes, raster.grid.resolution_m)
     features = []
     for value, polygons in by_class.items():
         if not polygons:
@@ -248,7 +255,8 @@ def _geojson(raster: LabelRaster, classes: npt.NDArray[np.uint8]) -> dict[str, A
                 "type": "Feature",
                 "properties": {
                     "class": CLASS_NAMES[value],
-                    "km2": round(merged.area / 1e6, 6),
+                    "km2": round(km2[CLASS_NAMES[value]], 6),
+                    "independent": report.independent,
                 },
                 "geometry": mapping(
                     shapely.transform(
@@ -273,9 +281,12 @@ def write_agreement(
         _write_tif(paths["tif"], classes, raster, report)
         files["tif"] = paths["tif"].name
         partial = paths["geojson"].with_name(paths["geojson"].name + ".part")
-        partial.write_text(json.dumps(_geojson(raster, classes)))
+        partial.write_text(json.dumps(_geojson(raster, classes, report)))
         partial.replace(paths["geojson"])
         files["geojson"] = paths["geojson"].name
+    else:
+        paths["tif"].unlink(missing_ok=True)
+        paths["geojson"].unlink(missing_ok=True)
     files["json"] = paths["json"].name
     report = replace(report, files=files)
     partial = paths["json"].with_name(paths["json"].name + ".part")
