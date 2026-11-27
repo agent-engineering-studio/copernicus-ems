@@ -10,6 +10,10 @@ there yet; a layer read live is saved, so the next visit finds it on disk.
     GET /api/activations                  the activations of the country, with a point each
     GET /api/activation/{code}            what one activation saw, product by product
     GET /api/activation/{code}/map        its observation masks and observed water, as GeoJSON
+    GET /api/activation/{code}/radar      what the radar checks saved beside its pairs say
+    GET /api/activation/{code}/radar/map  their agreement polygons (?product=P for one)
+
+The radar files (``copernicus-ems quality`` and ``radar``) are only read, never written.
 
 The numbers of an activation are those of :func:`copernicus_ems.geo.summarize`,
 which joins the polygons of each product: on the largest activations (EMSR664,
@@ -295,6 +299,108 @@ class Store:
                     log.warning("could not prepare %s", a.code, exc_info=True)
 
 
+Report = tuple[Path, dict[str, Any]]
+
+
+def _radar_files(directory: Path, code: str, kind: str) -> dict[str, list[Report]]:
+    """The readable ``*_<kind>.json`` of an activation's radar folder, by product.
+
+    A file that cannot be read, or has no product, is logged and left out.
+    """
+    found: dict[str, list[Report]] = {}
+    for path in sorted((directory / code / "sentinel-1").glob(f"*_{kind}.json")):
+        try:
+            body = json.loads(path.read_bytes())
+            product = body["product"]
+            if not isinstance(body, dict) or not isinstance(product, str):
+                raise ValueError("no product")
+        except (OSError, ValueError, KeyError, TypeError):
+            log.warning("unreadable radar file %s", path, exc_info=True)
+            continue
+        found.setdefault(product, []).append((path, body))
+    return found
+
+
+def _preferred(candidates: list[Report]) -> Report:
+    """The 40 m report first (what the thresholds were calibrated at), then the newest."""
+
+    def rank(item: Report) -> tuple[bool, float]:
+        resolution = item[1].get("resolution_m")
+        at_40 = isinstance(resolution, int | float) and abs(resolution - 40.0) <= 0.5
+        return at_40, item[0].stat().st_mtime
+
+    return max(candidates, key=rank)
+
+
+def radar_results(directory: Path, code: str) -> dict[str, dict[str, Any]]:
+    """What the radar checks say of each product: verdict, flags, areas and scores."""
+    qualities = _radar_files(directory, code, "quality")
+    agreements = _radar_files(directory, code, "agreement")
+    results: dict[str, dict[str, Any]] = {}
+    for product in sorted(qualities.keys() | agreements.keys()):
+        files: list[str] = []
+        quality: dict[str, Any] | None = None
+        agreement: dict[str, Any] | None = None
+        if product in qualities:
+            path, quality = _preferred(qualities[product])
+            files.append(path.name)
+        if product in agreements:
+            path, agreement = _preferred(agreements[product])
+            files.append(path.name)
+        if quality is not None:
+            verdict, reason = quality.get("verdict"), quality.get("reason")
+            flags = quality.get("flags") or []
+        else:
+            verdict, reason, flags = (agreement or {}).get("quality_verdict"), None, []
+        independent = (agreement or {}).get("independent")
+        if independent is None and quality is not None and "same_image" in quality:
+            independent = not quality["same_image"]
+        source = quality if quality is not None else agreement or {}
+        results[product] = {
+            "verdict": verdict,
+            "reason": reason,
+            "flags": flags,
+            "independent": independent,
+            "gap_hours": (quality or agreement or {}).get("gap_hours"),
+            "km2": (agreement or {}).get("km2"),
+            "scores": (agreement or {}).get("scores"),
+            "computed": (agreement or {}).get("computed"),
+            "files": sorted(files),
+            "resolution_m": source.get("resolution_m"),
+        }
+    return results
+
+
+def radar_shapes(directory: Path, code: str, product: str | None) -> dict[str, Any]:
+    """The agreement polygons (confirmed, map_only, candidate) of one or every product."""
+    features: list[dict[str, Any]] = []
+    for name, candidates in sorted(_radar_files(directory, code, "agreement").items()):
+        if product is not None and name != product:
+            continue
+        path, body = _preferred(candidates)
+        try:
+            shapes = json.loads(path.with_suffix(".geojson").read_bytes())
+            for f in shapes["features"]:
+                klass = f["properties"]["class"]
+                geometry = shape(f["geometry"])
+                features.append(
+                    _feature(
+                        geometry,
+                        {
+                            "class": klass,
+                            "km2": f["properties"].get("km2"),
+                            "product": name,
+                            "independent": body.get("independent"),
+                        },
+                    )
+                )
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError, KeyError, TypeError):
+            log.warning("unreadable radar shapes %s", path, exc_info=True)
+    return {"type": "FeatureCollection", "features": features}
+
+
 store = Store()
 
 Handler = Callable[[Request], Awaitable[JSONResponse]]
@@ -345,6 +451,24 @@ async def activation_map(request: Request) -> dict[str, Any]:
     return await store.map(_code(request))
 
 
+async def radar(request: Request) -> dict[str, Any]:
+    code = _code(request)
+    results = radar_results(store.directory, code)
+    card = await store.card(code)
+    return {
+        "checked": len(results),
+        "products": len(card["products"]),
+        "command": f"make radar CODE={code}",
+        "results": results,
+    }
+
+
+async def radar_map(request: Request) -> dict[str, Any]:
+    code = _code(request)
+    await store.card(code)  # an unknown activation is a 404, not an empty map
+    return radar_shapes(store.directory, code, request.query_params.get("product"))
+
+
 @asynccontextmanager
 async def lifespan(_: Starlette) -> AsyncIterator[None]:
     warming = asyncio.create_task(store.warm())
@@ -363,5 +487,7 @@ app = Starlette(
         Route("/api/activations", guarded(activations)),
         Route("/api/activation/{code}", guarded(activation)),
         Route("/api/activation/{code}/map", guarded(activation_map)),
+        Route("/api/activation/{code}/radar", guarded(radar)),
+        Route("/api/activation/{code}/radar/map", guarded(radar_map)),
     ],
 )
