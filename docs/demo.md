@@ -44,6 +44,10 @@ look at it), "non valutabile" or "non ancora controllata". With one product
 selected, the map also shows where the radar and the map agree (blue), the
 water only the map has (lighter blue) and, hatched orange, "possible water,
 not mapped". A paragraph explains how far to trust a map. No scores, no code.
+When `copernicus-ems describe` has run for the activation, the card also
+shows its description, with a line under it saying a language model wrote it
+from the official text and the library's numbers. Without the file, nothing
+is shown.
 The radar sees only part of the water, so "da guardare" only means a person
 should look at the map: it is not a judgment on it.
 
@@ -52,7 +56,9 @@ should look at the map: it is not a judgment on it.
 that gives them, one row per product of the radar check (verdict, flags, gap
 in hours, independent, km² per class, CSI, POD, FAR, bias), the commands, the
 files, the limits, and the MCP tools for AI agents. `/tecnica?code=EMSR664`
-opens it on an activation.
+opens it on an activation. For the description it shows the official text, the
+fields with their quotes, what was dropped and why, the provider, the model
+and the date. See [Descriptions](describe.md).
 
 ## Where the radar results come from
 
@@ -121,6 +127,7 @@ curl http://localhost:3000/api/activations
 curl http://localhost:3000/api/activation/EMSR762
 curl http://localhost:3000/api/activation/EMSR762/map
 curl http://localhost:3000/api/activation/EMSR762/radar
+curl http://localhost:3000/api/activation/EMSR762/description
 curl "http://localhost:3000/api/activation/EMSR762/radar/map?product=AOI01_GRA_PRODUCT"
 ```
 

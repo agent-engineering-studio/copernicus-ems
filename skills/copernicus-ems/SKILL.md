@@ -22,6 +22,7 @@ pip install "copernicus-ems[geo]"          # + km², observed dry area, summarie
 pip install "copernicus-ems[ml]"           # + label rasters, CSI/POD/FAR inside the mask
 pip install "copernicus-ems[cdse]"         # + Sentinel-1 backscatter on the label grid (CDSE account)
 pip install "copernicus-ems[mcp]"          # + the MCP server:  copernicus-ems mcp
+pip install "copernicus-ems[ai]"           # + describe: a checked description from the official text
 ```
 
 Python 3.12 or newer. No account and no key for Rapid Mapping: the data are
@@ -113,6 +114,7 @@ Data go to `$DATA_ROOT/copernicus-ems` (else `~/.cache/copernicus-ems`);
    delivered). Say so; do not report them as zero water.
 9. **A quality verdict is a screening, not a judgment.** "to check" means a human should look; never call a map wrong.
 10. **Radar-only water is a candidate, never ground truth.** A `candidate` patch may be unmapped water or ploughed, wet soil; never score it as a missed flood. `map_only` is not a map error: radar cannot see water under trees, in towns, or after it receded. A report with `independent: false` (the map was drawn on Sentinel-1) proves nothing: never quote its `confirmed` area or its scores as confirmation.
+11. A description is model-written from the official text: quote extracted fields with their quote, never as the official word.
 
 ## Without writing code
 
@@ -123,6 +125,7 @@ copernicus-ems export EMSR664 -o emsr664.geojson --masks masks.geojson  # for GI
 copernicus-ems scenes EMSR664 --aoi 1          # open Sentinel-1/2 passes over AOI 1
 copernicus-ems init                            # the offline copy of Italy
 copernicus-ems radar EMSR664                   # where maps and radar agree (ml extra)
+copernicus-ems describe EMSR664                # a checked description from the official text (ai extra)
 ```
 
 As tools for an agent (MCP): `copernicus-ems mcp` (stdio), or in Docker

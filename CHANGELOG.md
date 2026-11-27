@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `copernicus-ems describe CODE | --all` and `copernicus_ems.describe` (`[ai]`
+  extra): a model (Claude, or any OpenAI-compatible server, or the local
+  `llm` service of `compose.yaml`, `make llm`) reads the official text of an
+  activation and writes `description.json`: a description in Italian and
+  English, and places, rivers, events and casualties, each with its quote.
+  The code checks quotes, numbers, names and forbidden words; one retry; a
+  cached result. The demo shows it (`/api/activation/{code}/description`).
+  See the "Descriptions" page.
 - The demo in two pages: the plain page (`/`) gains a Radar column in the card
   and the radar layers on the map; `/tecnica` has the numbers, scores, Python,
   commands and MCP tools. The API reads the quality and agreement files from
