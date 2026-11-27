@@ -89,6 +89,7 @@ from copernicus_ems.agreement import (  # noqa: E402
     agreement_paths,
     write_agreement,
 )
+from copernicus_ems.cli import main  # noqa: E402
 from copernicus_ems.dataset import Pair, find_pairs  # noqa: E402
 from copernicus_ems.ml import Grid, LabelRaster  # noqa: E402
 
@@ -227,8 +228,6 @@ def test_agree_pairs_select_and_rewrite(tmp_path: Path) -> None:
 
 
 # --- radar command ---------------------------------------------------------
-
-from copernicus_ems.cli import main  # noqa: E402
 
 
 def test_radar_command_text(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

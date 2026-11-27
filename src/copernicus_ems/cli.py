@@ -16,7 +16,7 @@ import asyncio
 import json
 import os
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, TextIO
@@ -491,9 +491,35 @@ def _prefer_40(by_product: dict[str, list[Any]]) -> list[Any]:
     ]
 
 
+def _by_product(reports: Iterable[Any]) -> dict[str, list[Any]]:
+    grouped: dict[str, list[Any]] = {}
+    for report in reports:
+        grouped.setdefault(report.product, []).append(report)
+    return grouped
+
+
+def _no_pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
+    """Say why nothing was found, and what to run; the exit status of that case."""
+    from copernicus_ems.dataset import find_pairs
+
+    flt = _filter_args(args)
+    if flt and find_pairs(ems.directory, [args.code]):
+        given = " ".join(flt)
+        print(
+            f"no pairs for {args.code} matching {given}: "
+            f"run copernicus-ems quality {args.code} --fetch --dry-run {given}",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            f"no pairs for {args.code}: run copernicus-ems quality {args.code} --fetch",
+            file=sys.stderr,
+        )
+    return 1
+
+
 async def _quality(ems: RapidMapping, args: argparse.Namespace) -> int:
     try:
-        from copernicus_ems.dataset import find_pairs
         from copernicus_ems.quality import COHERENT, NOT_ASSESSABLE, TO_CHECK, check_pairs
     except ImportError:  # pragma: no cover - without the ml extra
         print("copernicus-ems: quality needs: pip install 'copernicus-ems[ml]'", file=sys.stderr)
@@ -515,25 +541,10 @@ async def _quality(ems: RapidMapping, args: argparse.Namespace) -> int:
         status = await _pairs(ems, fetch)
         if status or args.dry_run:
             return status
-    flt = _filter_args(args)
     wanted = _wanted(args)
-    by_product: dict[str, list[Any]] = {}
-    for report in check_pairs(ems.directory, [args.code], select=wanted):
-        by_product.setdefault(report.product, []).append(report)
+    by_product = _by_product(check_pairs(ems.directory, [args.code], select=wanted))
     if not by_product:
-        if flt and find_pairs(ems.directory, [args.code]):
-            given = " ".join(flt)
-            print(
-                f"no pairs for {args.code} matching {given}: "
-                f"run copernicus-ems quality {args.code} --fetch --dry-run {given}",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"no pairs for {args.code}: run copernicus-ems quality {args.code} --fetch",
-                file=sys.stderr,
-            )
-        return 1
+        return _no_pairs(ems, args)
     chosen = _prefer_40(by_product)
     for report in chosen:
         if args.json:
@@ -549,28 +560,12 @@ async def _quality(ems: RapidMapping, args: argparse.Namespace) -> int:
 def _radar(ems: RapidMapping, args: argparse.Namespace) -> int:
     try:
         from copernicus_ems.agreement import agree_pairs
-        from copernicus_ems.dataset import find_pairs
     except ImportError:  # pragma: no cover - without the ml extra
         print("copernicus-ems: radar needs: pip install 'copernicus-ems[ml]'", file=sys.stderr)
         return 2
-    flt = _filter_args(args)
-    by_product: dict[str, list[Any]] = {}
-    for report in agree_pairs(ems.directory, [args.code], select=_wanted(args)):
-        by_product.setdefault(report.product, []).append(report)
+    by_product = _by_product(agree_pairs(ems.directory, [args.code], select=_wanted(args)))
     if not by_product:
-        if flt and find_pairs(ems.directory, [args.code]):
-            given = " ".join(flt)
-            print(
-                f"no pairs for {args.code} matching {given}: "
-                f"run copernicus-ems quality {args.code} --fetch --dry-run {given}",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"no pairs for {args.code}: run copernicus-ems quality {args.code} --fetch",
-                file=sys.stderr,
-            )
-        return 1
+        return _no_pairs(ems, args)
     chosen = _prefer_40(by_product)
     for report in chosen:
         if args.json:
