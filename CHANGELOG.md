@@ -23,8 +23,16 @@ All notable changes to this project are documented here. The format follows
   group) over the library, `demo/web` (Next.js, Leaflet, Bootstrap Italia,
   in Italian and English). `Dockerfile` and `compose.yaml` (`api`, `web`,
   and `init`, `cli`, `python` as tools), `scripts/` and `make init`,
-  `make data`, `make demo`, `make docker`, `make down`. CI builds the images
+  `make data`, `make demo`, `make docker` (in the background), `make down`. CI builds the images
   and checks that the page answers.
+- The MCP server in Docker: the `mcp` service of `compose.yaml` (profile
+  `mcp`, http://127.0.0.1:8770/mcp, `COPERNICUS_EMS_MCP_DOCKER_PORT`), with
+  the allowed hosts set. `make up` starts it with the demo, `make logs`
+  follows them.
+- «Per gli agenti AI» on the demo page: the MCP tools, whether the server is
+  on, and the command that connects Claude Code to it.
+- The agent skill, `skills/copernicus-ems/SKILL.md`: setup, recipes, the
+  rules that fail quietly and how to report numbers.
 - `publiccode.yml`, the card for the Developers Italia software catalogue,
   checked in CI by its official parser.
 

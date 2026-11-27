@@ -472,3 +472,69 @@ button.link {
     height: 60vh;
   }
 }
+
+/* For AI agents: the MCP tools, whether the server is on, how to connect. */
+.agents {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.agents h3 small {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.agents h3 small.on {
+  background: #e3f4ea;
+  color: #00703c;
+}
+
+.agents h3 small.off {
+  background: #eef0f2;
+  color: var(--soft);
+}
+
+.agents .tools {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  font-size: 14px;
+}
+
+.agents .tools li {
+  padding: 3px 0;
+}
+
+.agents .tools code {
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--wash);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.agents details + details {
+  margin-top: 8px;
+}
+
+.agents h3 small {
+  display: inline-block;
+}
+
+/* A command is read whole: it wraps rather than run out of the card. */
+.agents pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.sheet pre code {
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  padding: 0;
+}

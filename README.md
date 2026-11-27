@@ -220,11 +220,19 @@ the Python behind each number.
 
 ```bash
 docker compose run --rm init   # once: the floods of Italy (~200 MB) into ./data
-docker compose up              # http://localhost:3000
+make docker                    # the demo, in the background: http://localhost:3000
+make up                        # + the MCP server for AI agents: http://127.0.0.1:8770/mcp
+make down                      # stop everything; the data stays
 ```
 
 Or, with uv and Node: `make init` then `make demo`. More in
 [demo/README.md](demo/README.md).
+
+**For AI agents.** The page says whether the MCP server is on and how to
+connect Claude Code to it (`claude mcp add --transport http copernicus-ems
+http://127.0.0.1:8770/mcp`). The [agent skill](skills/copernicus-ems/SKILL.md)
+teaches an agent the library and its traps: drop it in `~/.claude/skills/`,
+or give it to any agent as context.
 
 ---
 

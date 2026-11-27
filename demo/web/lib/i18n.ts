@@ -77,6 +77,22 @@ const it = {
     "Una pagina Next.js e Leaflet sopra una piccola API Python (Starlette) che chiama la libreria. Ogni scheda mostra le righe di Python che danno i suoi numeri.",
   docs: "Documentazione",
   code: "Codice su GitHub",
+  agentsTitle: "Per gli agenti AI",
+  mcpOn: "server MCP acceso",
+  mcpOff: "server MCP spento",
+  agentsText:
+    "Gli stessi dati, come strumenti per un agente (Claude o un altro client MCP): risponde con le mappe pubblicate, non a memoria.",
+  tools: {
+    list_activations: "le emergenze di un paese, di un tipo, in un periodo",
+    activation_summary: "cosa ha visto un'attivazione: km² d'acqua e area guardata, per prodotto",
+    compare_products: "come è cambiata l'acqua in un'area, prodotto dopo prodotto",
+    export_observed_events: "salva gli strati in GeoJSON o GeoParquet",
+    find_scenes: "le immagini Sentinel-1 e -2 su un'area, nei giorni dell'evento",
+  } as Record<string, string>,
+  connectHttp: "Collega Claude Code a questo server",
+  startMcp: "Accendi il server MCP",
+  connectStdio: "Oppure senza Docker, sul tuo computer",
+  agentsTry: "Prova a chiedere: «Quali alluvioni sono state mappate in Italia nel 2023, e quanta acqua ha visto EMSR664 in Emilia-Romagna?»",
 };
 
 export type Text = typeof it;
@@ -152,6 +168,22 @@ const en: Text = {
     "A Next.js and Leaflet page over a small Python API (Starlette) that calls the library. Every card shows the lines of Python that give its numbers.",
   docs: "Documentation",
   code: "Code on GitHub",
+  agentsTitle: "For AI agents",
+  mcpOn: "MCP server on",
+  mcpOff: "MCP server off",
+  agentsText:
+    "The same data, as tools for an agent (Claude or any MCP client): it answers from the published maps, not from memory.",
+  tools: {
+    list_activations: "the emergencies of a country, of a kind, in a period",
+    activation_summary: "what an activation saw: km² of water and area looked at, per product",
+    compare_products: "how the water in an area changed, product after product",
+    export_observed_events: "saves the layers as GeoJSON or GeoParquet",
+    find_scenes: "the Sentinel-1 and -2 images of an area, in the days of the event",
+  },
+  connectHttp: "Connect Claude Code to this server",
+  startMcp: "Start the MCP server",
+  connectStdio: "Or without Docker, on your computer",
+  agentsTry: "Try asking: “Which floods were mapped in Italy in 2023, and how much water did EMSR664 see in Emilia-Romagna?”",
 };
 
 export const TEXT: Record<Lang, Text> = { it, en };

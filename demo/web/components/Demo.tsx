@@ -2,10 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import Agents from "@/components/Agents";
 import Card from "@/components/Card";
 import { LOOKED, WATER, ask, day, failed } from "@/lib/format";
 import { LANGS, LangContext, TEXT, type Lang } from "@/lib/i18n";
-import type { CardData, Failed, Listing, MapData } from "@/lib/types";
+import type { Agents as AgentsData, CardData, Failed, Listing, MapData } from "@/lib/types";
 
 // Leaflet needs a window: the map is drawn in the browser only.
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -57,7 +58,7 @@ function useAnswer<T>(path: string | null): T | Failed | null {
   return found?.path === path ? found.value : null;
 }
 
-export default function Demo({ first }: { first: string | null }) {
+export default function Demo({ first, agents }: { first: string | null; agents: AgentsData }) {
   const [lang, setLang] = useLang();
   const t = TEXT[lang];
   const [code, setCode] = useState<string | null>(first);
@@ -202,6 +203,7 @@ export default function Demo({ first }: { first: string | null }) {
                     </>
                   )}
                 </section>
+                <Agents agents={agents} />
               </div>
             )}
           </div>

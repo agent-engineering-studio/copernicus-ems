@@ -16,8 +16,9 @@ With Docker, from the root of the repository:
 
 ```bash
 docker compose run --rm init   # once: the floods of Italy, about 200 MB, into ./data
-docker compose up              # the demo, on http://localhost:3000
-docker compose down            # stop it (or: make down); the data stays
+make docker                    # the demo, in the background, on http://localhost:3000
+make up                        # + the MCP server for AI agents, on http://127.0.0.1:8770/mcp
+make down                      # stop everything; the data stays
 ```
 
 With [uv](https://docs.astral.sh/uv/) and [Node](https://nodejs.org/) 20 or
