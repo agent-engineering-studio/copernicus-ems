@@ -29,7 +29,7 @@ from copernicus_ems.describe import Description, describe, provider_from_env
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS, OBSERVED_EVENT
 from copernicus_ems.export import mask_features, tagged_features, write_features
-from copernicus_ems.offline import INIT_CATEGORIES, init, read_activations
+from copernicus_ems.offline import INIT_CATEGORIES, detail_path, init, read_activations
 from copernicus_ems.scenes import SENTINEL_1_GRD, SENTINEL_2_L2A, ScenePass, passes
 
 #: Many floods are filed as ``Storm``: the features are filtered on ``5-Flood`` anyway.
@@ -605,18 +605,21 @@ def _describe(args: argparse.Namespace) -> int:
     provider = provider_from_env()  # fails once, with the hint, before any activation
     if args.all:
         try:
-            codes = [a.code for a in read_activations(args.dir)]
+            every = [a.code for a in read_activations(args.dir)]
         except FileNotFoundError as exc:
             raise EmsError("no activations saved: run copernicus-ems init first") from exc
+        codes = [c for c in every if detail_path(c, args.dir).is_file()]
+        if len(codes) < len(every):
+            print(f"{len(every) - len(codes)} without detail skipped", file=sys.stderr)
     else:
         codes = [args.code]
     failed = 0
     for code in codes:
         try:
             result = describe(code, args.dir, provider=provider, force=args.force)
-        except (EmsError, OSError) as exc:
+        except (EmsError, OSError, ValueError) as exc:
             if not args.all:
-                raise
+                raise exc if isinstance(exc, EmsError) else EmsError(f"{code}: {exc}") from exc
             failed += 1
             print(f"{code}\tfailed: {exc}", file=sys.stderr)
             continue

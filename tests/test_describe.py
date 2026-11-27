@@ -616,20 +616,36 @@ def test_cli_all_continues_and_exits_1(
 
     cli(monkeypatch, Failing())
     assert main(["describe", "--all"]) == 1
-    captured = capsys.readouterr()
-    assert "EMSR762\tfailed: model down" in captured.err
-    assert "EMSR935\tfailed:" in captured.err  # the others are still tried
-    assert "2 of 2 failed" in captured.err
+    err = capsys.readouterr().err
+    assert "EMSR762\tfailed: model down" in err
+    assert "1 of 1 failed" in err
 
 
-def test_cli_all_keeps_going_after_a_failure(
+def test_cli_all_skips_activations_without_detail(
     text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     cli(monkeypatch, Fake(VALID))
-    assert main(["describe", "--all"]) == 1  # EMSR935 has no detail saved
+    assert main(["describe", "--all"]) == 0
     captured = capsys.readouterr()
     assert "EMSR762\tclaude/fake-model\tdescription: ok" in captured.out
-    assert "1 of 2 failed" in captured.err
+    assert "1 without detail skipped" in captured.err
+
+
+def test_cli_all_counts_a_malformed_detail_as_a_failure(
+    text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (text / "EMSR762" / "detail.json").write_text("{not json")
+    cli(monkeypatch, Fake())
+    assert main(["describe", "--all"]) == 1
+    assert "EMSR762\tfailed:" in capsys.readouterr().err
+
+
+def test_cli_one_without_detail_fails(
+    text: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cli(monkeypatch, Fake())
+    assert main(["describe", "EMSR935"]) == 1
+    assert "EMSR935" in capsys.readouterr().err
 
 
 def test_cli_none_line(

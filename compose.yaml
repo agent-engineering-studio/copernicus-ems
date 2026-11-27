@@ -5,7 +5,7 @@
 #                                              http://127.0.0.1:8770/mcp
 #   docker compose --profile ai up -d llm      a local language model (llama.cpp) for `describe`:
 #                                              http://127.0.0.1:8780/v1 (~2 GB, downloaded once)
-#   docker compose run --rm init              download the Italian floods once (~200 MB)
+#   docker compose run --rm init               download the Italian floods once (~200 MB)
 #   docker compose run --rm cli --help         the command line
 #   docker compose run --rm python             Python, with copernicus_ems to import
 #
@@ -14,7 +14,7 @@
 #   COPERNICUS_EMS_COUNTRY  the country the demo shows (default Italy)
 #   COPERNICUS_EMS_LLM_PORT the port of the local model (default 8780)
 #   COPERNICUS_EMS_LLM_HF   its Hugging Face repo:quant (default Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M)
-#   DATA_ROOT             the data folder shared with Limen and the other libraries:
+#   DATA_ROOT               the data folder shared with Limen and the other libraries:
 #                           the library's own folder is $DATA_ROOT/copernicus-ems
 #                           (default ./data/copernicus-ems). Create it first, so that
 #                           it is yours.
@@ -26,12 +26,6 @@ x-ems: &ems
   environment:
     DATA_ROOT: /data
     COPERNICUS_EMS_COUNTRY: ${COPERNICUS_EMS_COUNTRY:-}
-    # `describe` asks Claude when ANTHROPIC_API_KEY is set, else this model (.env.example).
-    COPERNICUS_EMS_LLM: ${COPERNICUS_EMS_LLM:-}
-    COPERNICUS_EMS_LLM_URL: ${COPERNICUS_EMS_LLM_URL:-http://llm:8080/v1}
-    COPERNICUS_EMS_LLM_MODEL: ${COPERNICUS_EMS_LLM_MODEL:-Qwen/Qwen2.5-3B-Instruct-GGUF}
-    COPERNICUS_EMS_CLAUDE_MODEL: ${COPERNICUS_EMS_CLAUDE_MODEL:-}
-    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   volumes:
     - ${DATA_ROOT:-./data}/copernicus-ems:/data/copernicus-ems
 
@@ -118,6 +112,15 @@ services:
     <<: *ems
     profiles: [tools]
     entrypoint: ["copernicus-ems"]
+    # Only `describe` asks a model: Claude when ANTHROPIC_API_KEY is set, else the llm service.
+    environment:
+      DATA_ROOT: /data
+      COPERNICUS_EMS_COUNTRY: ${COPERNICUS_EMS_COUNTRY:-}
+      COPERNICUS_EMS_LLM: ${COPERNICUS_EMS_LLM:-}
+      COPERNICUS_EMS_LLM_URL: http://llm:8080/v1
+      COPERNICUS_EMS_LLM_MODEL: ${COPERNICUS_EMS_LLM_MODEL:-Qwen/Qwen2.5-3B-Instruct-GGUF}
+      COPERNICUS_EMS_CLAUDE_MODEL: ${COPERNICUS_EMS_CLAUDE_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
 
   python:
     <<: *ems
