@@ -14,7 +14,7 @@ from copernicus_ems.describe_checks import (
     Checked,
     check,
 )
-from copernicus_ems.describe_input import Source
+from copernicus_ems.describe_input import Source, allowed_numbers
 
 REASON = (
     "A new wave of severe weather has again hit south-eastern areas of the "
@@ -284,3 +284,33 @@ def test_article_one_never_rejected(word: str) -> None:
         ).problems
         == []
     )
+
+
+def test_generic_names_and_activation_time() -> None:
+    facts = FACTS | {"event_time": "2023-05-16T11:00:00"}
+    checked = check(
+        with_text(
+            "Il 16 maggio 2023 alle 11:00 UTC la Regione Emilia-Romagna ha chiesto "
+            "il Servizio di Protezione Civile.",
+            "The Copernicus Emergency Management Service (CEMS) mapped the River Savio "
+            "at 11:00 UTC, in two AOIs.",
+        ),
+        SOURCE,
+        facts,
+    )
+    assert checked.problems == []
+    late = check(with_text("Alle 14:30 UTC."), SOURCE, facts)
+    assert any("14:30" in p for p in late.problems)
+
+
+def test_missed_only_as_missed_water() -> None:
+    assert check(with_text("Una mappa.", "No flood was missed."), SOURCE, FACTS).problems == []
+    for en in ("The radar shows missed water.", "Missed flooding near Faenza.", "Missing water."):
+        assert check(with_text("Una mappa.", en), SOURCE, FACTS).problems, en
+
+
+def test_venti_and_sei_are_words() -> None:
+    facts = FACTS | {"event_time": "2023-05-16T00:00:00"}
+    assert "20" not in allowed_numbers(facts, SOURCE)
+    text = "Forti venti su Faenza: se sei a Faenza, segui le mappe."
+    assert check(with_text(text), SOURCE, facts).problems == []

@@ -77,6 +77,40 @@ _WEEKDAYS = (
     "Monday Tuesday Wednesday Thursday Friday Saturday Sunday"
 )
 
+# Generic capitalised nouns and abbreviations: none of them can carry an invented fact.
+#   en: River, Province, Region, Municipality, Valley, Sea, Mount
+#   it: Fiume, Provincia, Regione, Comune, Valle, Mare, Monte, Servizio, Protezione,
+#       Civile, Dipartimento
+#   both: AOI, AOIs, CEMS, UTC, CET, CEST
+# plus, above: Italia, Italy, Europa, Europe, Copernicus, EMS, Emergency, Management,
+# Service, Rapid, Mapping, Sentinel, Sentinel-1, Sentinel-2, the months and the weekdays.
+_GENERIC = [
+    "River",
+    "Province",
+    "Region",
+    "Municipality",
+    "Valley",
+    "Sea",
+    "Mount",
+    "Fiume",
+    "Provincia",
+    "Regione",
+    "Comune",
+    "Valle",
+    "Mare",
+    "Monte",
+    "Servizio",
+    "Protezione",
+    "Civile",
+    "Dipartimento",
+    "AOI",
+    "AOIs",
+    "CEMS",
+    "UTC",
+    "CET",
+    "CEST",
+]
+
 ALLOWED_NAMES: frozenset[str] = frozenset(
     {
         "Italia",
@@ -95,6 +129,7 @@ ALLOWED_NAMES: frozenset[str] = frozenset(
         "Sentinel-2",
         *MONTHS,
         *_WEEKDAYS.split(),
+        *_GENERIC,
     }
 )
 """Names a description may use beyond the official text and the facts."""
@@ -116,7 +151,8 @@ FORBIDDEN: dict[str, tuple[str, ...]] = {
         r"mistakes?",
         r"mistaken\w*",
         r"inaccura\w*",
-        r"missed",
+        r"missed\s+(?:water|flood\w*|area\w*)",
+        r"missing\s+water",
     ),
 }
 """Words that judge a map as wrong or call radar water missed (regex, whole words)."""
@@ -180,6 +216,10 @@ NUMBER_WORDS: dict[str, dict[str, int]] = {
         )
     },
 }
+# "venti" (winds) and "sei" (you are) are ordinary Italian words: not read as numbers.
+for _ambiguous in ("venti", "sei"):
+    del NUMBER_WORDS["it"][_ambiguous]
+
 _ARTICLES = {"un", "uno", "una", "one"}  # also "a"/"an": never read as the number 1
 
 _FORBIDDEN = [
@@ -193,6 +233,7 @@ _DATE = re.compile(
     re.IGNORECASE,
 )
 _ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+_TIME = re.compile(r"(?<![\d:.,])(\d{1,2}):(\d{2})(?![\d:])")
 _SPACES = " \u00a0\u202f\u2009"
 _NUM = re.compile(
     rf"(?<!\w)(?<![^\W\d_]-)(?:\d{{1,3}}(?:[.,{_SPACES}]\d{{3}})+(?![\d])(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
@@ -279,6 +320,7 @@ class _Allowed:
     values: set[float]
     days: set[Day]
     names: set[str]
+    times: set[tuple[int, int]]
 
     def number(self, token: str) -> bool:
         if token in self.strings:
@@ -316,7 +358,11 @@ def _allowed(facts: dict[str, Any], source: Source) -> _Allowed:
     for text in texts:
         days |= _days(text)
     names = {n.casefold() for n in allowed_names(facts, source) | ALLOWED_NAMES}
-    return _Allowed(strings, values, days, names)
+    times = {(int(h), int(m)) for text in texts for h, m in _TIME.findall(text)}
+    event = facts.get("event_time")
+    if isinstance(event, str):
+        times |= {(int(h), int(m)) for h, m in _TIME.findall(event[11:16])}
+    return _Allowed(strings, values, days, names, times)
 
 
 def _blank(text: str, start: int, end: int) -> str:
@@ -337,6 +383,13 @@ def _text_problems(language: str, text: str, allowed: _Allowed) -> list[str]:
         if not allowed.day(int(day), _month(month), int(year) if year else None):
             out.append(
                 f'{language}: the date "{m[0]}" is not among the library\'s dates '
+                "or in the official text"
+            )
+        plain = _blank(plain, m.start(), m.end())
+    for m in _TIME.finditer(plain):
+        if (int(m[1]), int(m[2])) not in allowed.times:
+            out.append(
+                f'{language}: the time "{m[0]}" is not the activation\'s time '
                 "or in the official text"
             )
         plain = _blank(plain, m.start(), m.end())
