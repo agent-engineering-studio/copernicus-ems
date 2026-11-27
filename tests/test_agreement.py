@@ -73,3 +73,154 @@ def test_class_km2_names_and_values() -> None:
         == {"dry", "confirmed", "map_only", "candidate", "radar_scattered"}
     )
     assert out["confirmed"] == pytest.approx(10 * 0.04**2)
+
+
+# --- pair I/O and report ---------------------------------------------------
+
+import json  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+import rasterio  # noqa: E402
+from pairs import add_reference, write_pair  # noqa: E402
+
+from copernicus_ems.agreement import (  # noqa: E402
+    agree_pair,
+    agree_pairs,
+    agreement_paths,
+    write_agreement,
+)
+from copernicus_ems.dataset import Pair, find_pairs  # noqa: E402
+from copernicus_ems.ml import Grid, LabelRaster  # noqa: E402
+
+
+def _pair40(
+    root: Path,
+    product: str = "AOI01_DEL_PRODUCT",
+    *,
+    res: float = 40.0,
+    reference: bool = True,
+    dark: bool = True,
+    **kw: object,
+) -> Pair:
+    grid = Grid("EPSG:32633", 500000.0, 4600000.0, res, 100, 100)
+    arr = np.zeros((100, 100), np.uint8)
+    arr[20:60, 20:60] = 1
+    manifest = write_pair(root, "EMSR1", product, LabelRaster(arr, grid, {}), gap_hours=5, **kw)  # type: ignore[arg-type]
+    meta = json.loads(manifest.read_text())
+    if reference:
+        add_reference(manifest, 0.1)
+        if dark:
+            with rasterio.open(manifest.parent / meta["image"]) as src:
+                profile, image = src.profile, src.read()
+            image[:2] = 0.1
+            image[:2, 20:60, 20:60] = 0.01
+            image[:2, 80:95, 80:95] = 0.01  # 15x15 px unmapped, 0.36 km2: scattered
+            with rasterio.open(manifest.parent / meta["image"], "w", **profile) as dst:
+                dst.write(image)
+    return next(p for p in find_pairs(root, None) if p.product == product)
+
+
+def test_agree_pair_writes_three_files(tmp_path: Path) -> None:
+    pair = _pair40(tmp_path)
+    report, classes = agree_pair(pair)
+    assert classes is not None and report.computed
+    report = write_agreement(pair, report, classes)
+    paths = agreement_paths(pair)
+    with rasterio.open(paths["tif"]) as src, rasterio.open(pair.labels) as lab:
+        assert src.count == 1 and src.dtypes[0] == "uint8" and src.nodata == 255
+        assert src.shape == lab.shape and src.transform == lab.transform
+        assert "confirmed=1" in src.descriptions[0]
+        assert src.tags()["activation"] == "EMSR1"
+        assert src.tags()["product"] == "AOI01_DEL_PRODUCT"
+    features = json.loads(paths["geojson"].read_text())["features"]
+    assert features
+    for f in features:
+        assert f["properties"]["class"] in {"confirmed", "map_only", "candidate"}
+        assert f["properties"]["km2"] > 0
+    assert json.loads(paths["json"].read_text()) == report.as_dict()
+    assert report.files == {
+        "tif": paths["tif"].name,
+        "geojson": paths["geojson"].name,
+        "json": paths["json"].name,
+    }
+
+
+def test_geojson_is_lon_lat(tmp_path: Path) -> None:
+    pair = _pair40(tmp_path)
+    report, classes = agree_pair(pair)
+    write_agreement(pair, report, classes)
+    data = json.loads(agreement_paths(pair)["geojson"].read_text())
+
+    def walk(c: object) -> list[tuple[float, float]]:
+        if isinstance(c, list) and c and isinstance(c[0], (int, float)):
+            return [(c[0], c[1])]
+        return [pt for x in c for pt in walk(x)]  # type: ignore[attr-defined]
+
+    pts = [pt for f in data["features"] for pt in walk(f["geometry"]["coordinates"])]
+    assert pts
+    for lon, lat in pts:
+        assert -180 <= lon <= 180 and -90 <= lat <= 90
+        assert abs(lon - 15.0) < 1 and abs(lat - 41.5) < 1
+
+
+def test_same_image_not_independent(tmp_path: Path) -> None:
+    pair = _pair40(tmp_path, made_from=[{"sensor": "Sentinel-1"}])
+    report, classes = agree_pair(pair)
+    assert report.computed and classes is not None
+    assert report.independent is False
+
+
+def test_skip_without_reference(tmp_path: Path) -> None:
+    pair = _pair40(tmp_path, reference=False)
+    report, classes = agree_pair(pair)
+    assert classes is None and not report.computed
+    assert report.reason == "no pre-event reference (pairs --reference)"
+    assert set(report.km2) == set(CLASS_NAMES.values()) and not any(report.km2.values())
+    assert report.scores == {}
+    out = write_agreement(pair, report, classes)
+    paths = agreement_paths(pair)
+    assert paths["json"].exists() and not paths["tif"].exists() and not paths["geojson"].exists()
+    assert out.files == {"json": paths["json"].name}
+
+
+def test_skip_not_40m(tmp_path: Path) -> None:
+    pair = _pair40(tmp_path, res=20.0, dark=False)
+    report, classes = agree_pair(pair)
+    assert classes is None and not report.computed
+    assert report.reason == "thresholds calibrated at 40 m"
+    write_agreement(pair, report, classes)
+    paths = agreement_paths(pair)
+    assert paths["json"].exists() and not paths["tif"].exists() and not paths["geojson"].exists()
+
+
+def test_all_radar_invalid(tmp_path: Path) -> None:
+    pair = _pair40(tmp_path, blind_rows=100)
+    report, classes = agree_pair(pair)
+    assert report.computed and classes is not None
+    assert not any(report.km2.values())
+    out = write_agreement(pair, report, classes)
+
+    def refuse(name: str) -> None:
+        raise AssertionError(name)
+
+    text = agreement_paths(pair)["json"].read_text()
+    assert json.loads(text, parse_constant=refuse)["files"] == out.files
+
+
+def test_quality_verdict_carried(tmp_path: Path) -> None:
+    pair = _pair40(tmp_path)
+    report, _ = agree_pair(pair)
+    assert report.quality_verdict == quality.check_pair(pair).verdict
+
+
+def test_agree_pairs_select_and_rewrite(tmp_path: Path) -> None:
+    a = _pair40(tmp_path, "AOI01_DEL_PRODUCT")
+    b = _pair40(tmp_path, "AOI02_DEL_PRODUCT")
+    before = a.labels.read_bytes()
+    reports = agree_pairs(tmp_path, select=lambda p: p.product == "AOI01_DEL_PRODUCT")
+    assert [r.product for r in reports] == ["AOI01_DEL_PRODUCT"]
+    assert agreement_paths(a)["json"].exists() and not agreement_paths(b)["json"].exists()
+    agree_pairs(tmp_path, select=lambda p: p.product == "AOI01_DEL_PRODUCT")
+    assert agreement_paths(a)["tif"].exists()
+    assert a.labels.read_bytes() == before
+    assert len(agree_pairs(tmp_path, write=False)) == 2
