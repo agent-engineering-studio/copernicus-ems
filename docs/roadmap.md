@@ -222,6 +222,14 @@ emit image + label pairs.
     each product, and backtest scores reported with and without the maps
     "to check".
 
+### 4d. Radar agreement of the maps
+
+!!! success "Done"
+    `copernicus-ems radar` and `copernicus_ems.agreement` (`[ml]` extra):
+    where each map and the radar agree (confirmed, map only, candidate,
+    scattered), as a raster, polygons and a report next to each pair.
+    See [Radar agreement](radar.md).
+
 ### 5. Fine-tuning notebooks on EO foundation models (0.6)
 
 !!! success "First notebook done"

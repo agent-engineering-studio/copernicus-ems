@@ -111,6 +111,8 @@ Data go to `$DATA_ROOT/copernicus-ems` (else `~/.cache/copernicus-ems`);
    may not show. It is not an alert service.
 8. **Some products have no `observedEventA`** (ortho-images only, or not
    delivered). Say so; do not report them as zero water.
+9. **A quality verdict is a screening, not a judgment.** "to check" means a human should look; never call a map wrong.
+10. **Radar-only water is a candidate, never ground truth.** A `candidate` patch may be unmapped water or ploughed, wet soil; never score it as a missed flood. `map_only` is not a map error: radar cannot see water under trees, in towns, or after it receded. A report with `independent: false` (the map was drawn on Sentinel-1) proves nothing: never quote its `confirmed` area or its scores as confirmation.
 
 ## Without writing code
 
@@ -120,6 +122,7 @@ copernicus-ems fetch EMSR664                   # the layers, into the data folde
 copernicus-ems export EMSR664 -o emsr664.geojson --masks masks.geojson  # for GIS tools
 copernicus-ems scenes EMSR664 --aoi 1          # open Sentinel-1/2 passes over AOI 1
 copernicus-ems init                            # the offline copy of Italy
+copernicus-ems radar EMSR664                   # where maps and radar agree (ml extra)
 ```
 
 As tools for an agent (MCP): `copernicus-ems mcp` (stdio), or in Docker

@@ -16,7 +16,7 @@ import asyncio
 import json
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Iterable, Sequence
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, TextIO
@@ -201,6 +201,15 @@ def _parser() -> argparse.ArgumentParser:
     )
     quality.add_argument("--json", action="store_true", help="one JSON object per product")
 
+    radar = commands.add_parser(
+        "radar",
+        help="where the map and the radar agree, per pair (ml extra)",
+    )
+    radar.add_argument("code", metavar="CODE", help="e.g. EMSR664")
+    radar.add_argument("--aoi", type=int, help="only this AOI number")
+    radar.add_argument("--product", help="only this product, e.g. AOI01_DEL_MONIT01")
+    radar.add_argument("--json", action="store_true", help="one JSON object per product")
+
     dataset = commands.add_parser(
         "dataset",
         help="chips + index + train/val/test from the pairs already fetched (ml extra)",
@@ -255,6 +264,8 @@ async def _run(args: argparse.Namespace, client: httpx.AsyncClient | None) -> in
             return await _pairs(ems, args)
         if args.command == "quality":
             return await _quality(ems, args)
+        if args.command == "radar":
+            return _radar(ems, args)
         if args.command == "dataset":
             return _dataset(ems, args)
         return await _export(ems, args)
@@ -458,9 +469,57 @@ async def _pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
     return 0
 
 
+def _filter_args(args: argparse.Namespace) -> list[str]:
+    flt = [f"--aoi {args.aoi}"] if args.aoi is not None else []
+    return flt + ([f"--product {args.product}"] if args.product is not None else [])
+
+
+def _wanted(args: argparse.Namespace) -> Callable[[Any], bool]:
+    def wanted(pair: Any) -> bool:
+        if args.aoi is not None and not pair.product.startswith(f"AOI{args.aoi:02d}_"):
+            return False
+        return bool(args.product is None or pair.product == args.product)
+
+    return wanted
+
+
+def _prefer_40(by_product: dict[str, list[Any]]) -> list[Any]:
+    """One report per product: the 40 m pair when there are several."""
+    return [
+        next((r for r in group if abs((r.resolution_m or 0.0) - 40.0) <= 0.5), group[0])
+        for group in by_product.values()
+    ]
+
+
+def _by_product(reports: Iterable[Any]) -> dict[str, list[Any]]:
+    grouped: dict[str, list[Any]] = {}
+    for report in reports:
+        grouped.setdefault(report.product, []).append(report)
+    return grouped
+
+
+def _no_pairs(ems: RapidMapping, args: argparse.Namespace) -> int:
+    """Say why nothing was found, and what to run; the exit status of that case."""
+    from copernicus_ems.dataset import find_pairs
+
+    flt = _filter_args(args)
+    if flt and find_pairs(ems.directory, [args.code]):
+        given = " ".join(flt)
+        print(
+            f"no pairs for {args.code} matching {given}: "
+            f"run copernicus-ems quality {args.code} --fetch --dry-run {given}",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            f"no pairs for {args.code}: run copernicus-ems quality {args.code} --fetch",
+            file=sys.stderr,
+        )
+    return 1
+
+
 async def _quality(ems: RapidMapping, args: argparse.Namespace) -> int:
     try:
-        from copernicus_ems.dataset import Pair, find_pairs
         from copernicus_ems.quality import COHERENT, NOT_ASSESSABLE, TO_CHECK, check_pairs
     except ImportError:  # pragma: no cover - without the ml extra
         print("copernicus-ems: quality needs: pip install 'copernicus-ems[ml]'", file=sys.stderr)
@@ -482,35 +541,11 @@ async def _quality(ems: RapidMapping, args: argparse.Namespace) -> int:
         status = await _pairs(ems, fetch)
         if status or args.dry_run:
             return status
-    flt = [f"--aoi {args.aoi}"] if args.aoi is not None else []
-    flt += [f"--product {args.product}"] if args.product is not None else []
-
-    def wanted(pair: Pair) -> bool:
-        if args.aoi is not None and not pair.product.startswith(f"AOI{args.aoi:02d}_"):
-            return False
-        return args.product is None or pair.product == args.product
-
-    by_product: dict[str, list[Any]] = {}
-    for report in check_pairs(ems.directory, [args.code], select=wanted):
-        by_product.setdefault(report.product, []).append(report)
+    wanted = _wanted(args)
+    by_product = _by_product(check_pairs(ems.directory, [args.code], select=wanted))
     if not by_product:
-        if flt and find_pairs(ems.directory, [args.code]):
-            given = " ".join(flt)
-            print(
-                f"no pairs for {args.code} matching {given}: "
-                f"run copernicus-ems quality {args.code} --fetch --dry-run {given}",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"no pairs for {args.code}: run copernicus-ems quality {args.code} --fetch",
-                file=sys.stderr,
-            )
-        return 1
-    chosen = [
-        next((r for r in group if abs((r.resolution_m or 0.0) - 40.0) <= 0.5), group[0])
-        for group in by_product.values()
-    ]
+        return _no_pairs(ems, args)
+    chosen = _prefer_40(by_product)
     for report in chosen:
         if args.json:
             print(json.dumps(report.as_dict()))
@@ -519,6 +554,35 @@ async def _quality(ems: RapidMapping, args: argparse.Namespace) -> int:
             print(f"{report.product}\t{report.verdict}\t{why}")
     count = [sum(r.verdict == v for r in chosen) for v in (COHERENT, TO_CHECK, NOT_ASSESSABLE)]
     print(f"{count[0]} coherent, {count[1]} to check, {count[2]} not assessable", file=sys.stderr)
+    return 0
+
+
+def _radar(ems: RapidMapping, args: argparse.Namespace) -> int:
+    try:
+        from copernicus_ems.agreement import agree_pairs
+    except ImportError:  # pragma: no cover - without the ml extra
+        print("copernicus-ems: radar needs: pip install 'copernicus-ems[ml]'", file=sys.stderr)
+        return 2
+    by_product = _by_product(agree_pairs(ems.directory, [args.code], select=_wanted(args)))
+    if not by_product:
+        return _no_pairs(ems, args)
+    chosen = _prefer_40(by_product)
+    for report in chosen:
+        if args.json:
+            print(json.dumps(report.as_dict()))
+        elif not report.computed:
+            print(f"{report.product}\tskipped: {report.reason}")
+        else:
+            km2, csi = report.km2, report.scores.get("csi")
+            line = (
+                f"{report.product}\tconfirmed {km2['confirmed']:.2f} km²"
+                f"\tmap only {km2['map_only']:.2f} km²"
+                f"\tcandidate {km2['candidate']:.2f} km²"
+                f"\tCSI {'—' if csi is None else f'{csi:.2f}'}"
+            )
+            print(line + ("" if report.independent else "\tnot independent"))
+    total = sum(r.km2.get("candidate", 0.0) for r in chosen if r.computed)
+    print(f"{len(chosen)} products, {total:.2f} km² of candidates total", file=sys.stderr)
     return 0
 
 

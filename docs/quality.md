@@ -41,6 +41,9 @@ Maps drawn on Sentinel-1 itself are the opposite case: they agree with the
 radar because they are the radar. They prove nothing, so they are *not
 assessable*.
 
+To see *where* the map and the radar agree, not only a verdict, see
+[Radar agreement](radar.md).
+
 ## What it measures
 
 Everything is counted only where the map observed (label other than 255) and

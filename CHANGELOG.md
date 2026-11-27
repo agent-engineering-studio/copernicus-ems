@@ -16,6 +16,13 @@ All notable changes to this project are documented here. The format follows
   `pairs` at 40 m; `--json` prints one object per product. Thresholds
   calibrated on the 24 Italian maps of notebook 08: 13 coherent, 3 to check,
   8 not assessable. See the "Quality check" page.
+- `copernicus-ems radar CODE` and `copernicus_ems.agreement` (`[ml]` extra):
+  where each flood map and the Sentinel-1 radar agree, as classes
+  (`confirmed`, `map_only`, `candidate`, `radar_scattered`) inside the
+  observation mask. Writes `_agreement.tif`, `_agreement.geojson` and
+  `_agreement.json` beside each pair; `--json` prints one object per
+  product. A screening: radar-only candidates are never ground truth. See
+  the "Radar agreement" page.
 - A demo, as in the other agent-engineering-studio libraries: a map of the
   Copernicus EMS emergencies in Italy that says in three steps what the
   library is for, where the satellites looked and the water they saw, with
