@@ -20,6 +20,7 @@ nav = [
   { "Sentinel-1 backscatter" = "backscatter.md" },
   { "Quality check" = "quality.md" },
   { "Radar agreement" = "radar.md" },
+  { "Descriptions" = "describe.md" },
   { "MCP server" = "mcp.md" },
   { "Demo" = "demo.md" },
   { "Notebooks" = "notebooks.md" },

@@ -694,3 +694,27 @@ button.link {
 .files code {
   display: block;
 }
+
+/* The model-written description, and the words each field was read from */
+
+.described {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.quote {
+  display: block;
+  color: var(--soft);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.official-text {
+  white-space: pre-line;
+}
+
+.fields {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font-size: 14px;
+}

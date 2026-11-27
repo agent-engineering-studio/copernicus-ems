@@ -3,18 +3,20 @@
 import { after, day, failed, km2, share, WATER } from "@/lib/format";
 import { useText } from "@/lib/i18n";
 import { phrase } from "@/lib/radar";
-import type { CardData, Failed, RadarData } from "@/lib/types";
+import type { CardData, DescriptionData, Failed, RadarData } from "@/lib/types";
 
 type Props = {
   card: CardData | Failed | null;
   /** The radar results of its products: null while they are read. */
   radar: RadarData | Failed | null;
+  /** What `copernicus-ems describe` wrote: nothing is shown while it is read, or without one. */
+  description: DescriptionData | Failed | null;
   product: string | null;
   onProduct: (product: string | null) => void;
   onClose: () => void;
 };
 
-export default function Card({ card, radar, product, onProduct, onClose }: Props) {
+export default function Card({ card, radar, description, product, onProduct, onClose }: Props) {
   const t = useText();
   if (card === null) {
     return (
@@ -36,6 +38,8 @@ export default function Card({ card, radar, product, onProduct, onClose }: Props
     );
   }
   const L = t.lang;
+  const written = description !== null && !failed(description) && "description" in description ? description : null;
+  const text = written?.description?.[L];
   const checked = radar === null || failed(radar) ? null : radar;
   // While the results are read, or if they could not be: nothing to say yet.
   const radarCell = (name: string) => {
@@ -62,6 +66,15 @@ export default function Card({ card, radar, product, onProduct, onClose }: Props
         </small>
         <h2 id="card-title">{card.name}</h2>
       </header>
+
+      {written && text && (
+        <section className="described">
+          <p>{text}</p>
+          <p className="muted">
+            {t.describe.by(t.describe.provider(written.provider))} {t.describe.notOfficial}
+          </p>
+        </section>
+      )}
 
       <section>
         <h3>{t.seenTitle}</h3>

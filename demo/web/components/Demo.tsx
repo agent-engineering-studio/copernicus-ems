@@ -8,7 +8,7 @@ import { LOOKED, WATER, day, failed, good } from "@/lib/format";
 import { useAnswer, useCodeInAddress, useLang } from "@/lib/hooks";
 import { LangContext, TEXT } from "@/lib/i18n";
 import { radarOf } from "@/lib/radar";
-import type { CardData, Listing, MapData, RadarData, RadarMap } from "@/lib/types";
+import type { CardData, DescriptionData, Listing, MapData, RadarData, RadarMap } from "@/lib/types";
 
 // Leaflet needs a window: the map is drawn in the browser only.
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -23,6 +23,7 @@ export default function Demo({ first }: { first: string | null }) {
   const card = useAnswer<CardData>(code && `/api/activation/${code}`);
   const shapes = useAnswer<MapData>(code && `/api/activation/${code}/map`);
   const radar = useAnswer<RadarData>(code && `/api/activation/${code}/radar`);
+  const description = useAnswer<DescriptionData>(code && `/api/activation/${code}/description`);
   // The radar layer of one product only, when one is selected: a large activation never loads them all.
   const radarShapes = useAnswer<RadarMap>(
     code && product && `/api/activation/${code}/radar/map?product=${encodeURIComponent(product)}`,
@@ -107,7 +108,7 @@ export default function Demo({ first }: { first: string | null }) {
 
           <div className="col-lg-4">
             {code ? (
-              <Card card={card} radar={radar} product={product} onProduct={setProduct} onClose={() => open(null)} />
+              <Card card={card} radar={radar} description={description} product={product} onProduct={setProduct} onClose={() => open(null)} />
             ) : (
               <div className="sheet">
                 <section className="what">

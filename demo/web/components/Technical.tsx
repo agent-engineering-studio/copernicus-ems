@@ -7,7 +7,17 @@ import { ask, day, failed, good, km2 } from "@/lib/format";
 import { useAnswer, useCodeInAddress, useLang } from "@/lib/hooks";
 import { LangContext, TEXT, useText } from "@/lib/i18n";
 import { phrase } from "@/lib/radar";
-import type { Agents as AgentsData, CardData, Failed, Listing, RadarData, RadarEntry, Row } from "@/lib/types";
+import type {
+  Agents as AgentsData,
+  CardData,
+  DescriptionData,
+  Failed,
+  Listing,
+  Quoted,
+  RadarData,
+  RadarEntry,
+  Row,
+} from "@/lib/types";
 
 /** A number with two decimals in the language of the page; "—" when there is none. */
 function fixed(value: number | null | undefined, lang: string, digits = 2): string {
@@ -126,7 +136,175 @@ function RadarRow({ name, aoi, entry }: { name: string; aoi: string; entry: Rada
   );
 }
 
-function Activation({ card, asked }: { card: CardData; asked: RadarData | Failed | null }) {
+/** The words a field was read from, in quotation marks: small, under it. */
+function Quote({ text }: { text: string }) {
+  const t = useText();
+  return <small className="quote">{t.lang === "it" ? `«${text}»` : `“${text}”`}</small>;
+}
+
+function Names({ title, items }: { title: string; items: Quoted[] }) {
+  const t = useText();
+  return (
+    <>
+      <h4>{title}</h4>
+      {items.length === 0 ? (
+        <p className="muted">{t.describe.nothing}</p>
+      ) : (
+        <ul className="fields">
+          {items.map((item, k) => (
+            <li key={`${item.name}-${k}`}>
+              {item.name}
+              <Quote text={item.quote} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function Description({ code, asked }: { code: string; asked: DescriptionData | Failed | null }) {
+  const t = useText();
+  const L = t.lang;
+  const d = t.describe;
+  const found = good(asked);
+  const file = found && "description" in found ? found : null;
+  return (
+    <section>
+      <h3>{d.title}</h3>
+      <p className="muted">{d.intro}</p>
+      {asked === null ? (
+        <p className="waiting">{t.reading}</p>
+      ) : failed(asked) ? (
+        <div className="alert alert-warning" role="alert">
+          {asked.error || t.noAnswer}
+        </div>
+      ) : file === null ? (
+        <p className="muted">{d.none}</p>
+      ) : (
+        <>
+          {file.description ? (
+            <>
+              <p>{file.description[L]}</p>
+              <p className="muted">
+                {d.by(d.provider(file.provider))} {d.notOfficial}
+              </p>
+            </>
+          ) : file.reason === "no official text" ? (
+            <p>{d.noText}</p>
+          ) : (
+            <>
+              <p>{d.rejected}</p>
+              {file.reason && (
+                <p>
+                  <code>{file.reason}</code>
+                </p>
+              )}
+            </>
+          )}
+          <p className="muted">
+            {d.providerLabel}: <code>{file.provider}</code> · <code>{file.model}</code> · {d.generated}{" "}
+            {day(file.generated_at, L)}
+          </p>
+
+          <h4>{d.official}</h4>
+          <p className="official-text">{file.source.reason || d.nothing}</p>
+          {(file.source.bulletins ?? []).length > 0 && (
+            <>
+              <h4>{d.bulletins}</h4>
+              <ul className="fields">
+                {(file.source.bulletins ?? []).map((b) => (
+                  <li key={b.url}>
+                    <a href={b.url} target="_blank" rel="noreferrer">
+                      {b.title || b.url} ↗
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {(file.source.related ?? []).length > 0 && (
+            <p className="muted">
+              {d.related}: {(file.source.related ?? []).join(", ")}
+            </p>
+          )}
+
+          <Names title={d.places} items={file.places ?? []} />
+          <Names title={d.rivers} items={file.rivers ?? []} />
+          <h4>{d.events}</h4>
+          {(file.related_events ?? []).length === 0 ? (
+            <p className="muted">{d.nothing}</p>
+          ) : (
+            <ul className="fields">
+              {(file.related_events ?? []).map((e, k) => (
+                <li key={`${e.date}-${k}`}>
+                  {e.date && <b>{e.date} </b>}
+                  {e.what}
+                  <Quote text={e.quote} />
+                </li>
+              ))}
+            </ul>
+          )}
+          <h4>{d.casualties}</h4>
+          {file.casualties == null ? (
+            <p className="muted">{d.nothing}</p>
+          ) : (
+            <p>
+              {d.deaths(file.casualties.deaths)}
+              <Quote text={file.casualties.quote} />
+            </p>
+          )}
+
+          <h4>{d.dropped}</h4>
+          {(file.dropped ?? []).length === 0 ? (
+            <p className="muted">{d.nothing}</p>
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{d.field}</th>
+                    <th>{d.value}</th>
+                    <th>{d.why}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(file.dropped ?? []).map((item, k) => (
+                    <tr key={k}>
+                      <th>
+                        <code>{item.field}</code>
+                      </th>
+                      <td>
+                        <code>{JSON.stringify(item.value)}</code>
+                      </td>
+                      <td>{item.why}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+      <h4>{t.tech.commandsTitle}</h4>
+      <p>{d.commands}</p>
+      <pre>
+        <code>{`make describe CODE=${code}\ncopernicus-ems describe ${code}`}</code>
+      </pre>
+      <p className="muted">{d.file(code)}</p>
+    </section>
+  );
+}
+
+function Activation({
+  card,
+  asked,
+  description,
+}: {
+  card: CardData;
+  asked: RadarData | Failed | null;
+  description: DescriptionData | Failed | null;
+}) {
   const t = useText();
   const L = t.lang;
   const radar = good(asked);
@@ -134,6 +312,8 @@ function Activation({ card, asked }: { card: CardData; asked: RadarData | Failed
   const named = card.products.filter((row) => results[row.product]);
   return (
     <>
+      <Description code={card.code} asked={description} />
+
       <section>
         <h3>{t.tech.cardTitle}</h3>
         <p>
@@ -302,6 +482,7 @@ export default function Technical({ first, agents }: { first: string | null; age
   const listing = useAnswer<Listing>(code ? null : "/api/activations");
   const card = useAnswer<CardData>(code && `/api/activation/${code}`);
   const radar = useAnswer<RadarData>(code && `/api/activation/${code}/radar`);
+  const description = useAnswer<DescriptionData>(code && `/api/activation/${code}/description`);
   const rows = good(listing)?.activations ?? [];
   const marks = useMarks(rows);
   useCodeInAddress(code);
@@ -383,7 +564,7 @@ export default function Technical({ first, agents }: { first: string | null; age
               {card.error || t.noAnswer}
             </div>
           ) : (
-            <Activation card={card} asked={radar} />
+            <Activation card={card} asked={radar} description={description} />
           )}
 
           <Agents agents={agents} />

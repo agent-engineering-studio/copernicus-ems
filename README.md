@@ -85,6 +85,7 @@ licence.
 | 🔁 | **Self-contained** | `RapidMapping()` opens its own HTTP client, retries 502s and network errors, closes it at the end. |
 | ✅ | **Quality check** | Compares a flood map with Sentinel-1 radar and says "coherent", "to check" or "not assessable": a screening that tells you which maps to look at again. |
 | 🛰️ | **Radar agreement** | Shows where a flood map and the radar agree: confirmed, map only, radar-only candidates, as a raster and polygons next to each pair. Candidates are never ground truth. |
+| 📝 | **Descriptions** | A model reads the official text of each activation and writes a short description in Italian and English, with places, rivers and events quoted from it. The code checks every number, name and quote; a description is model-written, never the official word. |
 | 🧪 | **Pure functions too** | Every parsing step is a plain function, if you have your own HTTP stack. |
 
 ### Why a library, and not the product package

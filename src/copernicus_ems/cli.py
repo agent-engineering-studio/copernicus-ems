@@ -19,7 +19,7 @@ import sys
 from collections.abc import Callable, Iterable, Sequence
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TYPE_CHECKING, Any, TextIO
 
 import httpx
 
@@ -28,8 +28,11 @@ from copernicus_ems.client import ProductEvents, RapidMapping
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS, OBSERVED_EVENT
 from copernicus_ems.export import mask_features, tagged_features, write_features
-from copernicus_ems.offline import INIT_CATEGORIES, init
+from copernicus_ems.offline import INIT_CATEGORIES, detail_path, init, read_activations
 from copernicus_ems.scenes import SENTINEL_1_GRD, SENTINEL_2_L2A, ScenePass, passes
+
+if TYPE_CHECKING:
+    from copernicus_ems.describe import Description
 
 #: Many floods are filed as ``Storm``: the features are filtered on ``5-Flood`` anyway.
 EXPORT_CATEGORIES = ("Flood", "Storm")
@@ -210,6 +213,15 @@ def _parser() -> argparse.ArgumentParser:
     radar.add_argument("--product", help="only this product, e.g. AOI01_DEL_MONIT01")
     radar.add_argument("--json", action="store_true", help="one JSON object per product")
 
+    describing = commands.add_parser(
+        "describe",
+        help="a short, checked description of an activation, by a language model",
+    )
+    describing.add_argument("code", metavar="CODE", nargs="?", help="e.g. EMSR762")
+    describing.add_argument("--all", action="store_true", help="every activation `init` saved")
+    describing.add_argument("--force", action="store_true", help="ask the model again")
+    describing.add_argument("--json", action="store_true", help="one JSON object per activation")
+
     dataset = commands.add_parser(
         "dataset",
         help="chips + index + train/val/test from the pairs already fetched (ml extra)",
@@ -247,6 +259,8 @@ def _parser() -> argparse.ArgumentParser:
 async def _run(args: argparse.Namespace, client: httpx.AsyncClient | None) -> int:
     if args.command == "init":
         return await _init(args, client)
+    if args.command == "describe":
+        return _describe(args)
     async with RapidMapping(client, directory=args.dir) as ems:
         if args.command == "list":
             for activation in await _activations(ems, args):
@@ -584,6 +598,62 @@ def _radar(ems: RapidMapping, args: argparse.Namespace) -> int:
     total = sum(r.km2.get("candidate", 0.0) for r in chosen if r.computed)
     print(f"{len(chosen)} products, {total:.2f} km² of candidates total", file=sys.stderr)
     return 0
+
+
+def _describe(args: argparse.Namespace) -> int:
+    if bool(args.code) == bool(args.all):
+        print("copernicus-ems: describe needs a CODE or --all", file=sys.stderr)
+        return 2
+    try:
+        from copernicus_ems.describe import describe, provider_from_env
+    except ImportError:  # pragma: no cover - without the geo extra
+        print("copernicus-ems: describe needs: pip install 'copernicus-ems[geo]'", file=sys.stderr)
+        return 2
+    provider = provider_from_env()  # fails once, with the hint, before any activation
+    if args.all:
+        try:
+            every = [a.code for a in read_activations(args.dir)]
+        except FileNotFoundError as exc:
+            raise EmsError("no activations saved: run copernicus-ems init first") from exc
+        codes = [c for c in every if detail_path(c, args.dir).is_file()]
+        if len(codes) < len(every):
+            print(f"{len(every) - len(codes)} without detail skipped", file=sys.stderr)
+    else:
+        codes = [args.code]
+    failed = 0
+    for code in codes:
+        try:
+            result = describe(code, args.dir, provider=provider, force=args.force)
+        except Exception as exc:
+            if not args.all:
+                if isinstance(exc, EmsError):
+                    raise
+                if isinstance(exc, OSError | ValueError):
+                    raise EmsError(f"{code}: {exc}") from exc
+                raise
+            failed += 1
+            why = str(exc) if isinstance(exc, EmsError) else f"{type(exc).__name__}: {exc}"
+            print(f"{code}\tfailed: {why}", file=sys.stderr)
+            continue
+        print(json.dumps(result.as_dict()) if args.json else _described(result))
+    if failed:
+        print(f"{failed} of {len(codes)} failed", file=sys.stderr)
+    return 1 if failed else 0
+
+
+def _described(result: Description) -> str:
+    state = "ok" if result.description else f"none ({result.reason})"
+    line = (
+        f"{result.activation}\t{result.provider}/{result.model}"
+        f"\tdescription: {state}\t{len(result.dropped)} dropped"
+    )
+    counts: dict[str, int] = {}
+    for item in result.dropped:
+        name = str(item.get("field", "?")) if isinstance(item, dict) else "?"
+        counts[name] = counts.get(name, 0) + 1
+    if counts:
+        line += "\tdropped: " + ", ".join(f"{k}\u00d7{n}" for k, n in counts.items())
+    return line
 
 
 def _dataset(ems: RapidMapping, args: argparse.Namespace) -> int:

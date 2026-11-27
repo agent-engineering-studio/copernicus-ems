@@ -37,6 +37,8 @@ cdse = ["copernicus-ems[ml]"]
 parquet = ["copernicus-ems[geo]", "pyarrow>=17"]
 # MCP server for LLM agents: copernicus-ems mcp.
 mcp = ["copernicus-ems[geo]", "mcp>=2.3"]
+# Model-written descriptions of each activation (Claude; a local server needs nothing more).
+ai = ["copernicus-ems[geo]", "anthropic>=2.14"]
 
 [project.scripts]
 copernicus-ems = "copernicus_ems.cli:main"
@@ -53,6 +55,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "anthropic>=2.14",
     "mcp>=1.20",
     "mypy>=1.13",
     "numpy>=1.26",

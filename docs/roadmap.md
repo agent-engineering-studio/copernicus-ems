@@ -238,6 +238,15 @@ emit image + label pairs.
     commands. Results are read from disk, made with `make radar CODE=...`.
     See [The demo](demo.md).
 
+### 4f. Descriptions of each activation
+
+!!! success "Done"
+    `copernicus-ems describe` and `copernicus_ems.describe` (`[ai]` extra): a
+    model reads the official text and writes a checked description in Italian
+    and English, and the places, rivers, events and casualties it names, each
+    with its quote, as `description.json`. The demo shows it, with a line that
+    says a model wrote it. See [Descriptions](describe.md).
+
 ### 5. Fine-tuning notebooks on EO foundation models (0.6)
 
 !!! success "First notebook done"

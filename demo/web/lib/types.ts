@@ -100,3 +100,41 @@ export type RadarShape = {
 };
 
 export type RadarMap = GeoJSON.FeatureCollection<GeoJSON.Geometry, RadarShape>;
+
+/** A name the model read in the official text, with the words it read it from. */
+export type Quoted = { name: string; quote: string };
+
+/**
+ * `<data directory>/<CODE>/description.json`, as `copernicus-ems describe` wrote it:
+ * a description written by a language model from the official text and the library's numbers.
+ */
+export type DescriptionFile = {
+  activation: string;
+  generated_at: string;
+  provider: "claude" | "local";
+  model: string;
+  prompt_version: number;
+  inputs_hash: string;
+  source: {
+    code: string;
+    name: string;
+    reason: string;
+    bulletins: { title: string; url: string }[];
+    related: string[];
+  };
+  facts: Record<string, unknown>;
+  /** null when the checks rejected it: `reason` says why. */
+  description: { it: string; en: string } | null;
+  reason: string | null;
+  places: Quoted[];
+  rivers: Quoted[];
+  related_events: { date: string; what: string; quote: string }[];
+  casualties: { deaths: number; quote: string } | null;
+  /** What the checks removed from the model's answer, and why. */
+  dropped: { field: string; value: unknown; why: string }[];
+};
+
+/** No file on disk, or one that could not be read. */
+export type NoDescription = { available: false };
+
+export type DescriptionData = DescriptionFile | NoDescription;
