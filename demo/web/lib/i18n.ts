@@ -156,6 +156,8 @@ const it = {
     scattered: "radar sparsa",
     scoresNote:
       "km² e punteggi contano solo dove la mappa ha guardato e il radar è valido. CSI, POD, FAR e bias trattano la mappa come riferimento; per una mappa non indipendente non dicono nulla.",
+    sameImageNote:
+      "Sulle mappe fatte con la stessa immagine radar l'accordo non prova nulla: le celle «confermata» e «solo mappa» restano vuote.",
     commandsTitle: "I comandi",
     commandsText:
       "Servono le credenziali CDSE e spendono PU: la demo non li lancia mai, legge quello che hanno scritto. Per i prodotti che mancano:",
@@ -329,6 +331,8 @@ const en: Text = {
     scattered: "radar scattered",
     scoresNote:
       "km² and scores count only where the map looked and the radar is valid. CSI, POD, FAR and bias take the map as the reference; for a map that is not independent they say nothing.",
+    sameImageNote:
+      "On maps made from the same radar image the agreement proves nothing: the “confirmed” and “map only” cells are left empty.",
     commandsTitle: "The commands",
     commandsText:
       "They need CDSE credentials and spend PU: the demo never runs them, it reads what they wrote. For the missing products:",

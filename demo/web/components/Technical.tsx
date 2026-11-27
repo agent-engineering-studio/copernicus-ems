@@ -28,6 +28,7 @@ function useMarks(rows: Row[]): Record<string, boolean> {
     for (const code of key.split(",")) {
       ask<RadarData>(`/api/activation/${code}/radar`, stop.signal)
         .then((radar) => setMarks((was) => ({ ...was, [code]: radar.checked > 0 })))
+        // On purpose: a failed request only drops the optional mark; the row stays and opens as usual.
         .catch(() => {});
     }
     return () => stop.abort();
@@ -37,11 +38,13 @@ function useMarks(rows: Row[]): Record<string, boolean> {
 
 const SCORES = ["csi", "pod", "far", "bias"] as const;
 
-/** The three files of a product: its two reports, and the agreement polygons when they were drawn. */
+/** The files of a product: its two reports, and the agreement polygons and raster when they were drawn. */
 function filesOf(entry: RadarEntry): string[] {
   const files = [...entry.files];
   const agreement = files.find((name) => name.endsWith("_agreement.json"));
-  if (agreement && entry.computed) files.push(agreement.replace(/\.json$/, ".geojson"));
+  if (agreement && entry.computed) {
+    files.push(agreement.replace(/\.json$/, ".geojson"), agreement.replace(/\.json$/, ".tif"));
+  }
   return files.sort();
 }
 
@@ -101,8 +104,9 @@ function RadarRow({ name, aoi, entry }: { name: string; aoi: string; entry: Rada
           </td>
           <td className="num">{fixed(entry.gap_hours, L, 1)}</td>
           <td>{entry.independent === null ? "—" : entry.independent ? t.tech.yes : t.tech.sameImage}</td>
-          {area(entry.km2?.confirmed)}
-          {area(entry.km2?.map_only)}
+          {/* Same image: the agreement proves nothing, so no "confirmed" or "map only" number. */}
+          {entry.independent === false ? dash : area(entry.km2?.confirmed)}
+          {entry.independent === false ? dash : area(entry.km2?.map_only)}
           {area(entry.km2?.candidate)}
           {area(entry.km2?.radar_scattered)}
           {SCORES.map((score) => (
@@ -231,6 +235,7 @@ function Activation({ card, asked }: { card: CardData; asked: RadarData | Failed
               </table>
             </div>
             <p className="muted">{t.tech.scoresNote}</p>
+            <p className="muted">{t.tech.sameImageNote}</p>
           </>
         )}
       </section>
