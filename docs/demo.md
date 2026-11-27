@@ -44,8 +44,8 @@ look at it), "non valutabile" or "non ancora controllata". With one product
 selected, the map also shows where the radar and the map agree (blue), the
 water only the map has (lighter blue) and, hatched orange, "possible water,
 not mapped". A paragraph explains how far to trust a map. No scores, no code.
-The radar sees only part of the water, so "da guardare" never means the map
-is in error.
+The radar sees only part of the water, so "da guardare" only means a person
+should look at the map: it is not a judgment on it.
 
 **`/tecnica`, the technical page** (link "Per chi sviluppa", it keeps
 `?code=`). The numbers behind each word: the card's numbers and the Python
@@ -67,6 +67,10 @@ To make them (needs CDSE credentials and Processing Units):
 ```bash
 make radar CODE=EMSR664   # quality --fetch, then radar, into $DATA_ROOT/copernicus-ems
 ```
+
+Like the library, `make radar` writes into `$COPERNICUS_EMS_DATA_DIR` when it
+is set, else into `$DATA_ROOT/copernicus-ems` (`data/copernicus-ems` by
+default): the same directory the demo reads.
 
 To see results at 0 PU, if you have the calibration pairs (the 24 Italian
 maps of the notebooks, from their `ems-data` artifact), copy them in:

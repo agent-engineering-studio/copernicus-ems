@@ -158,7 +158,7 @@ export default function Demo({ first }: { first: string | null }) {
         </div>
       </main>
 
-      <Footer />
+      <Footer toTech />
     </LangContext.Provider>
   );
 }

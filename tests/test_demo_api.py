@@ -338,3 +338,50 @@ def test_radar_files_untouched(client: TestClient, saved: Path) -> None:
     client.get("/api/activation/EMSR762/radar/map")
     assert {p: p.read_bytes() for p in files} == before
     assert sorted((saved / "EMSR762" / "sentinel-1").iterdir()) == sorted(before)
+
+
+def test_radar_is_cheap_on_a_fresh_store(
+    client: TestClient, saved: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    card = client.get("/api/activation/EMSR762").json()
+    _write(saved, "a", quality={})
+
+    def slow(*_: Any) -> None:
+        raise AssertionError("the radar marks built the card")
+
+    monkeypatch.setattr(api, "build", slow)
+    fresh = api.Store(saved)
+    fresh._ems = api.store._ems
+    monkeypatch.setattr(api, "store", fresh)
+    body = client.get("/api/activation/EMSR762/radar").json()
+    assert body["products"] == len(card["products"])
+    assert body["checked"] == 1
+    assert not fresh._built
+    assert client.get("/api/activation/EMSR935/radar").status_code == 404
+    assert client.get("/api/activation/EMSR935/radar/map").status_code == 404
+
+
+def test_radar_checked_counts_only_the_activation_products(client: TestClient, saved: Path) -> None:
+    _write(saved, "a", quality={})
+    _write(saved, "b", "AOI09_NOT_OURS", quality={})
+    body = client.get("/api/activation/EMSR762/radar").json()
+    assert set(body["results"]) == {PRODUCT, "AOI09_NOT_OURS"}
+    assert body["checked"] == 1
+    assert body["checked"] <= body["products"]
+
+
+def test_radar_map_skips_a_shape_without_geometry(client: TestClient, saved: Path) -> None:
+    x, y = _inside(client)
+    (_, _, geojson) = _write(saved, "a", quality={}, agreement={}, at=(x, y))
+    geo = json.loads(geojson.read_text())
+    geo["features"].append(
+        {"type": "Feature", "properties": {"class": "candidate"}, "geometry": None}
+    )
+    geojson.write_text(json.dumps(geo))
+    answer = client.get("/api/activation/EMSR762/radar/map")
+    assert answer.status_code == 200
+    assert {f["properties"]["class"] for f in answer.json()["features"]} == {
+        "confirmed",
+        "candidate",
+    }
+    assert len(answer.json()["features"]) == 2

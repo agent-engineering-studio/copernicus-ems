@@ -45,8 +45,8 @@ look at it), "non valutabile" or "non ancora controllata". With one product
 selected, the map also shows where the radar and the map agree (blue), the
 water only the map has (lighter blue) and, hatched orange, "possible water,
 not mapped". A paragraph explains how far to trust a map. No scores, no code.
-The radar sees only part of the water, so "da guardare" never means the map
-is in error.
+The radar sees only part of the water, so "da guardare" only means a person
+should look at the map: it is not a judgment on it.
 
 **`/tecnica`, the technical page** (link "Per chi sviluppa", it keeps
 `?code=`). The numbers behind each word: the card's numbers and the Python

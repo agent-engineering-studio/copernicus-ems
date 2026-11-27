@@ -149,7 +149,7 @@ export default function Card({ card, radar, product, onProduct, onClose }: Props
         <a href={card.link} target="_blank" rel="noreferrer">
           {t.official} ↗
         </a>
-        <a href={`/tecnica?code=${encodeURIComponent(card.code)}`}>{t.radar.developers}</a>
+        <a href={`/tecnica?code=${encodeURIComponent(card.code)}&lang=${t.lang}`}>{t.radar.developers}</a>
       </footer>
     </article>
   );

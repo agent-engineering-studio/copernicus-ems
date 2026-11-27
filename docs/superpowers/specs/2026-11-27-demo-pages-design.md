@@ -83,8 +83,8 @@ them.
   styling: the legend says the radar cannot confirm it.
 - One paragraph "Quanto fidarsi di una mappa" in the side sheet: the radar
   sees only part of the water (not under trees, in towns, or after it
-  recedes), so "da guardare" means a person should look, never that the map
-  is in error.
+  recedes), so "da guardare" only means a person should look at the map: it
+  is not a judgment on it.
 
 ### The technical page (`/tecnica`)
 

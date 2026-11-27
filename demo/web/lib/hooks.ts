@@ -27,6 +27,12 @@ export function useLang(): [Lang, (lang: Lang) => void] {
   }, [lang]);
   const choose = (next: Lang) => {
     setLang(next);
+    // a ?lang= in the address follows the choice, so that a reload keeps it
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("lang")) {
+      url.searchParams.set("lang", next);
+      window.history.replaceState(null, "", url);
+    }
     try {
       localStorage.setItem("lang", next);
     } catch {}

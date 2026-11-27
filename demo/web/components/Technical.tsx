@@ -306,7 +306,7 @@ export default function Technical({ first, agents }: { first: string | null; age
   const marks = useMarks(rows);
   useCodeInAddress(code);
 
-  const mapLink = code ? `/?code=${encodeURIComponent(code)}` : "/";
+  const mapLink = code ? `/?code=${encodeURIComponent(code)}&lang=${lang}` : `/?lang=${lang}`;
   const shown = good(card);
   return (
     <LangContext.Provider value={t}>

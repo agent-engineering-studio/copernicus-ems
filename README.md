@@ -229,7 +229,7 @@ make down                      # stop everything; the data stays
 
 Or, with uv and Node: `make init` then `make demo`. The radar column fills
 for the activations you check with `make radar CODE=EMSR664` (needs CDSE
-credentials). More in
+credentials and Processing Units, PU). More in
 [demo/README.md](demo/README.md).
 
 **For AI agents.** The page says whether the MCP server is on and how to

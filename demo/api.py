@@ -279,6 +279,25 @@ class Store:
             self._built[code] = done
             return done
 
+    async def labels(self, code: str) -> list[str]:
+        """The products the card lists, without building it (the radar marks ask per row).
+
+        Built already: its rows. Else the products with an AOI and an observed-event
+        layer, as ``build`` keeps them; from disk after ``init``, nothing downloaded.
+        An unknown activation is a ``LookupError``.
+        """
+        done = self._built.get(code)
+        if done is not None:
+            return [row["product"] for row in done.card["products"]]
+        found, _ = await self.activations()
+        if not any(a.code == code for a in found):
+            raise LookupError(code)
+        return [
+            p.label
+            for p in await self.products(code)
+            if p.aoi_extent is not None and OBSERVED_EVENT in p.layers
+        ]
+
     async def card(self, code: str) -> dict[str, Any]:
         card = (await self.built(code)).card
         return {**card, "saved": detail_path(code, self.directory).is_file()}
@@ -382,24 +401,32 @@ def radar_shapes(directory: Path, code: str, product: str | None) -> dict[str, A
         path, body = _preferred(candidates)
         try:
             shapes = json.loads(path.with_suffix(".geojson").read_bytes())
-            for f in shapes["features"]:
-                klass = f["properties"]["class"]
-                geometry = shape(f["geometry"])
-                features.append(
-                    _feature(
-                        geometry,
-                        {
-                            "class": klass,
-                            "km2": f["properties"].get("km2"),
-                            "product": name,
-                            "independent": body.get("independent"),
-                        },
-                    )
-                )
+            listed = shapes["features"]
         except FileNotFoundError:
             continue
         except (OSError, ValueError, KeyError, TypeError):
             log.warning("unreadable radar shapes %s", path, exc_info=True)
+            continue
+        for f in listed:
+            # one shape without a usable geometry is left out, not the whole map
+            try:
+                klass = f["properties"]["class"]
+                geometry = shape(f["geometry"])
+                if geometry.is_empty:
+                    raise ValueError("empty geometry")
+                feature = _feature(
+                    geometry,
+                    {
+                        "class": klass,
+                        "km2": f["properties"].get("km2"),
+                        "product": name,
+                        "independent": body.get("independent"),
+                    },
+                )
+            except Exception:
+                log.warning("unreadable radar shape in %s", path, exc_info=True)
+                continue
+            features.append(feature)
     return {"type": "FeatureCollection", "features": features}
 
 
@@ -456,10 +483,10 @@ async def activation_map(request: Request) -> dict[str, Any]:
 async def radar(request: Request) -> dict[str, Any]:
     code = _code(request)
     results = radar_results(store.directory, code)
-    card = await store.card(code)
+    labels = await store.labels(code)  # cheap: the list asks this once per row
     return {
-        "checked": len(results),
-        "products": len(card["products"]),
+        "checked": len(results.keys() & set(labels)),
+        "products": len(labels),
         "command": f"make radar CODE={code}",
         "results": results,
     }
@@ -467,7 +494,7 @@ async def radar(request: Request) -> dict[str, Any]:
 
 async def radar_map(request: Request) -> dict[str, Any]:
     code = _code(request)
-    await store.card(code)  # an unknown activation is a 404, not an empty map
+    await store.labels(code)  # an unknown activation is a 404, not an empty map
     return radar_shapes(store.directory, code, request.query_params.get("product"))
 
 

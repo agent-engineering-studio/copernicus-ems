@@ -76,6 +76,7 @@ const it = {
   howTitle: "Com'è fatta",
   howText:
     "Una pagina Next.js e Leaflet sopra una piccola API Python (Starlette) che chiama la libreria. La pagina per chi sviluppa mostra le righe di Python che danno i numeri di ogni scheda.",
+  howLink: "Apri la pagina per chi sviluppa →",
   docs: "Documentazione",
   code: "Codice su GitHub",
   agentsTitle: "Per gli agenti AI",
@@ -251,6 +252,7 @@ const en: Text = {
   howTitle: "How it is made",
   howText:
     "A Next.js and Leaflet page over a small Python API (Starlette) that calls the library. The page for developers shows the lines of Python that give the numbers of every card.",
+  howLink: "Open the page for developers →",
   docs: "Documentation",
   code: "Code on GitHub",
   agentsTitle: "For AI agents",

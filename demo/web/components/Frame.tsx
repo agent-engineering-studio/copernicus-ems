@@ -49,8 +49,8 @@ export function Header({ lang, onLang }: { lang: Lang; onLang: (lang: Lang) => v
   );
 }
 
-/** The footer of both pages: the data, the limit, how it is made, the links. */
-export function Footer() {
+/** The footer of both pages: the data, the limit, how it is made, the links (on `/`, also to `/tecnica`). */
+export function Footer({ toTech = false }: { toTech?: boolean }) {
   const t = useText();
   return (
     <footer className="it-footer">
@@ -68,6 +68,11 @@ export function Footer() {
             <section className="col-md-4">
               <h2 className="h6">{t.howTitle}</h2>
               <p>{t.howText}</p>
+              {toTech && (
+                <p>
+                  <a href={`/tecnica?lang=${t.lang}`}>{t.howLink}</a>
+                </p>
+              )}
             </section>
           </div>
         </div>

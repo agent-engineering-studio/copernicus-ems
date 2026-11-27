@@ -1,4 +1,5 @@
-// The radar results in plain words: one short phrase per map, never a judgment of error.
+// The radar results in plain words: one short phrase per map; "da guardare" only means a person
+// should look at the map, it is not a judgment on it.
 
 import type { Text } from "./i18n";
 import type { RadarEntry, RadarMap } from "./types";
