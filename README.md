@@ -215,7 +215,8 @@ Open the result in QGIS or drop it on [geojson.io](https://geojson.io).
 
 A map that explains, in three steps, what the library is for. It shows every
 emergency in Italy, where the satellites looked and the water they saw, with
-the Python behind each number.
+how far the Sentinel-1 radar backs each map, in plain words. A second page,
+`/tecnica`, has the numbers, the scores and the Python behind them.
 
 ![The demo on EMSR664, Emilia-Romagna, May 2023](https://raw.githubusercontent.com/agent-engineering-studio/copernicus-ems/main/docs/images/demo-emsr664.png)
 
@@ -226,7 +227,9 @@ make up                        # + the MCP server for AI agents: http://127.0.0.
 make down                      # stop everything; the data stays
 ```
 
-Or, with uv and Node: `make init` then `make demo`. More in
+Or, with uv and Node: `make init` then `make demo`. The radar column fills
+for the activations you check with `make radar CODE=EMSR664` (needs CDSE
+credentials and Processing Units, PU). More in
 [demo/README.md](demo/README.md).
 
 **For AI agents.** The page says whether the MCP server is on and how to

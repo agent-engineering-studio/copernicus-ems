@@ -4,7 +4,8 @@ A map of Italy that says, in three steps, what copernicus-ems is for. One dot
 for each Copernicus EMS emergency (floods and storms, from 2023). Click one
 and the map shows the dashed boxes where the satellites looked (the
 observation masks) and, in blue, the water they saw. A card gives the same
-numbers, product by product, with the lines of Python that compute them.
+numbers, product by product, and how far the radar backs each map. The
+technical page (`/tecnica`) has the Python and the scores.
 
 ![The demo: the emergencies in Italy, and what copernicus-ems is for](../docs/images/demo.png)
 
@@ -34,6 +35,50 @@ read is saved, so the second visit is fast.
 
 `/?code=EMSR664` opens the page on that activation, to link to it; `&lang=en` or
 `&lang=it` chooses the language.
+
+## The two pages
+
+**`/`, the plain page.** The map, the list and the card. In the card, a
+**Radar** column says, for each product, how far the Sentinel-1 radar backs
+the map: "il radar conferma", "da guardare" (worth a look: a person should
+look at it), "non valutabile" or "non ancora controllata". With one product
+selected, the map also shows where the radar and the map agree (blue), the
+water only the map has (lighter blue) and, hatched orange, "possible water,
+not mapped". A paragraph explains how far to trust a map. No scores, no code.
+The radar sees only part of the water, so "da guardare" only means a person
+should look at the map: it is not a judgment on it.
+
+**`/tecnica`, the technical page** (link "Per chi sviluppa", it keeps
+`?code=`). The numbers behind each word: the card's numbers and the Python
+that gives them, one row per product of the radar check (verdict, flags, gap
+in hours, independent, km² per class, CSI, POD, FAR, bias), the commands, the
+files, the limits, and the MCP tools for AI agents. `/tecnica?code=EMSR664`
+opens it on an activation.
+
+## Where the radar results come from
+
+The demo never fetches and never runs the detector: it reads the files that
+`copernicus-ems quality` and `copernicus-ems radar` wrote beside each
+Sentinel-1 pair, in `$DATA_ROOT/copernicus-ems/<CODE>/sentinel-1/`
+(`*_quality.json`, `*_agreement.json`, `*_agreement.geojson`). A product with
+none shows "non ancora controllata". Nothing is published with the data.
+
+To make them (needs CDSE credentials and Processing Units):
+
+```bash
+make radar CODE=EMSR664   # quality --fetch, then radar, into $DATA_ROOT/copernicus-ems
+```
+
+To see results at 0 PU, if you have the calibration pairs (the 24 Italian
+maps of the notebooks, from their `ems-data` artifact), copy them in:
+
+```bash
+mkdir -p data/copernicus-ems/EMSR664
+cp -R data/calibration/copernicus-ems/EMSR664/sentinel-1 data/copernicus-ems/EMSR664/
+```
+
+The files are read as they are and never changed. Details:
+[Quality check](../docs/quality.md) and [Radar agreement](../docs/radar.md).
 
 ## What is in it
 
@@ -72,6 +117,8 @@ curl http://localhost:3000/api/health
 curl http://localhost:3000/api/activations
 curl http://localhost:3000/api/activation/EMSR762
 curl http://localhost:3000/api/activation/EMSR762/map
+curl http://localhost:3000/api/activation/EMSR762/radar
+curl "http://localhost:3000/api/activation/EMSR762/radar/map?product=AOI01_GRA_PRODUCT"
 ```
 
 | Variable | What it does | Default |

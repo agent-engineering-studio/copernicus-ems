@@ -1,6 +1,7 @@
 // The words of the page, in Italian and in English.
 
 import { createContext, useContext } from "react";
+import type { Reason } from "./radar";
 
 export const LANGS = ["it", "en"] as const;
 export type Lang = (typeof LANGS)[number];
@@ -74,7 +75,8 @@ const it = {
     "Una mappa satellitare è un limite inferiore: allagamenti brevi, urbani o sotto la vegetazione possono non comparire. Non è un servizio di allerta: per il pericolo valgono le comunicazioni della Protezione Civile.",
   howTitle: "Com'è fatta",
   howText:
-    "Una pagina Next.js e Leaflet sopra una piccola API Python (Starlette) che chiama la libreria. Ogni scheda mostra le righe di Python che danno i suoi numeri.",
+    "Una pagina Next.js e Leaflet sopra una piccola API Python (Starlette) che chiama la libreria. La pagina per chi sviluppa mostra le righe di Python che danno i numeri di ogni scheda.",
+  howLink: "Apri la pagina per chi sviluppa →",
   docs: "Documentazione",
   code: "Codice su GitHub",
   agentsTitle: "Per gli agenti AI",
@@ -92,6 +94,90 @@ const it = {
   connectHttp: "Collega Claude Code a questo server",
   startMcp: "Accendi il server MCP",
   connectStdio: "Oppure senza Docker, sul tuo computer",
+  radar: {
+    title: "Radar",
+    agrees: "il radar conferma",
+    look: "da guardare",
+    cannot: "non valutabile",
+    unchecked: "non ancora controllata",
+    flags: {
+      possibly_partial: "forse la mappa copre solo una parte dell'acqua",
+      much_unmapped: "il radar vede altre ampie zone di acqua possibile, non mappate",
+      little_confirmed: "il radar ritrova poca dell'acqua mappata",
+    } as Record<string, string>,
+    flagOther: "il radar segnala altro da guardare",
+    reasons: {
+      sameImage: "mappa fatta con la stessa immagine radar: non si può usare per confermarla",
+      resolution: "il confronto è tarato su immagini da 40 m",
+      gap: "il radar è passato troppo lontano dal momento della mappa",
+      coverage: "il radar copre troppo poco dell'area guardata",
+      noPassTime: "non si sa quando è passato il radar",
+      noReference: "manca un'immagine radar di prima dell'evento",
+      tooLittle: "troppo poca acqua mappata per un confronto",
+    } as Record<Reason, string>,
+    checked: (n: number, of: number) =>
+      n === 1 ? `1 mappa su ${of} controllata col radar.` : `${n} mappe su ${of} controllate col radar.`,
+    legendConfirmed: "Acqua mappata, vista anche dal radar",
+    legendMapOnly: "Acqua mappata, non vista dal radar",
+    legendCandidate: "Acqua possibile, non mappata",
+    legendNotIndependent: "Non indipendente: il radar non può confermarla",
+    readingRadar: "Leggo il controllo radar…",
+    trustTitle: "Quanto fidarsi di una mappa",
+    trustText:
+      "Dove è stato fatto, il controllo confronta l'acqua disegnata con un'immagine radar Sentinel-1 presa vicino al momento della mappa. Il radar vede solo una parte dell'acqua: non sotto gli alberi, non tra le case, non dopo che si è ritirata. Per questo «da guardare» vuol dire che conviene che una persona guardi la mappa, non è un giudizio sulla mappa; e l'acqua possibile in arancione è un indizio, non una certezza.",
+    developers: "Per chi sviluppa →",
+  },
+  tech: {
+    title: "Per chi sviluppa",
+    toMap: "← mappa",
+    intro:
+      "Le stesse attivazioni della mappa, con i numeri dietro ogni parola: i km² di ogni prodotto, il controllo radar con i suoi punteggi, i file che lo contengono, il Python e i comandi che li producono, gli strumenti MCP.",
+    pick: "Scegli un'emergenza. «radar ✓» segna quelle con risultati del controllo radar su disco.",
+    mark: "radar ✓",
+    markLabel: "ha risultati del controllo radar",
+    cardTitle: "I numeri della scheda",
+    features: "elementi",
+    flooded: "acqua km²",
+    observed: "guardata km²",
+    radarTitle: "Il controllo radar",
+    radarIntro:
+      "Una riga per prodotto, dai file che copernicus-ems quality e copernicus-ems radar hanno scritto accanto alla coppia Sentinel-1; «—» dove non c'è. La demo li legge così come sono.",
+    checked: (n: number, of: number) => `${n} prodotti su ${of} controllati col radar.`,
+    said: "In parole",
+    verdict: "Verdetto",
+    flags: "Segnali",
+    gap: "Scarto h",
+    independent: "Indipendente",
+    yes: "sì",
+    sameImage: "no, stessa immagine",
+    km2: "km²",
+    confirmed: "confermata",
+    mapOnly: "solo mappa",
+    candidate: "candidata",
+    scattered: "radar sparsa",
+    scoresNote:
+      "km² e punteggi contano solo dove la mappa ha guardato e il radar è valido. CSI, POD, FAR e bias trattano la mappa come riferimento; per una mappa non indipendente non dicono nulla.",
+    sameImageNote:
+      "Sulle mappe fatte con la stessa immagine radar l'accordo non prova nulla: le celle «confermata» e «solo mappa» restano vuote.",
+    commandsTitle: "I comandi",
+    commandsText:
+      "Servono le credenziali CDSE e spendono PU: la demo non li lancia mai, legge quello che hanno scritto. Per i prodotti che mancano:",
+    stepByStep: "Oppure un passo alla volta:",
+    pythonRadar: "Lo stesso in Python (extra [ml])",
+    filesTitle: "I file",
+    filesText: (code: string) => `In <directory dei dati>/${code}/sentinel-1/, accanto a ogni coppia:`,
+    noFiles: "Nessun file del controllo radar per questa attivazione.",
+    docsQuality: "Il controllo di qualità, nella documentazione",
+    docsRadar: "L'accordo con il radar, nella documentazione",
+    limitsTitle: "I limiti",
+    limits: [
+      "È uno screening, non un giudizio sulla mappa: «da guardare» vuol dire che conviene che una persona la guardi.",
+      "Sulle mappe indipendenti la POD è quasi sempre sotto 0,2: il radar non vede l'acqua sotto gli alberi, tra le case, né quella già ritirata. Un punteggio basso è il caso normale.",
+      "Le mappe fatte con la stessa immagine radar non provano nulla: i loro punteggi non vanno citati come conferma.",
+      "Le candidate non sono verità a terra: dicono dove guardare di nuovo, e possono essere terreno bagnato.",
+      "Solo immagini da 40 m con un'immagine di prima dell'evento; tarato su un campione di pianura italiana.",
+    ],
+  },
   agentsTry: "Prova a chiedere: «Quali alluvioni sono state mappate in Italia nel 2023, e quanta acqua ha visto EMSR664 in Emilia-Romagna?»",
 };
 
@@ -165,7 +251,8 @@ const en: Text = {
     "A satellite map is a lower bound: short, urban or under-canopy floods may not show. This is not an alert service: for danger, the official word is the Civil Protection's.",
   howTitle: "How it is made",
   howText:
-    "A Next.js and Leaflet page over a small Python API (Starlette) that calls the library. Every card shows the lines of Python that give its numbers.",
+    "A Next.js and Leaflet page over a small Python API (Starlette) that calls the library. The page for developers shows the lines of Python that give the numbers of every card.",
+  howLink: "Open the page for developers →",
   docs: "Documentation",
   code: "Code on GitHub",
   agentsTitle: "For AI agents",
@@ -183,6 +270,90 @@ const en: Text = {
   connectHttp: "Connect Claude Code to this server",
   startMcp: "Start the MCP server",
   connectStdio: "Or without Docker, on your computer",
+  radar: {
+    title: "Radar",
+    agrees: "the radar agrees",
+    look: "worth a look",
+    cannot: "cannot be judged",
+    unchecked: "not checked yet",
+    flags: {
+      possibly_partial: "the map may cover only part of the water",
+      much_unmapped: "the radar sees other wide patches of possible water, not mapped",
+      little_confirmed: "the radar finds little of the mapped water",
+    },
+    flagOther: "the radar points to something else to look at",
+    reasons: {
+      sameImage: "map made from the same radar image: it cannot be used to confirm it",
+      resolution: "the comparison is tuned for 40 m images",
+      gap: "the radar passed too long before or after the map",
+      coverage: "the radar covers too little of the area looked at",
+      noPassTime: "the time of the radar pass is unknown",
+      noReference: "no radar image from before the event",
+      tooLittle: "too little mapped water to compare",
+    },
+    checked: (n, of) =>
+      of === 1 ? `${n} of 1 map checked with the radar.` : `${n} of ${of} maps checked with the radar.`,
+    legendConfirmed: "Mapped water, seen by the radar too",
+    legendMapOnly: "Mapped water the radar does not see",
+    legendCandidate: "Possible water, not mapped",
+    legendNotIndependent: "Not independent: the radar cannot confirm it",
+    readingRadar: "Reading the radar check…",
+    trustTitle: "How far to trust a map",
+    trustText:
+      "Where it has been run, the check compares the water drawn with a Sentinel-1 radar image taken close to the time of the map. The radar sees only part of the water: not under trees, not among buildings, not after it recedes. So “worth a look” means a person should look at the map, not a judgment on the map; and the possible water in orange is a hint, not a certainty.",
+    developers: "For developers →",
+  },
+  tech: {
+    title: "For developers",
+    toMap: "← map",
+    intro:
+      "The same activations as the map, with the numbers behind every word: the km² of each product, the radar check with its scores, the files that hold it, the Python and the commands that make them, the MCP tools.",
+    pick: "Pick an emergency. “radar ✓” marks those with radar check results on disk.",
+    mark: "radar ✓",
+    markLabel: "has radar check results",
+    cardTitle: "The numbers of the card",
+    features: "features",
+    flooded: "water km²",
+    observed: "looked at km²",
+    radarTitle: "The radar check",
+    radarIntro:
+      "One row per product, from the files that copernicus-ems quality and copernicus-ems radar wrote beside the Sentinel-1 pair; “—” where there are none. The demo reads them as they are.",
+    checked: (n, of) => `${n} of ${of} products checked with the radar.`,
+    said: "In words",
+    verdict: "Verdict",
+    flags: "Flags",
+    gap: "Gap h",
+    independent: "Independent",
+    yes: "yes",
+    sameImage: "no, same image",
+    km2: "km²",
+    confirmed: "confirmed",
+    mapOnly: "map only",
+    candidate: "candidate",
+    scattered: "radar scattered",
+    scoresNote:
+      "km² and scores count only where the map looked and the radar is valid. CSI, POD, FAR and bias take the map as the reference; for a map that is not independent they say nothing.",
+    sameImageNote:
+      "On maps made from the same radar image the agreement proves nothing: the “confirmed” and “map only” cells are left empty.",
+    commandsTitle: "The commands",
+    commandsText:
+      "They need CDSE credentials and spend PU: the demo never runs them, it reads what they wrote. For the missing products:",
+    stepByStep: "Or one step at a time:",
+    pythonRadar: "The same in Python ([ml] extra)",
+    filesTitle: "The files",
+    filesText: (code) => `In <data directory>/${code}/sentinel-1/, beside each pair:`,
+    noFiles: "No radar check files for this activation.",
+    docsQuality: "The quality check, in the documentation",
+    docsRadar: "The radar agreement, in the documentation",
+    limitsTitle: "The limits",
+    limits: [
+      "A screening, not a judgment on the map: “worth a look” means a person should look at it.",
+      "On independent maps POD is mostly under 0.2: the radar does not see water under trees, among buildings, or after it recedes. A low score is the usual case.",
+      "Maps made from the same radar image prove nothing: their scores must not be quoted as confirmation.",
+      "Candidates are not ground truth: they say where to look again, and may be wet soil.",
+      "40 m images only, with a pre-event image; tuned on a sample of Italian lowlands.",
+    ],
+  },
   agentsTry: "Try asking: “Which floods were mapped in Italy in 2023, and how much water did EMSR664 see in Emilia-Romagna?”",
 };
 
