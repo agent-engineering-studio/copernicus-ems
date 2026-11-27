@@ -224,3 +224,70 @@ def test_agree_pairs_select_and_rewrite(tmp_path: Path) -> None:
     assert agreement_paths(a)["tif"].exists()
     assert a.labels.read_bytes() == before
     assert len(agree_pairs(tmp_path, write=False)) == 2
+
+
+# --- radar command ---------------------------------------------------------
+
+from copernicus_ems.cli import main  # noqa: E402
+
+
+def test_radar_command_text(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    _pair40(tmp_path, "AOI01_DEL_PRODUCT")
+    _pair40(tmp_path, "AOI02_DEL_PRODUCT", made_from=[{"sensor": "Sentinel-1"}])
+    assert main(["--dir", str(tmp_path), "radar", "EMSR1"]) == 0
+    out = capsys.readouterr()
+    one, two = out.out.splitlines()
+    cols = one.split("\t")
+    assert cols[0] == "AOI01_DEL_PRODUCT" and cols[1].startswith("confirmed ")
+    assert cols[1].endswith(" km²") and cols[2].startswith("map only ")
+    assert cols[3].startswith("candidate ") and cols[4].startswith("CSI ")
+    assert "not independent" not in one and two.endswith("\tnot independent")
+    assert "2 products, " in out.err
+    assert main(["--dir", str(tmp_path), "radar", "EMSR1", "--aoi", "2"]) == 0
+    assert capsys.readouterr().out.startswith("AOI02_DEL_PRODUCT")
+    assert main(["--dir", str(tmp_path), "radar", "EMSR1", "--product", "AOI01_DEL_PRODUCT"]) == 0
+    assert capsys.readouterr().out.startswith("AOI01_DEL_PRODUCT")
+
+
+def test_radar_command_skipped_and_json(
+    tmp_path: Path, labels: LabelRaster, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_pair(tmp_path, "EMSR1", "AOI01_DEL_PRODUCT", labels)
+    assert main(["--dir", str(tmp_path), "radar", "EMSR1"]) == 0
+    assert "AOI01_DEL_PRODUCT\tskipped: " in capsys.readouterr().out
+    assert main(["--dir", str(tmp_path), "radar", "EMSR1", "--json"]) == 0
+    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert len(rows) == 1 and rows[0]["computed"] is False and rows[0]["reason"]
+
+
+def test_radar_command_json_equals_as_dict(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _pair40(tmp_path)
+    assert main(["--dir", str(tmp_path), "radar", "EMSR1", "--json"]) == 0
+    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    expected = [r.as_dict() for r in agree_pairs(tmp_path, write=False)]
+    for row in rows:
+        row.pop("files")
+    for exp in expected:
+        exp.pop("files")
+    assert rows == expected
+
+
+def test_radar_command_no_pairs_and_filter(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["--dir", str(tmp_path), "radar", "EMSR9"]) == 1
+    assert "no pairs for EMSR9: run copernicus-ems quality EMSR9 --fetch" in capsys.readouterr().err
+    _pair40(tmp_path)
+    assert main(["--dir", str(tmp_path), "radar", "EMSR1", "--aoi", "7"]) == 1
+    assert "matching --aoi 7" in capsys.readouterr().err
+
+
+def test_radar_prefers_40m_pair() -> None:
+    from types import SimpleNamespace
+
+    from copernicus_ems.cli import _prefer_40
+
+    low, high = SimpleNamespace(resolution_m=20.0), SimpleNamespace(resolution_m=40.0)
+    assert _prefer_40({"a": [low, high], "b": [low]}) == [high, low]
