@@ -6,6 +6,45 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-28
+
+### Added
+
+The Copernicus EMS logic that lived in Limen, moved here so that an
+application only wires it. Geometry stays behind the `geo` extra; data goes in
+and out as plain types (your geometries, your `httpx.AsyncClient`).
+
+- `copernicus_ems.ids` (core): stable ids as strings. `product_id(product)`
+  (`EMSR664-aoi01-DEL0`), `label_product_id(code, label)`, `polygon_id`,
+  `polygon_product_id`, `is_monitoring`, `aoi_label`, and
+  `delivered_product_ids(detail)`: the products the detail lists with at least
+  one layer of any format.
+- `copernicus_ems.truth` (`[geo]` extra): `fetch_activation_truth(client,
+  activation)` and the pure `activation_truth(...)` give the flood polygons
+  (`ObservedFlood`, one per polygon part, with its area) and the observation
+  masks (`ObservationMask`) of an activation. A mask is given only where the
+  observed layer was read; products never delivered, delivered without an
+  observed layer, and unreadable layers are told apart (`absent_masks`,
+  `read_products`, `delivered_without_event`, `errors`). Areas are geodesic,
+  or planar with `area_crs=3035`.
+- `copernicus_ems.reports` (core; `read_classes` needs `[geo]`): the
+  `_quality.json` and `_agreement.json` files read back without numpy or
+  rasterio. `read_quality`, `read_agreement`, `read_classes`, and
+  `collect_reports(directory)`: one `ProductReport` per product, the most
+  recent pair, with notes on what was skipped or chosen.
+- `copernicus_ems.overlay` (`[geo]` extra): observed water over the caller's
+  polygons, in a metric CRS. `places_hit(water, places)`: the places touched
+  (municipalities or any others, as `(key, polygon)`), with km² of the union.
+  `split_by_zones(water, zones, classes=...)`: the water per class of any zone
+  layer, the highest class wins, and the part outside raw and filtered.
+- `attribution(year)`, the sentence the CEMS licence asks for, and
+  `CATALOGUE_FROM_YEAR`.
+- Parity with Limen's implementation on fixed inputs
+  (`tests/test_limen_parity.py`, reference written by
+  `scripts/limen_parity.py` at Limen `3b0e1ee`).
+
+## [0.10.0] - 2026-11-27
+
 ### Added
 
 - `copernicus-ems describe CODE | --all` and `copernicus_ems.describe` (`[ai]`

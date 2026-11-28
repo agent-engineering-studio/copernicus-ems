@@ -6,6 +6,7 @@ from typing import Any
 
 from copernicus_ems.catalogue import (
     ACTIVATIONS_URL,
+    CATALOGUE_FROM_YEAR,
     DETAIL_URL,
     Activation,
     ActivationsPage,
@@ -13,6 +14,7 @@ from copernicus_ems.catalogue import (
     Layer,
     Product,
     activations_url,
+    attribution,
     detail_url,
     parse_activations,
     parse_detail,
@@ -44,6 +46,15 @@ from copernicus_ems.events import (
     OBSERVED_EVENT,
     parse_layer,
     select_features,
+)
+from copernicus_ems.ids import (
+    aoi_label,
+    delivered_product_ids,
+    is_monitoring,
+    label_product_id,
+    polygon_id,
+    polygon_product_id,
+    product_id,
 )
 from copernicus_ems.offline import (
     ACTIVATIONS_FILE,
@@ -97,6 +108,7 @@ def __getattr__(name: str) -> Any:
 __all__ = [
     "ACTIVATIONS_FILE",
     "ACTIVATIONS_URL",
+    "CATALOGUE_FROM_YEAR",
     "DATA_ROOT_FOLDER",
     "DETAIL_FILE",
     "DETAIL_URL",
@@ -127,7 +139,10 @@ __all__ = [
     "__version__",
     "activations_path",
     "activations_url",
+    "aoi_label",
+    "attribution",
     "default_directory",
+    "delivered_product_ids",
     "detail_path",
     "detail_url",
     "fetch_activations",
@@ -137,6 +152,8 @@ __all__ = [
     "fetch_scenes",
     "find_scenes",
     "init",
+    "is_monitoring",
+    "label_product_id",
     "layer_path",
     "parse_activations",
     "parse_detail",
@@ -144,6 +161,9 @@ __all__ = [
     "parse_scenes",
     "parse_time",
     "passes",
+    "polygon_id",
+    "polygon_product_id",
+    "product_id",
     "read_activations",
     "read_products",
     "scene_search_body",
