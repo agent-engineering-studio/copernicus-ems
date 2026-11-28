@@ -57,6 +57,19 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
+The water over one place, a municipality or any polygon of yours (`[geo]`):
+
+```python
+from copernicus_ems.places import water_over_place
+
+for a in water_over_place(boundary_geojson):  # the saved copy of `copernicus-ems init`
+    print(a.activation_code, a.water_km2, a.observed_share)  # read the share first
+```
+
+`observed_share` is how much of the place a satellite looked at. A low share
+makes `water_km2` a figure about a small part: the rest is unknown, never dry.
+An activation that did not look at the place is not in the list.
+
 Areas, with the mask (`[geo]`):
 
 ```python
@@ -115,6 +128,7 @@ Data go to `$DATA_ROOT/copernicus-ems` (else `~/.cache/copernicus-ems`);
 9. **A quality verdict is a screening, not a judgment.** "to check" means a human should look; never call a map wrong.
 10. **Radar-only water is a candidate, never ground truth.** A `candidate` patch may be unmapped water or ploughed, wet soil; never score it as a missed flood. `map_only` is not a map error: radar cannot see water under trees, in towns, or after it receded. A report with `independent: false` (the map was drawn on Sentinel-1) proves nothing: never quote its `confirmed` area or its scores as confirmation.
 11. A description is model-written from the official text: quote extracted fields with their quote, never as the official word.
+12. **Observed water is not a hazard.** It is what a satellite saw after one event: a lower bound, never an alert, a forecast or a risk level. Read how much of a place was observed (`observed_share`) before its km² of water, and say "unknown" for the rest.
 
 ## Without writing code
 
@@ -129,13 +143,13 @@ copernicus-ems describe EMSR664                # a checked description from the 
 ```
 
 As tools for an agent (MCP): `copernicus-ems mcp` (stdio), or in Docker
-`make up` → `http://127.0.0.1:8770/mcp`. Tools: `list_activations`,
+`make up` → `http://127.0.0.1:8769/mcp`. Tools: `list_activations`,
 `activation_summary`, `compare_products`, `export_observed_events`,
 `find_scenes`.
 
 ```bash
 claude mcp add copernicus-ems -- uvx --from 'copernicus-ems[mcp]' copernicus-ems mcp
-claude mcp add --transport http copernicus-ems http://127.0.0.1:8770/mcp
+claude mcp add --transport http copernicus-ems http://127.0.0.1:8769/mcp
 ```
 
 ## When reporting results

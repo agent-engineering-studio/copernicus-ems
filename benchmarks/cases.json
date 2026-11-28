@@ -1,0 +1,421 @@
+{
+ "about": "The 24 Italian flood maps of notebook 08, each with what the radar measured inside its observation mask (40 m pairs with a pre-event reference, full radar coverage) and the verdict the quality check must give. Measurements are those of docs/quality.md, to the decimals printed there.",
+ "resolution_m": 40.0,
+ "cases": [
+  {
+   "activation": "EMSR659",
+   "product": "AOI04_FEP_PRODUCT",
+   "made_from": "Sentinel-1",
+   "gap_hours": -0.0,
+   "measurements": {
+    "mapped_km2": 11.13,
+    "confirmed_share": 0.115,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.36,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "not assessable",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR664",
+   "product": "AOI01_DEL_MONIT03",
+   "made_from": "COSMO-SkyMed",
+   "gap_hours": 12.5,
+   "measurements": {
+    "mapped_km2": 44.88,
+    "confirmed_share": 0.601,
+    "unmapped_clustered_km2": 18.94,
+    "mapped_extent": 0.246,
+    "unmapped_outside_extent_km2": 13.57
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR664",
+   "product": "AOI01_GRA_PRODUCT",
+   "made_from": "Pléiades",
+   "gap_hours": -5.1,
+   "measurements": {
+    "mapped_km2": 7.7,
+    "confirmed_share": 0.024,
+    "unmapped_clustered_km2": 34.63,
+    "mapped_extent": 0.013,
+    "unmapped_outside_extent_km2": 34.63
+   },
+   "expect": {
+    "verdict": "to check",
+    "flags": [
+     "possibly_partial",
+     "much_unmapped"
+    ]
+   }
+  },
+  {
+   "activation": "EMSR664",
+   "product": "AOI03_GRA_PRODUCT",
+   "made_from": "Pléiades",
+   "gap_hours": -5.1,
+   "measurements": {
+    "mapped_km2": 5.81,
+    "confirmed_share": 0.02,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.798,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR664",
+   "product": "AOI04_GRA_PRODUCT",
+   "made_from": "WorldView-2",
+   "gap_hours": 19.2,
+   "measurements": {
+    "mapped_km2": 1.91,
+    "confirmed_share": 0.021,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.588,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR664",
+   "product": "AOI05_GRA_PRODUCT",
+   "made_from": "Pléiades Neo",
+   "gap_hours": -5.0,
+   "measurements": {
+    "mapped_km2": 0.16,
+    "confirmed_share": 0.15,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.181,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR664",
+   "product": "AOI06_GRA_PRODUCT",
+   "made_from": "SPOT-6/7",
+   "gap_hours": 19.2,
+   "measurements": {
+    "mapped_km2": 3.03,
+    "confirmed_share": 0.441,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.45,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR664",
+   "product": "AOI07_GRA_PRODUCT",
+   "made_from": "SPOT-6/7",
+   "gap_hours": 19.2,
+   "measurements": {
+    "mapped_km2": 63.84,
+    "confirmed_share": 0.145,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.987,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR705",
+   "product": "AOI01_DEL_PRODUCT",
+   "made_from": "COSMO-SkyMed",
+   "gap_hours": 0.3,
+   "measurements": {
+    "mapped_km2": 3.95,
+    "confirmed_share": 0.312,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.329,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR705",
+   "product": "AOI02_DEL_MONIT01",
+   "made_from": "Sentinel-1",
+   "gap_hours": 0.0,
+   "measurements": {
+    "mapped_km2": 2.63,
+    "confirmed_share": 0.572,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.291,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "not assessable",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR705",
+   "product": "AOI03_DEL_MONIT02",
+   "made_from": "Sentinel-1",
+   "gap_hours": 0.0,
+   "measurements": {
+    "mapped_km2": 12.76,
+    "confirmed_share": 0.103,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.32,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "not assessable",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR705",
+   "product": "AOI04_GRA_PRODUCT",
+   "made_from": "Pléiades",
+   "gap_hours": -5.2,
+   "measurements": {
+    "mapped_km2": 0.83,
+    "confirmed_share": 0.088,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.551,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR705",
+   "product": "AOI06_GRA_PRODUCT",
+   "made_from": "Pléiades",
+   "gap_hours": 19.4,
+   "measurements": {
+    "mapped_km2": 3.16,
+    "confirmed_share": 0.007,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.772,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "to check",
+    "flags": [
+     "little_confirmed"
+    ]
+   }
+  },
+  {
+   "activation": "EMSR705",
+   "product": "AOI08_DEL_MONIT01",
+   "made_from": "Sentinel-1",
+   "gap_hours": 0.0,
+   "measurements": {
+    "mapped_km2": 4.39,
+    "confirmed_share": 0.709,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.589,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "not assessable",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR762",
+   "product": "AOI04_GRA_MONIT01",
+   "made_from": "Drone, GeoEye-1",
+   "gap_hours": -1.7,
+   "measurements": {
+    "mapped_km2": 11.04,
+    "confirmed_share": 0.309,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.594,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR762",
+   "product": "AOI07_GRA_PRODUCT",
+   "made_from": "GeoEye-1",
+   "gap_hours": -4.7,
+   "measurements": {
+    "mapped_km2": 0.83,
+    "confirmed_share": 0.0,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.137,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "to check",
+    "flags": [
+     "little_confirmed"
+    ]
+   }
+  },
+  {
+   "activation": "EMSR795",
+   "product": "AOI02_DEL_PRODUCT",
+   "made_from": "Sentinel-1",
+   "gap_hours": -0.0,
+   "measurements": {
+    "mapped_km2": 2.31,
+    "confirmed_share": 0.531,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.634,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "not assessable",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR795",
+   "product": "AOI02_GRA_PRODUCT",
+   "made_from": "Pléiades",
+   "gap_hours": -16.7,
+   "measurements": {
+    "mapped_km2": 1.22,
+    "confirmed_share": 0.158,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.768,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR795",
+   "product": "AOI06_DEL_PRODUCT",
+   "made_from": "Sentinel-1",
+   "gap_hours": 0.0,
+   "measurements": {
+    "mapped_km2": 15.49,
+    "confirmed_share": 0.885,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.429,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "not assessable",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR800",
+   "product": "AOI01_GRA_PRODUCT",
+   "made_from": "Pléiades",
+   "gap_hours": -5.1,
+   "measurements": {
+    "mapped_km2": 0.29,
+    "confirmed_share": 0.055,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.488,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR843",
+   "product": "AOI01_DEL_MONIT01",
+   "made_from": "SPOT-6/7",
+   "gap_hours": -4.6,
+   "measurements": {
+    "mapped_km2": 0.47,
+    "confirmed_share": 0.109,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.422,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR843",
+   "product": "AOI01_DEL_PRODUCT",
+   "made_from": "WorldView-2",
+   "gap_hours": -4.4,
+   "measurements": {
+    "mapped_km2": 0.26,
+    "confirmed_share": 0.085,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.167,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "coherent",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR855",
+   "product": "AOI01_DEL_MONIT01",
+   "made_from": "Sentinel-1",
+   "gap_hours": -0.0,
+   "measurements": {
+    "mapped_km2": 0.59,
+    "confirmed_share": 0.26,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.351,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "not assessable",
+    "flags": []
+   }
+  },
+  {
+   "activation": "EMSR855",
+   "product": "AOI01_DEL_PRODUCT",
+   "made_from": "Sentinel-1",
+   "gap_hours": -0.0,
+   "measurements": {
+    "mapped_km2": 1.82,
+    "confirmed_share": 0.401,
+    "unmapped_clustered_km2": 0.0,
+    "mapped_extent": 0.491,
+    "unmapped_outside_extent_km2": 0.0
+   },
+   "expect": {
+    "verdict": "not assessable",
+    "flags": []
+   }
+  }
+ ]
+}

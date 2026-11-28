@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -55,10 +56,18 @@ def add_text(saved: Path) -> None:
     path.write_text(json.dumps(body))
 
 
-def quality(saved: Path, name: str, product: str, verdict: str, resolution: float = 40.0) -> None:
+def quality(
+    saved: Path,
+    name: str,
+    product: str,
+    verdict: str,
+    resolution: float = 40.0,
+    mtime: float = 1000.0,
+) -> None:
     folder = saved / "EMSR762" / "sentinel-1"
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / f"{name}_quality.json").write_text(
+    path = folder / f"{product}_{resolution:.0f}m_{name}_quality.json"
+    path.write_text(
         json.dumps(
             {
                 "activation": "EMSR762",
@@ -68,6 +77,7 @@ def quality(saved: Path, name: str, product: str, verdict: str, resolution: floa
             }
         )
     )
+    os.utime(path, (mtime, mtime))
 
 
 def test_source_fields(saved: Path) -> None:
@@ -141,7 +151,8 @@ def test_no_network(saved: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_radar_counts(saved: Path) -> None:
     quality(saved, "a", "AOI01_DEL_PRODUCT", "coherent")
-    quality(saved, "b", "AOI01_DEL_PRODUCT", "to check", resolution=10.0)  # 40 m wins
+    # The newest pair wins, whatever its resolution: one rule, that of reports.newest_pair.
+    quality(saved, "b", "AOI01_DEL_PRODUCT", "to check", resolution=10.0, mtime=2000.0)
     quality(saved, "c", "AOI02_DEL_PRODUCT", "to check")
     quality(saved, "d", "AOI03_DEL_PRODUCT", "not assessable")
     found = facts("EMSR762")
@@ -149,8 +160,12 @@ def test_radar_counts(saved: Path) -> None:
     for aoi in found["aois"].values():
         for k in totals:
             totals[k] += aoi["radar"][k]
-    assert totals == {"confirms": 1, "to_check": 1, "not_assessable": 1}
-    assert found["aois"]["Brisighella"]["radar"]["confirms"] == 1
+    assert totals == {"confirms": 0, "to_check": 2, "not_assessable": 1}
+    assert found["aois"]["Brisighella"]["radar"] == {
+        "confirms": 0,
+        "to_check": 1,
+        "not_assessable": 0,
+    }
 
 
 def test_no_quality_files_counts_zero(saved: Path) -> None:
@@ -210,12 +225,8 @@ def test_bulletin_title_words_are_names(saved: Path) -> None:
 
 
 def test_newest_wins_at_equal_resolution(saved: Path) -> None:
-    import os
-
-    quality(saved, "old", "AOI01_DEL_PRODUCT", "coherent")
+    quality(saved, "old", "AOI01_DEL_PRODUCT", "coherent", mtime=1.0)
     quality(saved, "new", "AOI01_DEL_PRODUCT", "to check")
-    folder = saved / "EMSR762" / "sentinel-1"
-    os.utime(folder / "old_quality.json", (1, 1))
     radar = facts("EMSR762")["aois"]["Brisighella"]["radar"]
     assert radar["to_check"] == 1 and radar["confirms"] == 0
 

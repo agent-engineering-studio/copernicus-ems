@@ -89,6 +89,12 @@ Generated from the docstrings of the package.
     options:
       show_root_heading: false
 
+## Water over one place (`[geo]` extra)
+
+::: copernicus_ems.places
+    options:
+      show_root_heading: false
+
 ## Water over places and zones (`[geo]` extra)
 
 ::: copernicus_ems.overlay
@@ -116,4 +122,4 @@ Generated from the docstrings of the package.
 
 ## Errors
 
-::: copernicus_ems.errors.EmsError
+::: copernicus_ems.errors

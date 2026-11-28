@@ -33,7 +33,7 @@ cat <<'NEXT'
 
 Ready. Now:
 
-    make demo                              the demo, on http://localhost:3000
+    make demo                              the demo, on http://localhost:3009
     uv run copernicus-ems --help           the command line
     uv run python                          then: import copernicus_ems
 

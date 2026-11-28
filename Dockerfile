@@ -2,7 +2,7 @@
 # and the API the demo asks (demo/api.py). The page of the demo is another
 # image, built from demo/web.
 #
-#   docker compose up            the demo, on http://localhost:3000
+#   docker compose up            the demo, on http://localhost:3009
 #   docker build -t copernicus-ems:local .
 FROM python:3.13-slim
 

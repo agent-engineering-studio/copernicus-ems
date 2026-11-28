@@ -17,8 +17,8 @@ With Docker, from the root of the repository:
 
 ```bash
 docker compose run --rm init   # once: the floods of Italy, about 200 MB, into ./data
-make docker                    # the demo, in the background, on http://localhost:3000
-make up                        # + the MCP server for AI agents, on http://127.0.0.1:8770/mcp
+make docker                    # the demo, in the background, on http://localhost:3009
+make up                        # + the MCP server for AI agents, on http://127.0.0.1:8769/mcp
 make down                      # stop everything; the data stays
 ```
 
@@ -27,7 +27,7 @@ later:
 
 ```bash
 make init    # install everything and download the floods of Italy
-make demo    # the demo, on http://localhost:3000
+make demo    # the demo, on http://localhost:3009
 ```
 
 Without `init` it works all the same, reading Rapid Mapping live: each layer
@@ -113,19 +113,21 @@ prepares in the background every activation `init` saved. The map is
 simplified to about 10 m and sent gzipped (EMSR664: 590 kB).
 
 ```bash
-curl http://localhost:3000/api/health
-curl http://localhost:3000/api/activations
-curl http://localhost:3000/api/activation/EMSR762
-curl http://localhost:3000/api/activation/EMSR762/map
-curl http://localhost:3000/api/activation/EMSR762/radar
-curl "http://localhost:3000/api/activation/EMSR762/radar/map?product=AOI01_GRA_PRODUCT"
+curl http://localhost:3009/api/health
+curl http://localhost:3009/api/activations
+curl http://localhost:3009/api/activation/EMSR762
+curl http://localhost:3009/api/activation/EMSR762/map
+curl http://localhost:3009/api/activation/EMSR762/radar
+curl "http://localhost:3009/api/activation/EMSR762/radar/map?product=AOI01_GRA_PRODUCT"
 ```
 
 | Variable | What it does | Default |
 |---|---|---|
 | `DATA_ROOT` | the data root; this library uses `$DATA_ROOT/copernicus-ems` | `./data` |
 | `COPERNICUS_EMS_COUNTRY` | the country the page shows | `Italy` |
-| `COPERNICUS_EMS_PORT` | the port of the page | `3000` |
+| `COPERNICUS_EMS_PORT` | the port of the page | `3009` |
+| `COPERNICUS_EMS_PLACE_GEOJSON` | the boundary of the place of the panel "water over our territory": a GeoJSON file, lon/lat | `demo/place.example.geojson` (Faenza) |
+| `COPERNICUS_EMS_PLACE` | the name shown for it | the `name` property of the file |
 | `COPERNICUS_EMS_API_PORT` | the port of the API, without Docker | `8000` |
 | `COPERNICUS_EMS_API` | where the page finds the API | `http://127.0.0.1:8000` |
 

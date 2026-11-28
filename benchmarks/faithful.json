@@ -1,0 +1,730 @@
+{
+ "about": "What the checks of `describe` do with an answer: hand-written answers about EMSR664, one faithful and the others with one known fault each. The source is the official text of the activation and the facts are those of copernicus_ems.describe_input.facts, both recorded once from the saved copy.",
+ "source": {
+  "code": "EMSR664",
+  "name": "Flood in Italy",
+  "reason": "A new wave of severe weather has again hit south-eastern areas of the Emilia-Romagna region, Italy. The same area was faced with floods already on 2 May 2023, which resulted in three deaths. The accompanying rains also caused landslides in the middle Apennines area of this region, which left hundreds of people displaced. On 16 May 2023, a new perturbation has raised river levels. The hydrometric threshold was reached in the basins of the Idice, Samoggia, Savio, Marzeno, Voltre, Marecchia, Pisciatello, Ausa, and Montone rivers. New floods are expected in the areas as well as possible evacuations. Copernicus EMS Rapid Mapping is requested to provide initial rough estimation, flood and landslide extent identification and monitoring.",
+  "bulletins": [
+   {
+    "title": "Information Bulletin 167 - The Copernicus Emergency Management Service activities following the latest floods in Emilia Romagna",
+    "url": "https://emergency.copernicus.eu/mapping/ems/information-bulletin-167-copernicus-emergency-management-service-activities-following-latest"
+   }
+  ],
+  "related": []
+ },
+ "facts": {
+  "code": "EMSR664",
+  "name": "Flood in Italy",
+  "category": "Flood",
+  "event_time": "2023-05-16T11:00:00+00:00",
+  "countries": [
+   "Italy"
+  ],
+  "aois": {
+   "Budrio": {
+    "water_km2": 3.02,
+    "observed_km2": 596,
+    "first_map": "2023-05-21",
+    "last_map": "2023-05-21",
+    "sensors": [
+     "SPOT-6-7"
+    ],
+    "maps": 1,
+    "radar": {
+     "confirms": 0,
+     "to_check": 0,
+     "not_assessable": 0
+    }
+   },
+   "Castel Bolognese": {
+    "water_km2": 5.78,
+    "observed_km2": 46,
+    "first_map": "2023-05-22",
+    "last_map": "2023-05-22",
+    "sensors": [
+     "Pleiades"
+    ],
+    "maps": 1,
+    "radar": {
+     "confirms": 0,
+     "to_check": 0,
+     "not_assessable": 0
+    }
+   },
+   "Cesena": {
+    "water_km2": 0.16,
+    "observed_km2": 25,
+    "first_map": "2023-05-22",
+    "last_map": "2023-05-22",
+    "sensors": [
+     "Pleiades Neo"
+    ],
+    "maps": 1,
+    "radar": {
+     "confirms": 0,
+     "to_check": 0,
+     "not_assessable": 0
+    }
+   },
+   "Faenza": {
+    "water_km2": 1.93,
+    "observed_km2": 13,
+    "first_map": "2023-05-21",
+    "last_map": "2023-05-21",
+    "sensors": [
+     "WorldView-2"
+    ],
+    "maps": 1,
+    "radar": {
+     "confirms": 0,
+     "to_check": 0,
+     "not_assessable": 0
+    }
+   },
+   "Forlì": {
+    "water_km2": 112.06,
+    "observed_km2": 3214,
+    "first_map": "2023-05-17",
+    "last_map": "2023-05-22",
+    "sensors": [
+     "COSMO-SkyMed",
+     "PAZ",
+     "Pleiades",
+     "RADARSAT-2"
+    ],
+    "maps": 5,
+    "radar": {
+     "confirms": 0,
+     "to_check": 0,
+     "not_assessable": 0
+    }
+   },
+   "Lugo": {
+    "water_km2": 135.3,
+    "observed_km2": 455,
+    "first_map": "2023-05-20",
+    "last_map": "2023-05-20",
+    "sensors": [
+     "SPOT-6-7",
+     "aerial"
+    ],
+    "maps": 1,
+    "radar": {
+     "confirms": 0,
+     "to_check": 0,
+     "not_assessable": 0
+    }
+   },
+   "Montalbano": {
+    "water_km2": 0.0,
+    "observed_km2": 0,
+    "first_map": "2023-05-21",
+    "last_map": "2023-05-21",
+    "sensors": [
+     "aerial"
+    ],
+    "maps": 1,
+    "radar": {
+     "confirms": 0,
+     "to_check": 0,
+     "not_assessable": 0
+    }
+   },
+   "Ravenna": {
+    "water_km2": 63.81,
+    "observed_km2": 419,
+    "first_map": "2023-05-21",
+    "last_map": "2023-05-21",
+    "sensors": [
+     "SPOT-6-7"
+    ],
+    "maps": 1,
+    "radar": {
+     "confirms": 0,
+     "to_check": 0,
+     "not_assessable": 0
+    }
+   }
+  }
+ },
+ "answers": [
+  {
+   "id": "faithful",
+   "what": "every figure is a fact, every field has its quote",
+   "fault": null,
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "kept",
+    "dropped": []
+   }
+  },
+  {
+   "id": "rounded-as-written",
+   "what": "135 and 2 km²: the facts rounded to the digits written",
+   "fault": null,
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135 km² d'acqua su 455 km² osservati. Nell'area di Faenza 2 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135 km² of water over 455 km² observed. In the Faenza area 2 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "kept",
+    "dropped": []
+   }
+  },
+  {
+   "id": "invented-number",
+   "what": "a figure that is in no fact: 150 km² of water",
+   "fault": "invented number",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 150 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 150 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "rejected",
+    "dropped": []
+   }
+  },
+  {
+   "id": "wrong-rounding",
+   "what": "135.3 km² written as 135.9",
+   "fault": "invented number",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,9 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.9 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "rejected",
+    "dropped": []
+   }
+  },
+  {
+   "id": "invented-date",
+   "what": "the maps dated 12 May 2023, a day in no fact",
+   "fault": "invented date",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 12 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 12 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "rejected",
+    "dropped": []
+   }
+  },
+  {
+   "id": "invented-deaths",
+   "what": "fourteen deaths: the official text says three",
+   "fault": "invented number",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2. L'alluvione ha causato quattordici vittime.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image. The flood caused fourteen deaths."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "rejected",
+    "dropped": []
+   }
+  },
+  {
+   "id": "unknown-place",
+   "what": "Bologna: a town neither in the official text nor among the areas",
+   "fault": "unknown name",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2. L'acqua ha raggiunto Bologna.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image. The water reached Bologna."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "rejected",
+    "dropped": []
+   }
+  },
+  {
+   "id": "map-called-wrong",
+   "what": "the radar screening told as a judgment: the map is wrong",
+   "fault": "forbidden word",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2. La mappa di Faenza è sbagliata.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image. The Faenza map is wrong."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "rejected",
+    "dropped": []
+   }
+  },
+  {
+   "id": "missed-water",
+   "what": "possible water told as water the map missed",
+   "fault": "forbidden word",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2. Il radar mostra acqua mancata.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image. The radar shows missed water."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "rejected",
+    "dropped": []
+   }
+  },
+  {
+   "id": "invented-quote",
+   "what": "a river with a quote that is not in the official text",
+   "fault": "dropped field: rivers",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Lamone",
+      "quote": "the Lamone river overflowed in Faenza"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "kept",
+    "dropped": [
+     "rivers"
+    ]
+   }
+  },
+  {
+   "id": "name-not-in-quote",
+   "what": "a place whose quote is real but does not name it",
+   "fault": "dropped field: places",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Ravenna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "kept",
+    "dropped": [
+     "places"
+    ]
+   }
+  },
+  {
+   "id": "deaths-not-in-quote",
+   "what": "five deaths, quoted with the sentence that says three",
+   "fault": "dropped field: casualties",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 5,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "kept",
+    "dropped": [
+     "casualties"
+    ]
+   }
+  },
+  {
+   "id": "wrong-event-date",
+   "what": "the earlier floods dated 3 May, quoted with the sentence that says 2 May",
+   "fault": "dropped field: related_events",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-03",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "kept",
+    "dropped": [
+     "related_events"
+    ]
+   }
+  },
+  {
+   "id": "swapped-areas",
+   "what": "the water of Lugo said of Faenza and the reverse: both figures are facts",
+   "fault": "swapped number (blind spot)",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 1,93 km² d'acqua su 455 km² osservati. Nell'area di Faenza 135,3 km² su 13 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 1.93 km² of water over 455 km² observed. In the Faenza area 135.3 km² over 13 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "kept",
+    "dropped": []
+   }
+  },
+  {
+   "id": "swapped-observed",
+   "what": "455 km² observed said of Faenza, whose observed area is 13",
+   "fault": "swapped number (blind spot)",
+   "answer": {
+    "description": {
+     "it": "Una nuova ondata di maltempo ha colpito l'Emilia-Romagna il 16 maggio 2023. Nell'area di Lugo le mappe del 20 maggio 2023 mostrano 135,3 km² d'acqua su 455 km² osservati. Nell'area di Faenza 1,93 km² su 455 km² osservati, da un'immagine WorldView-2.",
+     "en": "A new wave of severe weather hit Emilia-Romagna on 16 May 2023. In the Lugo area the maps of 20 May 2023 show 135.3 km² of water over 455 km² observed. In the Faenza area 1.93 km² over 455 km² observed, from a WorldView-2 image."
+    },
+    "places": [
+     {
+      "name": "Emilia-Romagna",
+      "quote": "south-eastern areas of the Emilia-Romagna region"
+     }
+    ],
+    "rivers": [
+     {
+      "name": "Savio",
+      "quote": "the basins of the Idice, Samoggia, Savio"
+     }
+    ],
+    "related_events": [
+     {
+      "date": "2023-05-02",
+      "what": "floods",
+      "quote": "faced with floods already on 2 May 2023"
+     }
+    ],
+    "casualties": {
+     "deaths": 3,
+     "quote": "which resulted in three deaths"
+    }
+   },
+   "expect": {
+    "description": "kept",
+    "dropped": []
+   }
+  }
+ ]
+}

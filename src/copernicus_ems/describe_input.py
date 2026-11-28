@@ -29,6 +29,7 @@ from copernicus_ems.client import ProductEvents, default_directory, layer_path
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import OBSERVED_EVENT, parse_layer, select_features
 from copernicus_ems.offline import detail_path, read_activations, read_products
+from copernicus_ems.reports import activation_reports
 
 try:
     from copernicus_ems.geo import area_km2, mask, summarize
@@ -109,26 +110,9 @@ def _events(products: list[Product], directory: Path) -> list[ProductEvents]:
 
 
 def _radar(directory: Path, code: str) -> dict[str, str]:
-    """Verdict of each product: the 40 m file first, then the newest."""
-    best: dict[str, tuple[tuple[bool, float], str]] = {}
-    for path in sorted((directory / code / "sentinel-1").glob("*_quality.json")):
-        try:
-            body = json.loads(path.read_bytes())
-            product, verdict = body["product"], body["verdict"]
-            resolution = body.get("resolution_m")
-            rank = (
-                isinstance(resolution, int | float) and abs(resolution - 40.0) <= 0.5,
-                path.stat().st_mtime,
-            )
-        except (OSError, ValueError, KeyError, TypeError, AttributeError):
-            continue
-        if (
-            isinstance(product, str)
-            and isinstance(verdict, str)
-            and (product not in best or rank > best[product][0])
-        ):
-            best[product] = (rank, verdict)
-    return {product: verdict for product, (_, verdict) in best.items()}
+    """Verdict of each product: the newest pair (:func:`copernicus_ems.reports.newest_pair`)."""
+    scan = activation_reports(directory, code, classes=())
+    return {r.product: r.quality.verdict for r in scan.reports if r.quality is not None}
 
 
 def facts(code: str, directory: Path | None = None) -> dict[str, Any]:

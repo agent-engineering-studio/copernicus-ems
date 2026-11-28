@@ -4,7 +4,7 @@
 #
 #   scripts/demo.sh
 #
-#   COPERNICUS_EMS_PORT       the port of the page (default 3000)
+#   COPERNICUS_EMS_PORT       the port of the page (default 3009)
 #   COPERNICUS_EMS_API_PORT   the port of the API (default 8000)
 #   DATA_ROOT                 where the data is (default ./data, as scripts/fetch-data.sh)
 #
@@ -12,7 +12,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-PORT="${COPERNICUS_EMS_PORT:-3000}"
+PORT="${COPERNICUS_EMS_PORT:-3009}"
 API_PORT="${COPERNICUS_EMS_API_PORT:-8000}"
 export DATA_ROOT="${DATA_ROOT:-$PWD/data}"
 

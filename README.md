@@ -86,6 +86,7 @@ licence.
 | ✅ | **Quality check** | Compares a flood map with Sentinel-1 radar and says "coherent", "to check" or "not assessable": a screening that tells you which maps to look at again. |
 | 🛰️ | **Radar agreement** | Shows where a flood map and the radar agree: confirmed, map only, radar-only candidates, as a raster and polygons next to each pair. Candidates are never ground truth. |
 | 📝 | **Descriptions** | A model reads the official text of each activation and writes a short description in Italian and English, with places, rivers and events quoted from it. The code checks every number, name and quote; a description is model-written, never the official word. |
+| 🏘️ | **Water over one place** | For a municipality (any polygon of yours): the km² of water each activation saw inside it, and how much of it was observed at all. Over Faenza, May 2023: 12.26 km² with the whole territory observed, and 0.40 km² two weeks earlier with 7 % observed. |
 | 🧪 | **Pure functions too** | Every parsing step is a plain function, if you have your own HTTP stack. |
 
 ### Why a library, and not the product package
@@ -223,8 +224,8 @@ how far the Sentinel-1 radar backs each map, in plain words. A second page,
 
 ```bash
 docker compose run --rm init   # once: the floods of Italy (~200 MB) into ./data
-make docker                    # the demo, in the background: http://localhost:3000
-make up                        # + the MCP server for AI agents: http://127.0.0.1:8770/mcp
+make docker                    # the demo, in the background: http://localhost:3009
+make up                        # + the MCP server for AI agents: http://127.0.0.1:8769/mcp
 make down                      # stop everything; the data stays
 ```
 
@@ -235,7 +236,7 @@ credentials and Processing Units, PU). More in
 
 **For AI agents.** The page says whether the MCP server is on and how to
 connect Claude Code to it (`claude mcp add --transport http copernicus-ems
-http://127.0.0.1:8770/mcp`). The [agent skill](skills/copernicus-ems/SKILL.md)
+http://127.0.0.1:8769/mcp`). The [agent skill](skills/copernicus-ems/SKILL.md)
 teaches an agent the library and its traps: drop it in `~/.claude/skills/`,
 or give it to any agent as context.
 

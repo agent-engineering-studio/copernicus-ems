@@ -284,6 +284,60 @@ Guardrails: the report template cites each figure's tool call, always
 includes the Copernicus attribution, and states the limits (delineation is
 a lower bound; outside the AOI is unknown, not dry).
 
+### The rule, and how each AI piece fits it
+
+**The numbers come from the data. A model may explain them, never invent
+them.** Each piece, and how far to trust it:
+
+- **Facts** (`geo.summarize`, `places.water_over_place`, `describe_input.facts`):
+  computed by tested code from the layers. Trust them as far as the maps: a
+  lower bound, and only inside the observation mask.
+- **The Sentinel-1 flood detection** (`quality.detect`, notebooks 01 to 08).
+  It is a detector of darkened water, not a mapper. Against labels drawn on
+  the same radar image a threshold reaches CSI 0.39; against independent
+  labels every detector stays between 0.04 and 0.16, and the one used in the
+  check has POD 0.31 and CSI 0.23. So it is never returned as a flood map. It
+  is used for one thing: to say whether a published map and the radar tell
+  the same story ("coherent", "to check", "not assessable"). Its
+  `candidate` class is possible water: never truth, never a miss.
+- **The quality verdict**: a screening calibrated on 24 Italian maps, with
+  one known suspect. [The benchmark](benchmark.md) keeps the 24 verdicts
+  fixed in CI.
+- **Descriptions** (`describe`): the only place where a model writes. Every
+  number, date and name must be in the facts or in the official text, checked
+  in code. Measured on 15 hand-written answers: 11 of 13 planted faults
+  caught, 2 of 2 faithful answers kept. Not caught: two real figures swapped
+  between places.
+- **The MCP server**: tools that return facts; its instructions tell the agent
+  that every figure must come from a tool result.
+
+### Proposed next, not built: a claim check
+
+The one AI feature that would help Limen most is small. Today the check of a
+description knows *which numbers exist*; it does not know *which place a
+number is said of* (the two swaps above). A claim check would tie each number
+of a sentence to the area named in it, and refuse "135.3 km² of water in
+Faenza" when 135.3 is the figure of Lugo. Limen's reviewer has the same need
+for every text it writes about a flood. It is arithmetic over the facts, with
+no second model, and the two failing cases of the benchmark are already its
+test. Planned for a later minor release, with plain inputs (the sentence, the
+facts keyed by area) so that the sister libraries can copy it.
+
+Sentences that name two areas take the conservative side: a number that
+cannot be tied to exactly one of the areas named is answered "not checkable",
+and never passes. The caller can refuse the sentence or ask for one area per
+sentence. How often that happens on the faithfulness set will be recorded, so
+that the cost of the rule is a number.
+
+### Burnt areas: not now
+
+A burnt-area preset was on this roadmap. It does not belong now: the sister
+library `effis-client` already gives the perimeter of every fire EFFIS maps.
+Rapid Mapping maps a fire only when someone activates it: a few per season.
+A preset here would return fewer fires than EFFIS, with another method, and
+invite a sum of the two. It would belong if a caller needed the *grading* of
+damage that only an activation has; nobody has asked.
+
 ### What we would *not* do
 
 | Idea | Why not |
