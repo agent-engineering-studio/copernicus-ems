@@ -38,6 +38,16 @@ API_URL = "https://rapidmapping.emergency.copernicus.eu/backend/dashboard-api"
 ACTIVATIONS_URL = f"{API_URL}/public-activations-info/"
 DETAIL_URL = f"{API_URL}/public-activations/"
 
+#: The public API lists activations from this year on; earlier ones are on the
+#: historical site, with no documented API. Say it wherever coverage is reported.
+CATALOGUE_FROM_YEAR = 2023
+
+
+def attribution(year: int) -> str:
+    """The sentence the CEMS licence asks for on derived data, with the year of the data."""
+    return f"Contains modified Copernicus Emergency Management Service information, {year}"
+
+
 #: ``EMSR762/AOI01/DEL_PRODUCT/EMSR762_AOI01_DEL_PRODUCT_observedEventA_v1_VT``
 _LAYER_RE = re.compile(r"_(?P<kind>[A-Za-z]+)_v(?P<version>\d+)_VT$")
 _WKT_RE = re.compile(

@@ -78,3 +78,73 @@ with httpx.Client(timeout=60, follow_redirects=True) as http:
             floods = select_features(parse_layer(http.get(layer.url).content))
             print(product.label, len(floods))
 ```
+
+## A truth set for a store: polygons, masks, and what is known
+
+`fetch_activation_truth` (`[geo]` extra) gives the flood polygons and the
+observation masks of an activation with stable ids, and tells apart the
+products it read from those it could not.
+
+```python
+import httpx
+
+from copernicus_ems import RapidMapping
+from copernicus_ems.truth import fetch_activation_truth
+
+async with httpx.AsyncClient(timeout=60, follow_redirects=True) as http:
+    activation = (await RapidMapping(http).activations(country="Italy"))[-1]
+    truth = await fetch_activation_truth(http, activation, area_crs=3035)
+
+for flood in truth.floods:  # id EMSR762-aoi01-DEL0-12-0: the same at every run
+    print(flood.id, f"{flood.area_km2:.3f} km²", flood.observed_time)
+print(truth.read_products)  # only for these a missing polygon was removed at the source
+print(truth.errors)  # layers that did not answer: what you stored of them stays
+```
+
+A mask is in `truth.masks` only where the observed layer was read: with the
+layer lost, a mask would call dry a place nobody knows about.
+
+## Observed water over your own polygons
+
+`copernicus_ems.overlay` (`[geo]` extra) takes geometries already in one
+metric CRS (EPSG:3035 for Europe) and knows no layer by name: the places and
+the zones are yours.
+
+```python
+from copernicus_ems.ids import is_monitoring, polygon_product_id
+from copernicus_ems.overlay import WaterPolygon, places_hit, split_by_zones
+
+# floods: ObservedFlood records projected to EPSG:3035 by you (to_3035).
+water = [
+    WaterPolygon(polygon_product_id(f.id), to_3035(f.geom), f.event_time, f.observed_time)
+    for f in truth.floods
+    if not is_monitoring(polygon_product_id(f.id))  # the first issue: no water counted twice
+]
+
+for hit in places_hit(water, municipalities):  # [(code, polygon), ...]
+    print(hit.key, f"{hit.water_km2:.2f} km²", hit.products)
+
+split = split_by_zones(
+    [w.geom for w in water],
+    hazard_zones,  # [(class, polygon), ...]: any layer with a class
+    classes=("high", "medium", "low"),  # from the highest: it wins where zones overlap
+)
+print(split.by_class_m2, split.share(split.outside_filtered_m2))
+```
+
+It is water observed afterwards, from satellite: a lower bound of what
+happened, never an alert or a forecast. Quote `attribution(year)` with it.
+
+## The radar reports, read back
+
+```python
+from copernicus_ems import default_directory
+from copernicus_ems.reports import TO_CHECK, collect_reports
+
+scan = collect_reports(default_directory())  # <dir>/<CODE>/sentinel-1/*_quality.json, …
+for report in scan.reports:
+    if report.verdict == TO_CHECK:  # look again: never "wrong"
+        print(report.product_id, report.quality.flag_codes if report.quality else ())
+for note in scan.notes:  # files skipped, pairs replaced by a newer one
+    print(note.kind, note.subject, note.detail)
+```

@@ -71,6 +71,30 @@ Generated from the docstrings of the package.
     options:
       show_root_heading: false
 
+## Identifiers
+
+::: copernicus_ems.ids
+    options:
+      show_root_heading: false
+
+## Truth set of an activation (`[geo]` extra)
+
+::: copernicus_ems.truth
+    options:
+      show_root_heading: false
+
+## Radar reports as files
+
+::: copernicus_ems.reports
+    options:
+      show_root_heading: false
+
+## Water over places and zones (`[geo]` extra)
+
+::: copernicus_ems.overlay
+    options:
+      show_root_heading: false
+
 ## Labels and scores (`[ml]` extra)
 
 ::: copernicus_ems.ml
