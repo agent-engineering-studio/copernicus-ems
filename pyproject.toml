@@ -1,6 +1,6 @@
 [project]
 name = "copernicus-ems"
-version = "0.11.0"
+version = "0.12.0"
 description = "Client for Copernicus EMS Rapid Mapping: activations, observation masks, observed flood extents"
 readme = "README.md"
 keywords = ["copernicus", "emergency management", "rapid mapping", "flood", "geojson", "disaster", "remote sensing"]
@@ -98,20 +98,20 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "ARG", "PTH", "RUF"]
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["src", "tests", "demo/api.py"]
+files = ["src", "tests", "demo/api.py", "benchmarks", "tools"]
 mypy_path = "demo"
 warn_unused_ignores = true
 warn_redundant_casts = true
 
 [[tool.mypy.overrides]]
 # No type information shipped.
-module = ["rasterio", "rasterio.*", "pyarrow", "pyarrow.*"]
+module = ["rasterio", "rasterio.*", "pyarrow", "pyarrow.*", "griffe"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # demo/api.py, the demo's API, is tested as the module `api`.
-pythonpath = ["demo"]
+pythonpath = ["demo", "."]
 addopts = "--strict-markers"
 markers = [
     "live: contract tests against the live services (COPERNICUS_EMS_LIVE=1, weekly in CI)",

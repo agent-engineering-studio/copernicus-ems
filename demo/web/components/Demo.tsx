@@ -4,11 +4,12 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import Card from "@/components/Card";
 import { Footer, Header } from "@/components/Frame";
-import { LOOKED, WATER, day, failed, good } from "@/lib/format";
+import Place from "@/components/Place";
+import { LOOKED, PLACE, WATER, day, failed, good } from "@/lib/format";
 import { useAnswer, useCodeInAddress, useLang } from "@/lib/hooks";
 import { LangContext, TEXT } from "@/lib/i18n";
 import { radarOf } from "@/lib/radar";
-import type { CardData, DescriptionData, Listing, MapData, RadarData, RadarMap } from "@/lib/types";
+import type { CardData, DescriptionData, Listing, MapData, PlaceData, RadarData, RadarMap } from "@/lib/types";
 
 // Leaflet needs a window: the map is drawn in the browser only.
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -20,6 +21,9 @@ export default function Demo({ first }: { first: string | null }) {
   const [product, setProduct] = useState<string | null>(null);
 
   const listing = useAnswer<Listing>("/api/activations");
+  // The water over one place (a municipality): asked once, kept while activations are opened and closed.
+  const place = useAnswer<PlaceData>("/api/place");
+  const boundary = good(place)?.boundary ?? null;
   const card = useAnswer<CardData>(code && `/api/activation/${code}`);
   const shapes = useAnswer<MapData>(code && `/api/activation/${code}/map`);
   const radar = useAnswer<RadarData>(code && `/api/activation/${code}/radar`);
@@ -66,6 +70,7 @@ export default function Demo({ first }: { first: string | null }) {
                 shapes={code ? good(shapes) : null}
                 product={product}
                 radar={computed ? good(radarShapes) : null}
+                place={boundary}
                 text={t}
                 onSelect={open}
               />
@@ -95,6 +100,12 @@ export default function Demo({ first }: { first: string | null }) {
                   <i className="swatch dashed" style={{ borderColor: LOOKED }} /> {t.legendLooked}
                 </p>
                 <p className="muted">{t.legendOut}</p>
+                {boundary && (
+                  <p>
+                    <i className="swatch outline" style={{ borderColor: PLACE }} />{" "}
+                    {good(place)?.name ? t.place.legend(good(place)!.name!) : t.place.legendNoName}
+                  </p>
+                )}
                 {!code && (
                   <p>
                     <i className="swatch dot" style={{ background: WATER }} /> {t.legendDot}
@@ -123,6 +134,7 @@ export default function Demo({ first }: { first: string | null }) {
                   </ol>
                   <p>{t.whyText}</p>
                 </section>
+                <Place place={place} onOpen={open} />
                 <section>
                   {listing === null ? (
                     <p className="waiting">{t.reading}</p>

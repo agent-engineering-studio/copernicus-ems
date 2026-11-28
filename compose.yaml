@@ -1,17 +1,21 @@
 # copernicus-ems on this machine, with nothing to install but Docker.
 #
-#   docker compose up -d                       the demo, on http://localhost:3000
+#   docker compose up -d                       the demo, on http://localhost:3009
 #   docker compose --profile mcp up -d         + the MCP server for AI agents:
-#                                              http://127.0.0.1:8770/mcp
+#                                              http://127.0.0.1:8769/mcp
 #   docker compose --profile ai up -d llm      a local language model (llama.cpp) for `describe`:
 #                                              http://127.0.0.1:8780/v1 (~2 GB, downloaded once)
 #   docker compose run --rm init               download the Italian floods once (~200 MB)
 #   docker compose run --rm cli --help         the command line
 #   docker compose run --rm python             Python, with copernicus_ems to import
 #
-#   COPERNICUS_EMS_PORT     the port of the demo (default 3000)
-#   COPERNICUS_EMS_MCP_DOCKER_PORT  the port of the MCP server in Docker (default 8770: 8768 is egms-client's)
+#   COPERNICUS_EMS_PORT     the port of the demo (default 3009)
+#   COPERNICUS_EMS_MCP_DOCKER_PORT  the port of the MCP server in Docker (default 8769)
 #   COPERNICUS_EMS_COUNTRY  the country the demo shows (default Italy)
+#   COPERNICUS_EMS_PLACE_GEOJSON, COPERNICUS_EMS_PLACE
+#                           the boundary (a GeoJSON file, lon/lat) and the name of the
+#                           municipality whose observed water the page shows
+#                           (default: demo/place.example.geojson, Faenza)
 #   COPERNICUS_EMS_LLM_PORT the port of the local model (default 8780)
 #   COPERNICUS_EMS_LLM_HF   its Hugging Face repo:quant (default Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M)
 #   DATA_ROOT               the data folder shared with Limen and the other libraries:
@@ -34,6 +38,15 @@ services:
   api:
     <<: *ems
     container_name: copernicus-ems-api
+    environment:
+      DATA_ROOT: /data
+      COPERNICUS_EMS_COUNTRY: ${COPERNICUS_EMS_COUNTRY:-}
+      # The place of the page "water over our municipality": its boundary and its name.
+      COPERNICUS_EMS_PLACE_GEOJSON: /place.geojson
+      COPERNICUS_EMS_PLACE: ${COPERNICUS_EMS_PLACE:-}
+    volumes:
+      - ${DATA_ROOT:-./data}/copernicus-ems:/data/copernicus-ems
+      - ${COPERNICUS_EMS_PLACE_GEOJSON:-./demo/place.example.geojson}:/place.geojson:ro
     restart: unless-stopped
 
   # The page: a map of the activations, and a card for the one clicked (demo/web).
@@ -44,16 +57,16 @@ services:
     environment:
       COPERNICUS_EMS_API: http://api:8000
       # The page says whether the MCP server is on, and how to connect an agent to it.
-      COPERNICUS_EMS_MCP: http://mcp:8768
-      COPERNICUS_EMS_MCP_URL: http://127.0.0.1:${COPERNICUS_EMS_MCP_DOCKER_PORT:-8770}/mcp
+      COPERNICUS_EMS_MCP: http://mcp:8769
+      COPERNICUS_EMS_MCP_URL: http://127.0.0.1:${COPERNICUS_EMS_MCP_DOCKER_PORT:-8769}/mcp
     depends_on:
       - api
     ports:
-      - "${COPERNICUS_EMS_PORT:-3000}:3000"
+      - "${COPERNICUS_EMS_PORT:-3009}:3000"
     restart: unless-stopped
 
   # The library as tools for AI agents (Claude and any MCP client), over
-  # streamable HTTP: http://127.0.0.1:8770/mcp. It reads the same folder as the
+  # streamable HTTP: http://127.0.0.1:8769/mcp. It reads the same folder as the
   # demo, so what `init` saved answers offline.
   mcp:
     <<: *ems
@@ -64,18 +77,18 @@ services:
       - copernicus-ems-mcp
       - --transport=streamable-http
       - --host=0.0.0.0
-      - --port=8768
+      - --port=8769
       - --allowed-host=localhost:*
       - --allowed-host=127.0.0.1:*
       - --allowed-host=mcp:*
       - --allowed-host=copernicus-ems-mcp:*
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8768/health', timeout=4)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8769/health', timeout=4)"]
       interval: 30s
       timeout: 5s
       start_period: 20s
     ports:
-      - "127.0.0.1:${COPERNICUS_EMS_MCP_DOCKER_PORT:-8770}:8768"
+      - "127.0.0.1:${COPERNICUS_EMS_MCP_DOCKER_PORT:-8769}:8769"
     restart: unless-stopped
 
   # A local language model for `describe`, OpenAI-compatible: http://127.0.0.1:8780/v1.

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -62,6 +62,14 @@ def _number(value: Any) -> float | None:
     if isinstance(value, bool) or not isinstance(value, int | float):
         return None
     return float(value) if math.isfinite(value) else None
+
+
+def _object(path: Path) -> dict[str, Any]:
+    """The JSON object of a file; anything else (a list, a number) is a ``ValueError``."""
+    d = json.loads(path.read_text())
+    if not isinstance(d, dict):
+        raise ValueError(f"{path.name} is not a JSON object")
+    return d
 
 
 def _stem(path: Path, suffix: str) -> str:
@@ -113,7 +121,7 @@ def read_quality(path: Path, *, activation_code: str | None = None) -> QualityFi
 
     ``activation_code`` is used when the file does not name its activation.
     """
-    d = json.loads(path.read_text())
+    d = _object(path)
     verdict = str(d.get("verdict") or "")
     if verdict not in VERDICTS:
         raise ValueError(f"unknown verdict {verdict!r} in {path.name}")
@@ -134,7 +142,7 @@ def read_quality(path: Path, *, activation_code: str | None = None) -> QualityFi
 
 def read_agreement(path: Path, *, activation_code: str | None = None) -> AgreementFile:
     """An ``_agreement.json``. With ``computed`` false there is no tif and no geojson."""
-    d = json.loads(path.read_text())
+    d = _object(path)
     computed = bool(d.get("computed"))
     files = d.get("files") or {}
     geojson = files.get("geojson") if computed else None
@@ -181,7 +189,7 @@ def read_classes(
             "copernicus_ems.reports.read_classes needs the geo extra: "
             "pip install 'copernicus-ems[geo]'"
         ) from exc
-    d = json.loads(path.read_text())
+    d = _object(path)
     out: dict[str, AgreementClass] = {}
     for feature in d.get("features") or []:
         props = feature.get("properties") or {}
@@ -240,8 +248,13 @@ class ReportScan:
     notes: list[ReportNote] = field(default_factory=list)
 
 
-def _newest(files: dict[str, list[Path]]) -> str:
-    """The most recent stem: a pair made again replaces the one before."""
+def newest_pair(files: Mapping[str, Sequence[Path]]) -> str:
+    """The stem to keep among the pairs of one product: the most recent.
+
+    ``files`` maps a stem to its report files. A pair made again replaces the
+    one before, whatever its resolution; with the same time, the greater stem.
+    This is the one rule of the library: ``describe`` and the demo use it too.
+    """
     return max(files, key=lambda s: (max(p.stat().st_mtime for p in files[s]), s))
 
 
@@ -261,8 +274,22 @@ def collect_reports(
     ``classes`` are the agreement classes read from the ``.geojson`` (none:
     the geometry is not read and shapely is not needed).
     """
+    return _scan(sorted(directory.glob("*/sentinel-1")), classes)
+
+
+def activation_reports(
+    directory: Path,
+    code: str,
+    *,
+    classes: Collection[str] = (CLASS_CONFIRMED, CLASS_CANDIDATE),
+) -> ReportScan:
+    """The reports of ``<directory>/<code>/sentinel-1/``, as :func:`collect_reports`."""
+    return _scan([directory / code / "sentinel-1"], classes)
+
+
+def _scan(folders: Sequence[Path], classes: Collection[str]) -> ReportScan:
     groups: dict[tuple[str, str], dict[str, list[Path]]] = {}
-    for folder in sorted(directory.glob("*/sentinel-1")):
+    for folder in folders:
         code = folder.parent.name.upper()
         paths = [*folder.glob(f"*{QUALITY_SUFFIX}"), *folder.glob(f"*{AGREEMENT_SUFFIX}")]
         for path in sorted(paths):
@@ -273,7 +300,7 @@ def collect_reports(
     reports: list[ProductReport] = []
     notes: list[ReportNote] = []
     for (code, product), files in sorted(groups.items()):
-        stem = _newest(files)
+        stem = newest_pair(files)
         if len(files) > 1:
             notes.append(ReportNote(SEVERAL_PAIRS, code, product, stem, " ".join(sorted(files))))
         report = _read_pair(code, product, stem, files[stem], classes, notes)

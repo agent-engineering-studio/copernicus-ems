@@ -253,14 +253,27 @@ def test_radar_reads_results_beside_pairs(client: TestClient, saved: Path) -> No
     assert entry["files"] == ["a_agreement.json", "a_quality.json"]
 
 
-def test_radar_prefers_40m_then_newest(client: TestClient, saved: Path) -> None:
+def test_radar_keeps_the_newest_pair(client: TestClient, saved: Path) -> None:
     _write(saved, "r20", resolution=20.0, quality={"verdict": "usable"}, mtime=3000)
     _write(saved, "r40a", quality={"verdict": "to check"}, mtime=1000)
     got = client.get("/api/activation/EMSR762/radar").json()["results"][PRODUCT]
-    assert got["verdict"] == "to check"
-    _write(saved, "r40b", quality={"verdict": "unreliable"}, mtime=2000)
+    assert got["verdict"] == "usable"  # the newest, though at 20 m: one rule everywhere
+    _write(saved, "r40b", quality={"verdict": "unreliable"}, mtime=4000)
     got = client.get("/api/activation/EMSR762/radar").json()["results"][PRODUCT]
     assert got["verdict"] == "unreliable"
+
+
+def test_radar_quality_and_agreement_come_from_the_same_pair(
+    client: TestClient, saved: Path
+) -> None:
+    at = _inside(client)
+    _write(saved, "old", quality={"verdict": "coherent"}, agreement={}, at=at, mtime=1000)
+    _write(saved, "new", quality={"verdict": "to check"}, mtime=2000)
+    got = client.get("/api/activation/EMSR762/radar").json()["results"][PRODUCT]
+    # The newer pair has no agreement: the numbers of the older one are not put beside it.
+    assert got["verdict"] == "to check" and got["km2"] is None
+    assert got["files"] == ["new_quality.json"]
+    assert client.get("/api/activation/EMSR762/radar/map").json()["features"] == []
 
 
 def test_radar_only_not_40m_shows_its_reason(client: TestClient, saved: Path) -> None:
@@ -489,3 +502,82 @@ def test_demo_api_does_not_import_describe() -> None:
         for a in node.names
     }
     assert not any("describe" in name or "anthropic" in name for name in imported)
+
+
+def _place_file(tmp_path: Path, client: TestClient) -> Path:
+    x, y = _inside(client)
+    body = {
+        "type": "Feature",
+        "properties": {"name": "Somewhere", "credit": "a credit"},
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[x, y], [x + 0.01, y], [x + 0.01, y + 0.01], [x, y + 0.01], [x, y]]],
+        },
+    }
+    path = tmp_path / "place.geojson"
+    path.write_text(json.dumps(body))
+    return path
+
+
+def test_place_gives_the_water_over_the_boundary(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(api, "PLACE_FILE", _place_file(tmp_path, client))
+    monkeypatch.setattr(api, "_place", {})
+    body = client.get("/api/place").json()
+    assert body["configured"] is True and body["saved"] is True
+    assert body["name"] == "Somewhere" and body["credit"] == "a credit"
+    assert body["place_km2"] == pytest.approx(0.88, abs=0.05)
+    assert body["boundary"]["geometry"]["type"] == "Polygon"
+    (row,) = body["activations"]
+    assert row["activation_code"] == "EMSR762"
+    assert row["observed_share"] == pytest.approx(1.0)
+    assert row["water_km2"] >= 0.0 and "lower bound" in body["caveat"]
+    assert "water_over_place" in body["python"]
+    # kept: the second answer does not read the layers again
+    monkeypatch.setattr(api, "read_place", lambda *_: pytest.fail("read again"))
+    assert client.get("/api/place").json() == body
+
+
+def test_place_the_name_of_the_environment_wins(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(api, "PLACE_FILE", _place_file(tmp_path, client))
+    monkeypatch.setattr(api, "PLACE_NAME", "Comune di Prova")
+    monkeypatch.setattr(api, "_place", {})
+    assert client.get("/api/place").json()["name"] == "Comune di Prova"
+
+
+@pytest.mark.parametrize("content", [None, "{not json", '{"type": "Point", "coordinates": [1, 2]}'])
+def test_place_without_a_usable_boundary_says_so(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content: str | None
+) -> None:
+    path = tmp_path / "missing.geojson"
+    if content is not None:
+        path.write_text(content)
+    monkeypatch.setattr(api, "PLACE_FILE", path)
+    monkeypatch.setattr(api, "_place", {})
+    body = client.get("/api/place").json()
+    assert body["configured"] is False and body["activations"] == [] and body["boundary"] is None
+
+
+def test_the_example_place_is_a_real_boundary() -> None:
+    from copernicus_ems.geo import area_km2
+    from copernicus_ems.places import place_geometry
+
+    example = json.loads((Path(api.__file__).parent / "place.example.geojson").read_bytes())
+    assert example["properties"]["name"] == "Faenza"
+    assert "OpenStreetMap" in example["properties"]["credit"]
+    # ISTAT gives 215.76 km² for the municipality.
+    assert area_km2(place_geometry(example)) == pytest.approx(215.76, abs=1.0)
+
+
+def test_place_of_a_collection_takes_the_name_of_its_first_feature(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    feature = json.loads((Path(api.__file__).parent / "place.example.geojson").read_bytes())
+    path = tmp_path / "collection.geojson"
+    path.write_text(json.dumps({"type": "FeatureCollection", "features": [feature]}))
+    body = api.read_place(tmp_path, path, "", saved=False)
+    assert body["configured"] is True and body["name"] == "Faenza"
+    assert body["saved"] is False and body["activations"] == []

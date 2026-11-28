@@ -13,6 +13,8 @@ there yet; a layer read live is saved, so the next visit finds it on disk.
     GET /api/activation/{code}/radar      what the radar checks saved beside its pairs say
     GET /api/activation/{code}/radar/map  their agreement polygons (?product=P for one)
     GET /api/activation/{code}/description  the file ``copernicus-ems describe`` wrote
+    GET /api/place                        the water each saved activation observed over one
+                                          place (a municipality): ``copernicus_ems.places``
 
 The radar files (``copernicus-ems quality`` and ``radar``) and the description are
 only read, never written: the demo never calls a language model.
@@ -25,6 +27,10 @@ made of the layers' versions, so a new monitoring product is seen. At start,
 every activation ``init`` saved is prepared in the background.
 
 ``COPERNICUS_EMS_COUNTRY`` (default ``Italy``) is the country the demo shows.
+``COPERNICUS_EMS_PLACE_GEOJSON`` is the boundary of the place of ``/api/place``,
+a GeoJSON file in lon/lat (default ``demo/place.example.geojson``: Faenza), and
+``COPERNICUS_EMS_PLACE`` its name. The place is the caller's: the library knows
+no boundary by name.
 """
 
 from __future__ import annotations
@@ -71,10 +77,18 @@ from copernicus_ems import (
 )
 from copernicus_ems.geo import area_km2, flooded, mask
 from copernicus_ems.offline import INIT_CATEGORIES
+from copernicus_ems.places import CAVEAT, place_geometry, water_over_place
+from copernicus_ems.reports import newest_pair
 
 log = logging.getLogger("copernicus-ems-demo")
 
 COUNTRY = os.environ.get("COPERNICUS_EMS_COUNTRY", "").strip() or "Italy"
+#: The boundary of the place of ``/api/place``, and the name shown with it.
+PLACE_FILE = Path(
+    os.environ.get("COPERNICUS_EMS_PLACE_GEOJSON", "").strip()
+    or Path(__file__).parent / "place.example.geojson"
+)
+PLACE_NAME = os.environ.get("COPERNICUS_EMS_PLACE", "").strip()
 #: How long the list of activations is kept before it is asked again.
 LIST_TTL_S = 3600.0
 #: About 10 m: invisible at the zoom of an area, a third of the bytes.
@@ -342,15 +356,17 @@ def _radar_files(directory: Path, code: str, kind: str) -> dict[str, list[Report
     return found
 
 
-def _preferred(candidates: list[Report]) -> Report:
-    """The 40 m report first (what the thresholds were calibrated at), then the newest."""
-
-    def rank(item: Report) -> tuple[bool, float]:
-        resolution = item[1].get("resolution_m")
-        at_40 = isinstance(resolution, int | float) and abs(resolution - 40.0) <= 0.5
-        return at_40, item[0].stat().st_mtime
-
-    return max(candidates, key=rank)
+def _chosen(
+    qualities: dict[str, list[Report]], agreements: dict[str, list[Report]], product: str
+) -> tuple[Report | None, Report | None]:
+    """The quality and the agreement of the newest pair of a product (``reports.newest_pair``)."""
+    pairs: dict[str, dict[str, Report]] = {}
+    for kind, found in (("quality", qualities), ("agreement", agreements)):
+        for report in found.get(product, []):
+            stem = report[0].name.removesuffix(f"_{kind}.json")
+            pairs.setdefault(stem, {})[kind] = report
+    newest = pairs[newest_pair({s: [r[0] for r in p.values()] for s, p in pairs.items()})]
+    return newest.get("quality"), newest.get("agreement")
 
 
 def radar_results(directory: Path, code: str) -> dict[str, dict[str, Any]]:
@@ -362,11 +378,12 @@ def radar_results(directory: Path, code: str) -> dict[str, dict[str, Any]]:
         files: list[str] = []
         quality: dict[str, Any] | None = None
         agreement: dict[str, Any] | None = None
-        if product in qualities:
-            path, quality = _preferred(qualities[product])
+        kept_quality, kept_agreement = _chosen(qualities, agreements, product)
+        if kept_quality is not None:
+            path, quality = kept_quality
             files.append(path.name)
-        if product in agreements:
-            path, agreement = _preferred(agreements[product])
+        if kept_agreement is not None:
+            path, agreement = kept_agreement
             files.append(path.name)
         if quality is not None:
             verdict, reason = quality.get("verdict"), quality.get("reason")
@@ -397,10 +414,15 @@ def radar_results(directory: Path, code: str) -> dict[str, dict[str, Any]]:
 def radar_shapes(directory: Path, code: str, product: str | None) -> dict[str, Any]:
     """The agreement polygons (confirmed, map_only, candidate) of one or every product."""
     features: list[dict[str, Any]] = []
-    for name, candidates in sorted(_radar_files(directory, code, "agreement").items()):
+    qualities = _radar_files(directory, code, "quality")
+    agreements = _radar_files(directory, code, "agreement")
+    for name in sorted(agreements):
         if product is not None and name != product:
             continue
-        path, body = _preferred(candidates)
+        kept = _chosen(qualities, agreements, name)[1]
+        if kept is None:  # the newest pair has no agreement: an older one is not shown
+            continue
+        path, body = kept
         try:
             shapes = json.loads(path.with_suffix(".geojson").read_bytes())
             listed = shapes["features"]
@@ -551,6 +573,76 @@ async def description(request: Request) -> dict[str, Any]:
     return read_description(store.directory, code)
 
 
+def place_python(file: Path) -> str:
+    """The lines of Python that give the numbers of the place."""
+    return (
+        "import json\n"
+        "from copernicus_ems.places import water_over_place\n"
+        "\n"
+        f'place = json.load(open("{file.name}"))  # your boundary, lon/lat\n'
+        "for a in water_over_place(place):  # the copy saved by `copernicus-ems init`\n"
+        '    print(a.activation_code, f"{a.water_km2:.2f} km² of water,",\n'
+        '          f"{a.observed_share:.0%} of the place observed")'
+    )
+
+
+def read_place(directory: Path, file: Path, name: str, saved: bool) -> dict[str, Any]:
+    """The water each saved activation observed over the place of ``file``.
+
+    Without the file, or before ``init``, it says so and gives no activation:
+    an empty list here must never read as "no water".
+    """
+    answer: dict[str, Any] = {
+        "configured": False,
+        "saved": saved,
+        "name": name or None,
+        "place_km2": None,
+        "boundary": None,
+        "credit": None,
+        "activations": [],
+        "caveat": CAVEAT,
+        "python": place_python(file),
+    }
+    try:
+        body = json.loads(file.read_bytes())
+        geometry = place_geometry(body)
+    except (OSError, ValueError, EmsError):
+        log.warning("no usable place in %s", file, exc_info=True)
+        return answer
+    properties = body.get("properties") if isinstance(body, dict) else None
+    if not isinstance(properties, dict):
+        first = (body.get("features") or [{}])[0] if isinstance(body, dict) else {}
+        properties = first.get("properties") if isinstance(first, dict) else None
+    properties = properties if isinstance(properties, dict) else {}
+    answer["configured"] = True
+    answer["name"] = name or str(properties.get("name") or "") or None
+    answer["credit"] = str(properties.get("credit") or "") or None
+    answer["place_km2"] = area_km2(geometry)
+    answer["boundary"] = _feature(geometry, {"kind": "place"})
+    if saved:
+        found = water_over_place(geometry, directory, country=COUNTRY)
+        answer["activations"] = [a.as_dict() for a in found]
+    return answer
+
+
+_place: dict[tuple[str, float, bool], dict[str, Any]] = {}
+
+
+async def place(_: Request) -> dict[str, Any]:
+    """Kept until the boundary file changes: every layer near the place is read."""
+    try:
+        stamp = PLACE_FILE.stat().st_mtime
+    except OSError:
+        stamp = 0.0
+    key = (str(store.directory), stamp, store.offline())
+    if key not in _place:
+        _place.clear()
+        _place[key] = await asyncio.to_thread(
+            read_place, store.directory, PLACE_FILE, PLACE_NAME, store.offline()
+        )
+    return _place[key]
+
+
 @asynccontextmanager
 async def lifespan(_: Starlette) -> AsyncIterator[None]:
     warming = asyncio.create_task(store.warm())
@@ -572,5 +664,6 @@ app = Starlette(
         Route("/api/activation/{code}/radar", guarded(radar)),
         Route("/api/activation/{code}/radar/map", guarded(radar_map)),
         Route("/api/activation/{code}/description", guarded(description)),
+        Route("/api/place", guarded(place)),
     ],
 )

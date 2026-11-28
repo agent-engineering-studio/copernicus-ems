@@ -47,6 +47,7 @@ def test_the_tools_and_prompt_are_advertised() -> None:
         "list_activations",
         "activation_summary",
         "compare_products",
+        "water_over_place",
         "export_observed_events",
         "find_scenes",
     }
@@ -312,7 +313,7 @@ def test_transport_options_from_flags_and_the_environment() -> None:
     assert (default.transport, default.host, default.port, default.allowed_host, default.dir) == (
         "stdio",
         "127.0.0.1",
-        8768,
+        8769,
         [],
         None,
     )
@@ -337,7 +338,7 @@ def test_transport_options_from_flags_and_the_environment() -> None:
     assert (flags.port, flags.transport, flags.dir) == (8000, "stdio", Path("/d"))
     assert mcp_server.http_options(default) == {
         "host": "127.0.0.1",
-        "port": 8768,
+        "port": 8769,
         "streamable_http_path": "/mcp",
     }
     with pytest.raises(SystemExit):
@@ -363,3 +364,36 @@ def test_health_and_mcp_over_http(tmp_path: Path) -> None:
         assert health.status_code == 200
         assert health.json() == {"status": "ok", "server": "copernicus-ems", "version": __version__}
         assert 400 <= http.get("/mcp").status_code < 500  # no session: refused, but alive
+
+
+def test_water_over_a_place() -> None:
+    from shapely.geometry import box, mapping, shape
+
+    fixtures = Path(__file__).parent / "fixtures"
+    layer = json.loads((fixtures / "EMSR762_AOI01_DEL_PRODUCT_observedEventA_v1.json").read_bytes())
+    largest = max((shape(f["geometry"]) for f in layer["features"]), key=lambda g: g.area)
+    x, y = largest.representative_point().coords[0]
+    place = dict(mapping(box(x - 0.02, y - 0.015, x + 0.02, y + 0.015)))
+
+    is_error, row = call("water_over_place", {"code": "emsr762", "place": place})
+    assert not is_error
+    assert row["covered"] is True and row["activation_code"] == "EMSR762"
+    assert 0 < row["water_km2"] < row["observed_km2"] <= row["place_km2"] + 1e-3
+    assert row["wet_products"] == ["EMSR762-aoi01-DEL0"]
+    assert row["water_share_of_observed"] == pytest.approx(
+        row["water_km2"] / row["observed_km2"], abs=1e-3
+    )
+    assert "lower bound" in row["note"] and row["attribution"] == ATTRIBUTION
+
+    # A place no product looked at: no figure of water, and it says why.
+    far = dict(mapping(box(0.0, 0.0, 0.1, 0.1)))
+    is_error, row = call("water_over_place", {"code": "EMSR762", "place": far})
+    assert not is_error
+    assert row["covered"] is False and row["products"] == []
+    assert row["water_share_of_observed"] is None and "not an observation" in row["note"]
+
+    point = {"type": "Point", "coordinates": [11.9, 44.3]}
+    is_error, text = call("water_over_place", {"code": "EMSR762", "place": point})
+    assert is_error and "no area" in text
+    is_error, text = call("water_over_place", {"code": "nonsense", "place": place})
+    assert is_error

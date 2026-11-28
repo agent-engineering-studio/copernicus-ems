@@ -207,6 +207,40 @@ const it = {
     commands: "Per scriverla (serve un modello configurato; la demo non lo fa mai):",
     file: (code: string) => `In <directory dei dati>/${code}/description.json`,
   },
+  place: {
+    title: (name: string) => `L'acqua osservata su ${name}`,
+    titleNoName: "L'acqua osservata sul tuo territorio",
+    area: (km2: string) => `${km2} km² di territorio`,
+    intro: "Per ogni emergenza salvata: quanta acqua ha visto il satellite dentro il confine, e quanta parte del territorio ha guardato.",
+    caveat:
+      "Acqua osservata da satellite dopo l'evento (Copernicus EMS Rapid Mapping): un limite inferiore di ciò che è stato allagato. Non è un'allerta e non è una previsione.",
+    notConfigured: "Nessun confine da leggere.",
+    howConfigure:
+      "Per vedere il tuo comune: metti in COPERNICUS_EMS_PLACE_GEOJSON un file GeoJSON con il suo confine, e in COPERNICUS_EMS_PLACE il suo nome.",
+    notSaved: "Le emergenze non sono ancora salvate su disco. Lancia make init, poi ricarica la pagina.",
+    none: (name: string) =>
+      `Nessuna emergenza salvata ha guardato ${name}. Non vuol dire che non c'era acqua: nessun satellite ha guardato qui.`,
+    water: "d'acqua osservata",
+    observed: "del territorio osservato",
+    keyWater: "acqua",
+    keySeen: "osservato, senza acqua",
+    fallbackName: "questo territorio",
+    whole: (km2: string, name: string) => `${km2} km² d'acqua su ${name}, osservato per intero.`,
+    part: (km2: string, share: string, name: string) =>
+      `${km2} km² d'acqua nel ${share} di ${name} che è stato osservato; il resto non è stato guardato.`,
+    wholeDry: (name: string) => `Nessuna acqua vista su ${name}, osservato per intero.`,
+    partDry: (share: string, name: string) =>
+      `Nessuna acqua vista nel ${share} di ${name} che è stato osservato; il resto non è stato guardato.`,
+    barLabel: (share: string) => `Osservato: ${share} del territorio. Il resto non è stato guardato.`,
+    unknown: "non guardato",
+    maps: (n: number) => (n === 1 ? "1 mappa" : `${n} mappe`),
+    later: (n: number) =>
+      n === 1 ? "1 mappa dei giorni dopo, non sommata" : `${n} mappe dei giorni dopo, non sommate`,
+    radar: "Radar:",
+    open: (code: string) => `Apri ${code}`,
+    legend: (name: string) => `Confine di ${name}`,
+    legendNoName: "Confine del territorio",
+  },
   agentsTry: "Prova a chiedere: «Quali alluvioni sono state mappate in Italia nel 2023, e quanta acqua ha visto EMSR664 in Emilia-Romagna?»",
 };
 
@@ -410,6 +444,39 @@ const en: Text = {
     generated: "Written on",
     commands: "To write it (a model must be configured; the demo never does it):",
     file: (code) => `In <data directory>/${code}/description.json`,
+  },
+  place: {
+    title: (name) => `The water observed over ${name}`,
+    titleNoName: "The water observed over your area",
+    area: (km2) => `${km2} km² of land`,
+    intro: "For each saved emergency: how much water the satellite saw inside the boundary, and how much of the area it looked at.",
+    caveat:
+      "Water observed from satellite after the event (Copernicus EMS Rapid Mapping): a lower bound of what was flooded. Not an alert and not a forecast.",
+    notConfigured: "No boundary to read.",
+    howConfigure:
+      "To see your municipality: set COPERNICUS_EMS_PLACE_GEOJSON to a GeoJSON file of its boundary, and COPERNICUS_EMS_PLACE to its name.",
+    notSaved: "The emergencies are not saved on disk yet. Run make init, then reload the page.",
+    none: (name) =>
+      `No saved emergency looked at ${name}. This does not mean there was no water: no satellite looked here.`,
+    water: "of water observed",
+    observed: "of the area observed",
+    keyWater: "water",
+    keySeen: "observed, no water",
+    fallbackName: "this area",
+    whole: (km2, name) => `${km2} km² of water over ${name}, all of it observed.`,
+    part: (km2, share, name) =>
+      `${km2} km² of water in the ${share} of ${name} that was observed; the rest was not looked at.`,
+    wholeDry: (name) => `No water seen over ${name}, all of it observed.`,
+    partDry: (share, name) =>
+      `No water seen in the ${share} of ${name} that was observed; the rest was not looked at.`,
+    barLabel: (share) => `Observed: ${share} of the area. The rest was not looked at.`,
+    unknown: "not looked at",
+    maps: (n) => (n === 1 ? "1 map" : `${n} maps`),
+    later: (n) => (n === 1 ? "1 map of the following days, not added" : `${n} maps of the following days, not added`),
+    radar: "Radar:",
+    open: (code) => `Open ${code}`,
+    legend: (name) => `Boundary of ${name}`,
+    legendNoName: "Boundary of the area",
   },
   agentsTry: "Try asking: “Which floods were mapped in Italy in 2023, and how much water did EMSR664 see in Emilia-Romagna?”",
 };

@@ -4,7 +4,7 @@ Needs the ``mcp`` extra (``pip install 'copernicus-ems[mcp]'``), then:
 
     copernicus-ems mcp                       # stdio, for Claude Desktop / Claude Code
     claude mcp add copernicus-ems -- copernicus-ems mcp
-    copernicus-ems-mcp --transport streamable-http --host 0.0.0.0 --port 8768
+    copernicus-ems-mcp --transport streamable-http --host 0.0.0.0 --port 8769
 
 Over HTTP the MCP endpoint is ``/mcp`` and ``GET /health`` answers
 ``{"status": "ok"}`` for container healthchecks. Every option also reads an
@@ -26,7 +26,7 @@ import asyncio
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mapping, Sequence
 from contextlib import asynccontextmanager
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
@@ -49,7 +49,8 @@ from copernicus_ems.client import ProductEvents, RapidMapping
 from copernicus_ems.errors import EmsError
 from copernicus_ems.events import FLOOD_EVENT_TYPE, FLOOD_NOTATIONS, MASS_MOVEMENT_EVENT_TYPE
 from copernicus_ems.export import mask_features, tagged_features, write_features
-from copernicus_ems.geo import ProductSummary, coverage, summarize
+from copernicus_ems.geo import ProductSummary, area_km2, coverage, summarize
+from copernicus_ems.places import CAVEAT, place_geometry, place_water
 from copernicus_ems.scenes import SENTINEL_1_GRD, SENTINEL_2_L2A, passes
 
 Hazard = Literal["flood", "landslide", "all"]
@@ -81,6 +82,11 @@ How to read the data:
   of the same type).
 - Satellite mapping is a lower bound: short urban floods and water under
   canopy may be missing.
+- For one place (a municipality), water_over_place gives the km² of water
+  inside it and how much of it was observed. The part not observed is
+  unknown; a place no product covers gets no figure at all.
+- It is water observed after the event: never an alert, a forecast or a
+  hazard level.
 - Many floods are filed under category "Storm": filter by country and dates,
   then look at the observed events.
 
@@ -249,6 +255,74 @@ async def activation_summary(
     }
 
 
+class PlaceWaterRow(TypedDict):
+    activation_code: str
+    name: str | None
+    event_time: str | None
+    covered: bool
+    place_km2: float
+    observed_km2: float
+    observed_share: float
+    water_km2: float
+    water_share_of_observed: float | None
+    observed_from: str | None
+    observed_to: str | None
+    products: list[str]
+    wet_products: list[str]
+    later_products: list[str]
+    note: str
+    attribution: str
+
+
+async def water_over_a_place(ems: RapidMapping, code: str, place: dict[str, Any]) -> PlaceWaterRow:
+    """What the first-issue products of one activation observed over ``place`` (GeoJSON)."""
+    code = _code(code)
+    geometry = place_geometry(place)  # an EmsError before any request
+    events, listed = await asyncio.gather(_events(ems, code, "flood"), ems.activations())
+    meta = next((a for a in listed if a.code == code), None)
+    # The list can lag behind the detail: the figures do not need it, the name and time do.
+    listed_as = meta or Activation(code, "", "", datetime.min.replace(tzinfo=UTC), ())
+    found = await asyncio.to_thread(place_water, geometry, listed_as, events)
+    if found is None:
+        return {
+            "activation_code": code,
+            "name": meta.name if meta else None,
+            "event_time": meta.event_time.isoformat() if meta else None,
+            "covered": False,
+            "place_km2": round(await asyncio.to_thread(area_km2, geometry), 3),
+            "observed_km2": 0.0,
+            "observed_share": 0.0,
+            "water_km2": 0.0,
+            "water_share_of_observed": None,
+            "observed_from": None,
+            "observed_to": None,
+            "products": [],
+            "wet_products": [],
+            "later_products": [],
+            "note": NOT_COVERED,
+            "attribution": ATTRIBUTION,
+        }
+    share = found.water_share
+    return {
+        "activation_code": code,
+        "name": meta.name if meta else None,
+        "event_time": meta.event_time.isoformat() if meta else None,
+        "covered": True,
+        "place_km2": round(found.place_km2, 3),
+        "observed_km2": round(found.observed_km2, 3),
+        "observed_share": round(found.observed_share, 4),
+        "water_km2": round(found.water_km2, 3),
+        "water_share_of_observed": None if share is None else round(share, 4),
+        "observed_from": found.observed_from.isoformat() if found.observed_from else None,
+        "observed_to": found.observed_to.isoformat() if found.observed_to else None,
+        "products": list(found.products),
+        "wet_products": list(found.wet_products),
+        "later_products": list(found.later_products),
+        "note": CAVEAT,
+        "attribution": ATTRIBUTION,
+    }
+
+
 async def compare_products(
     ems: RapidMapping, code: str, aoi_number: int, *, hazard: Hazard = "flood"
 ) -> AoiTimeline:
@@ -324,6 +398,11 @@ async def export_observed_events(
 
 
 _SENSORS = {"sentinel-1": SENTINEL_1_GRD, "sentinel-2": SENTINEL_2_L2A}
+
+NOT_COVERED = (
+    "No first-issue product of this activation covers the place: nothing is known of it. "
+    "This is not an observation of no water."
+)
 
 SCENES_NOTE = (
     "Searching the Copernicus Data Space catalogue is open; downloading a scene needs a "
@@ -462,6 +541,20 @@ def build_server(
         """
         return await _guard(activation_summary(ems, code, hazard=hazard))
 
+    @server.tool(name="water_over_place", annotations=_READ_ONLY)
+    async def _place(code: str, place: dict[str, Any]) -> PlaceWaterRow:
+        """The water one activation observed over one place: a municipality, any polygon.
+
+        place: a GeoJSON geometry, Feature or FeatureCollection in lon/lat (the
+        caller's boundary: no place is known by name). Gives water_km2 inside
+        the place, observed_km2 (the part of it inside an observation mask) and
+        the products used. covered false: no product looked at the place, so
+        nothing is known of it; never report that as "no water". The part of
+        the place outside observed_km2 is unknown too. Monitoring products
+        (later_products) are later views and are not added to the water.
+        """
+        return await _guard(water_over_a_place(ems, code, place))
+
     @server.tool(name="compare_products", annotations=_READ_ONLY)
     async def _compare(code: str, aoi_number: int, hazard: Hazard = "flood") -> AoiTimeline:
         """How the observed extent of one AOI changed across its products, in time order.
@@ -552,8 +645,8 @@ def build_server(
 
 
 TRANSPORTS = ("stdio", "streamable-http")
-#: The HTTP port when none is given (idrogeo-mcp uses 8767).
-DEFAULT_PORT = 8768
+#: The HTTP port when none is given: one no sister library uses (egms-client has 8768).
+DEFAULT_PORT = 8769
 
 
 def add_options(parser: argparse.ArgumentParser, environ: Mapping[str, str]) -> None:

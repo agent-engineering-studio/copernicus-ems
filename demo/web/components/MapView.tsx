@@ -2,10 +2,10 @@
 
 import L from "leaflet";
 import { useEffect, useRef } from "react";
-import { CANDIDATE, LOOKED, WATER, km2 } from "@/lib/format";
+import { CANDIDATE, LOOKED, PLACE, WATER, km2 } from "@/lib/format";
 import type { Text } from "@/lib/i18n";
 import { radarOf } from "@/lib/radar";
-import type { MapData, RadarMap, RadarShape, Row } from "@/lib/types";
+import type { MapData, PlaceData, RadarMap, RadarShape, Row } from "@/lib/types";
 
 type Props = {
   rows: Row[];
@@ -16,6 +16,8 @@ type Props = {
   product: string | null;
   /** The radar classes of the selected product, once read: null when there are none. */
   radar: RadarMap | null;
+  /** The boundary of the place of the page (a municipality): an outline, always drawn. */
+  place: PlaceData["boundary"];
   text: Text;
   onSelect: (code: string) => void;
 };
@@ -67,6 +69,7 @@ export default function MapView(props: Props) {
       ["masks", 400],
       ["radar", 405],
       ["water", 410],
+      ["place", 420],
       ["dots", 450],
     ] as const) {
       m.createPane(name).style.zIndex = String(z);
@@ -106,6 +109,21 @@ export default function MapView(props: Props) {
       group.remove();
     };
   }, [rows, selected]);
+
+  // The boundary of the place: an outline over the water, that takes no pointer.
+  const { place } = props;
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !place) return;
+    const outline = L.geoJSON(place, {
+      pane: "place",
+      interactive: false,
+      style: { color: PLACE, weight: 2, fill: false },
+    }).addTo(m);
+    return () => {
+      outline.remove();
+    };
+  }, [place]);
 
   // Back to Italy when nothing is selected.
   useEffect(() => {

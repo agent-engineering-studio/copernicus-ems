@@ -8,7 +8,7 @@ evolve?"* from the published layers, not from memory.
 ```bash
 pip install 'copernicus-ems[mcp]'
 copernicus-ems mcp            # stdio; --dir to choose the data directory
-copernicus-ems-mcp --transport streamable-http --port 8768   # HTTP, at /mcp
+copernicus-ems-mcp --transport streamable-http --port 8769   # HTTP, at /mcp
 ```
 
 ## Connect it
@@ -49,20 +49,20 @@ copernicus-ems-mcp --transport streamable-http --port 8768   # HTTP, at /mcp
       environment:
         COPERNICUS_EMS_MCP_TRANSPORT: streamable-http
         COPERNICUS_EMS_MCP_HOST: 0.0.0.0            # listen inside the container
-        COPERNICUS_EMS_MCP_PORT: "8768"
+        COPERNICUS_EMS_MCP_PORT: "8769"
         COPERNICUS_EMS_MCP_ALLOWED_HOSTS: copernicus-ems-mcp:*,localhost:*
         DATA_ROOT: /data                            # layers and exports in /data/copernicus-ems
       volumes:
         - ${DATA_ROOT:-./data}/copernicus-ems:/data/copernicus-ems
       healthcheck:
-        test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8768/health')"]
+        test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8769/health')"]
     ```
 
     | Variable | Flag | Default |
     |---|---|---|
     | `COPERNICUS_EMS_MCP_TRANSPORT` | `--transport` | `stdio` (or `streamable-http`) |
     | `COPERNICUS_EMS_MCP_HOST` | `--host` | `127.0.0.1` |
-    | `COPERNICUS_EMS_MCP_PORT` | `--port` | `8768` |
+    | `COPERNICUS_EMS_MCP_PORT` | `--port` | `8769` |
     | `COPERNICUS_EMS_MCP_ALLOWED_HOSTS` | `--allowed-host` (repeatable) | none |
     | `DATA_ROOT` | `--dir` (the folder itself) | `$DATA_ROOT/copernicus-ems`, else the user cache |
 
@@ -75,13 +75,13 @@ copernicus-ems-mcp --transport streamable-http --port 8768   # HTTP, at /mcp
 ## In this repository, with Docker
 
 ```bash
-make up     # the demo on http://localhost:3000 and the MCP server on http://127.0.0.1:8770/mcp
-claude mcp add --transport http copernicus-ems http://127.0.0.1:8770/mcp
+make up     # the demo on http://localhost:3009 and the MCP server on http://127.0.0.1:8769/mcp
+claude mcp add --transport http copernicus-ems http://127.0.0.1:8769/mcp
 ```
 
 The `mcp` service of `compose.yaml` (profile `mcp`) reads the same folder as
 the demo, so what `copernicus-ems init` saved answers offline. Its port is
-`COPERNICUS_EMS_MCP_DOCKER_PORT` (default 8770: 8768 is egms-client's). The
+`COPERNICUS_EMS_MCP_DOCKER_PORT` (default 8769). The
 demo page says whether it is on.
 
 ## The agent skill
@@ -98,6 +98,7 @@ numbers. For Claude Code, copy the folder into `~/.claude/skills/`.
 |---|---|
 | `list_activations(country, categories, since, until, limit)` | activations newest first: code, name, category, event time, countries |
 | `activation_summary(code, hazard)` | per product: type, observed time, event km², observed (AOI) km², bbox; per AOI: largest and latest delineation |
+| `water_over_place(code, place)` | for one place (a GeoJSON polygon of the caller): km² of water inside it, km² and share of it that were observed, the products used; `covered: false` when no product looked there ([details](places.md)) |
 | `compare_products(code, aoi_number, hazard)` | one AOI's products in time order, with the change from the previous product **of the same type** |
 | `export_observed_events(code, hazard, with_masks, file_format)` | writes GeoJSON or GeoParquet files (events, observation masks) and returns their **paths** |
 | `find_scenes(code, aoi_number, days, sensors, max_cloud_cover, min_coverage, per_product)` | per product: the images it was made from, and the open Sentinel-1/2 passes over its AOI with time gap, AOI coverage, cloud cover, download URLs ([details](scenes.md)) |

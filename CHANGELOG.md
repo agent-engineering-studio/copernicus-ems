@@ -6,6 +6,60 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-28
+
+### Changed
+
+- **One rule for the verdict of a product: the newest pair**
+  (`copernicus_ems.reports.newest_pair`, the rule of `collect_reports`).
+  `describe` and the demo used another one: the 40 m file first, then the
+  newest. What `describe` now answers differently: a product with a 40 m
+  report "coherent" and a newer 10 m report "to check" was counted among the
+  maps the radar confirms; it is now counted among the maps to check, as the
+  newest report says. With one pair per product, or with only 40 m pairs,
+  nothing changes. In the demo the verdict, the areas and the polygons of a
+  product now come from the same pair: the numbers of an older agreement are
+  no longer shown beside a newer verdict.
+- **The MCP server listens on port 8769 by default**, no longer 8768, which
+  is the port of `egms-client`. It applies to `copernicus-ems-mcp
+  --transport streamable-http`, to `copernicus-ems mcp` and to the `mcp`
+  service of `compose.yaml` (it was published on 8770). A client configured
+  with `http://127.0.0.1:8768/mcp` or `:8770/mcp` must move to
+  `http://127.0.0.1:8769/mcp`, or set `COPERNICUS_EMS_MCP_PORT`.
+- **The demo is on port 3009 by default**, no longer 3000
+  (`COPERNICUS_EMS_PORT`), so that it runs beside the demos of the sister
+  libraries.
+- `read_quality` and `read_agreement` raise `ValueError` for a file that is
+  JSON but not an object; `collect_reports` skips it with a note.
+
+### Added
+
+- `copernicus_ems.places` (`[geo]` extra): the water each activation observed
+  over one place, a municipality or any polygon of the caller.
+  `water_over_place(place, directory)` reads the saved copy;
+  `place_water(place, activation, events)` is the pure function. A
+  `PlaceWater` keeps apart the part of the place that was observed
+  (`observed_km2`, `observed_share`), the water in it (`water_km2`) and what
+  nobody looked at; monitoring products are listed, not added. Over Faenza:
+  EMSR664, 12.26 km² of water with the whole territory observed; EMSR659,
+  0.40 km² with 7 % observed. See the "Water over a place" page.
+- MCP tool `water_over_place(code, place)`.
+- The demo's plain page has a panel "the water observed over our territory"
+  (`/api/place`), with the boundary on the map. `COPERNICUS_EMS_PLACE_GEOJSON`
+  and `COPERNICUS_EMS_PLACE` set the place; the default is Faenza.
+- `copernicus_ems.reports.activation_reports(directory, code)` and
+  `newest_pair(files)`.
+- `benchmarks/`, run in CI and by `make bench`: the 24 Italian maps with the
+  verdict each must get (trusting every map is right on 13 of 24), and what
+  the checks of `describe` do with 15 hand-written answers (11 of 13 planted
+  faults caught; two swapped figures are not, and the set says so).
+- `llms.txt`, `llms-full.txt` and the agent skill in the documentation site
+  (`tools/build_llms.py`, `make docs`).
+- `make help`, `docs`, `notebooks`, `lab` (JupyterLab on port 8887), `bench`.
+- Tests of the repository's rules: no module imports Limen or a sister
+  library, each module imports only httpx and its own extra, the notebooks
+  are numbered and import names that exist.
+
 ## [0.11.0] - 2026-11-28
 
 ### Added

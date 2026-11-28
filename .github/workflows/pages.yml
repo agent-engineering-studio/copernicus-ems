@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    paths: ["docs/**", "zensical.toml", "src/**", "CHANGELOG.md", ".github/workflows/pages.yml"]
+    paths: ["docs/**", "zensical.toml", "src/**", "CHANGELOG.md", "benchmarks/README.md", "notebooks/README.md", "skills/**", "tools/build_llms.py", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -28,6 +28,8 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --only-group docs
       - run: uv run --no-sync zensical build --strict --clean
+      # llms.txt, llms-full.txt and the agent skill, from the same sources.
+      - run: uv run --no-sync python tools/build_llms.py
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site/
